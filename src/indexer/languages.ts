@@ -35,6 +35,40 @@ const TS_QUERY = `
 (new_expression constructor: (identifier) @ref.call)
 `;
 
+const CPP_QUERY = `
+(function_definition declarator: (function_declarator declarator: (identifier) @name)) @def.function
+(function_definition declarator: (function_declarator declarator: (qualified_identifier name: (identifier) @name))) @def.method
+(class_specifier name: (type_identifier) @name body: (field_declaration_list)) @def.class
+(struct_specifier name: (type_identifier) @name body: (field_declaration_list)) @def.struct
+(namespace_definition name: (namespace_identifier) @name) @def.namespace
+(field_declaration declarator: (function_declarator declarator: (field_identifier) @name)) @def.method
+(type_definition declarator: (type_identifier) @name) @def.type
+(enum_specifier name: (type_identifier) @name) @def.enum
+(preproc_def name: (identifier) @name) @def.macro
+(preproc_function_def name: (identifier) @name) @def.macro
+(call_expression function: (identifier) @ref.call)
+(call_expression function: (field_expression field: (field_identifier) @ref.call))
+`;
+
+const PY_QUERY = `
+(function_definition name: (identifier) @name) @def.function
+(class_definition name: (identifier) @name) @def.class
+(module (expression_statement (assignment left: (identifier) @name) @def.variable))
+(call function: (identifier) @ref.call)
+(call function: (attribute attribute: (identifier) @ref.call))
+`;
+
+const JAVA_QUERY = `
+(class_declaration name: (identifier) @name) @def.class
+(interface_declaration name: (identifier) @name) @def.interface
+(enum_declaration name: (identifier) @name) @def.enum
+(method_declaration name: (identifier) @name) @def.method
+(constructor_declaration name: (identifier) @name) @def.method
+(field_declaration declarator: (variable_declarator name: (identifier) @name)) @def.field
+(method_invocation name: (identifier) @ref.call)
+(object_creation_expression type: (type_identifier) @ref.call)
+`;
+
 // require는 문법 패키지에 타입 정의가 없어 불가피
 const tsGrammar = require('tree-sitter-typescript');
 
@@ -42,6 +76,9 @@ export const LANGUAGES: LanguageSpec[] = [
   { id: 'c', extensions: ['.c', '.h'], grammar: require('tree-sitter-c'), query: C_QUERY },
   { id: 'typescript', extensions: ['.ts', '.js', '.mjs', '.cjs'], grammar: tsGrammar.typescript, query: TS_QUERY },
   { id: 'tsx', extensions: ['.tsx', '.jsx'], grammar: tsGrammar.tsx, query: TS_QUERY },
+  { id: 'cpp', extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hh'], grammar: require('tree-sitter-cpp'), query: CPP_QUERY },
+  { id: 'python', extensions: ['.py'], grammar: require('tree-sitter-python'), query: PY_QUERY },
+  { id: 'java', extensions: ['.java'], grammar: require('tree-sitter-java'), query: JAVA_QUERY },
 ];
 
 const byExt = new Map<string, LanguageSpec>();
