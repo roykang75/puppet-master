@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "rebuild:electron": "electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3",
+    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3",
     "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3",
     "bench": "node dist/scripts/bench.js"
   },
