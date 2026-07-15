@@ -1,0 +1,18 @@
+{
+  "name": "sourceinsight",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "rebuild:electron": "electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3",
+    "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3",
+    "bench": "node dist/scripts/bench.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
