@@ -1,14 +1,5 @@
+import * as chokidar from 'chokidar';
 import { languageForPath } from './languages';
-
-// chokidar v5 is ESM-only; this CommonJS project loads it via runtime require
-// (supported on Node >= 20.19 / 22), matching the require() pattern in languages.ts.
-interface FSWatcher {
-  on(event: string, listener: (path: string) => void): FSWatcher;
-  close(): Promise<void>;
-}
-const chokidar = require('chokidar') as {
-  watch(paths: string, options?: unknown): FSWatcher;
-};
 
 export interface WatchHandlers {
   onChangeOrAdd(absPath: string): void;
