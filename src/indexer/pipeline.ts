@@ -40,12 +40,14 @@ export class Indexer {
     // 디스크에서 사라진 파일 정리
     const rels = new Set(files.map((f) => this.toRel(f)));
     const known = this.db.prepare(`SELECT id, path FROM files`).all() as { id: number; path: string }[];
-    for (const k of known) {
-      if (!rels.has(k.path)) {
-        this.db.prepare(`DELETE FROM files WHERE id=?`).run(k.id);
-        this.db.prepare(`DELETE FROM file_text WHERE rowid=?`).run(k.id);
+    this.db.transaction(() => {
+      for (const k of known) {
+        if (!rels.has(k.path)) {
+          this.db.prepare(`DELETE FROM files WHERE id=?`).run(k.id);
+          this.db.prepare(`DELETE FROM file_text WHERE rowid=?`).run(k.id);
+        }
       }
-    }
+    })();
     const c = this.db.prepare(`SELECT (SELECT count(*) FROM symbols) s, (SELECT count(*) FROM refs) r`).get() as { s: number; r: number };
     stats.symbols = c.s;
     stats.refs = c.r;
