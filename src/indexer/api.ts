@@ -24,6 +24,15 @@ export interface CallerHit {
   line: number;
 }
 
+export interface RefHit {
+  name: string;
+  kind: string;
+  path: string;
+  line: number;
+  col: number;
+  enclosingName: string | null;
+}
+
 const HIT_SELECT = `SELECT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, f.path
 FROM symbols s JOIN files f ON f.id = s.file_id`;
 
@@ -74,4 +83,42 @@ export function getCallees(db: Database, symbolId: number): SymbolHit[] {
        ) AND s.kind IN ('function','method') ORDER BY s.name`,
     )
     .all(symbolId) as SymbolHit[];
+}
+
+const CLASS_KINDS = `('class','struct','interface')`;
+
+export function getReferences(db: Database, name: string, limit = 200): RefHit[] {
+  return db
+    .prepare(
+      `SELECT r.name, r.kind, f.path, r.line, r.col, es.name AS enclosingName
+       FROM refs r
+       JOIN files f ON f.id = r.file_id
+       LEFT JOIN symbols es ON es.id = r.enclosing_symbol_id
+       WHERE r.name = ? AND r.kind IN ('call','extends')
+       ORDER BY f.path, r.line LIMIT ?`,
+    )
+    .all(name, limit) as RefHit[];
+}
+
+export function getSuperclasses(db: Database, symbolId: number): SymbolHit[] {
+  return db
+    .prepare(
+      `${HIT_SELECT} WHERE s.name IN (
+         SELECT DISTINCT r.name FROM refs r WHERE r.enclosing_symbol_id = ? AND r.kind = 'extends'
+       ) AND s.kind IN ${CLASS_KINDS} ORDER BY s.name`,
+    )
+    .all(symbolId) as SymbolHit[];
+}
+
+export function getSubclasses(db: Database, name: string): SymbolHit[] {
+  return db
+    .prepare(
+      `SELECT DISTINCT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, f.path
+       FROM refs r
+       JOIN symbols s ON s.id = r.enclosing_symbol_id
+       JOIN files f ON f.id = s.file_id
+       WHERE r.kind = 'extends' AND r.name = ? AND s.kind IN ${CLASS_KINDS}
+       ORDER BY s.name`,
+    )
+    .all(name) as SymbolHit[];
 }

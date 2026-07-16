@@ -51,4 +51,20 @@ export class Persistence {
     fs.mkdirSync(path.join(this.baseDir, 'projects'), { recursive: true });
     fs.writeFileSync(this.uiStatePath(root), JSON.stringify(state, null, 2));
   }
+
+  loadBookmarks(root: string): unknown[] {
+    try {
+      return JSON.parse(
+        fs.readFileSync(path.join(this.baseDir, 'bookmarks', `${this.projectHash(root)}.json`), 'utf8'),
+      ) as unknown[];
+    } catch {
+      return [];
+    }
+  }
+
+  saveBookmarks(root: string, list: unknown[]): void {
+    const dir = path.join(this.baseDir, 'bookmarks');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${this.projectHash(root)}.json`), JSON.stringify(list, null, 2));
+  }
 }

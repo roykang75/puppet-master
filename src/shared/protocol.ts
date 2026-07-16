@@ -18,14 +18,19 @@ export type RpcMessage = RpcRequest | RpcResponse | RpcEvent;
 // 결과 타입은 indexer/api.ts(SymbolHit/TextHit/CallerHit), pipeline.ts(IndexStats)를 재사용한다.
 export interface OpenProjectParams { root: string; dbPath: string }
 export interface FileParams { path: string }        // 프로젝트 루트 기준 rel ('/' 구분자)
+export interface IndexBufferParams { path: string; content: string }
 export interface SearchParams { query: string; limit?: number }
 export interface NameParams { name: string }
 export interface SymbolIdParams { symbolId: number }
+export interface ResolveParams { name: string; fromPath: string }
 
 // ── 이벤트 페이로드 (인덱서 → UI) ──
 export interface ReadyPayload { protocolVersion: number }
 export interface IndexProgressPayload { done: number; total: number; file: string }
-export interface FileIndexedPayload { path: string }
+export interface FileIndexedPayload {
+  path: string;
+  source?: 'buffer' | 'disk'; // 생략 시 'disk'
+}
 
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {

@@ -11,9 +11,11 @@ export interface SymbolRow {
   signature: string;
 }
 
+export type RefKind = 'call' | 'import' | 'extends';
+
 export interface RefRow {
   name: string;
-  kind: 'call';
+  kind: RefKind;
   line: number;
   col: number;
   enclosingIndex: number | null;
@@ -57,13 +59,13 @@ export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
   const tree = getParser(spec).parse(source);
   const query = getQuery(spec);
   const symbols: SymbolRow[] = [];
-  const rawRefs: { name: string; line: number; col: number }[] = [];
+  const rawRefs: { name: string; kind: RefKind; line: number; col: number }[] = [];
   const seen = new Set<string>();
 
   for (const match of query.matches(tree.rootNode)) {
     const defCap = match.captures.find((c) => c.name.startsWith('def.'));
     const nameCap = match.captures.find((c) => c.name === 'name');
-    const refCap = match.captures.find((c) => c.name === 'ref.call');
+    const refCap = match.captures.find((c) => c.name.startsWith('ref.'));
     if (defCap && nameCap) {
       const d = defCap.node;
       const key = `${nameCap.node.text}:${d.startIndex}:${defCap.name}`;
@@ -80,8 +82,12 @@ export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
         signature: firstLine(d.text),
       });
     } else if (refCap) {
+      const kind = refCap.name.slice(4) as RefKind;
+      // import 대상은 따옴표/꺾쇠를 제거해 순수 경로/모듈 문자열로 정규화
+      const text = kind === 'import' ? refCap.node.text.replace(/^["'<]+|[">']+$/g, '') : refCap.node.text;
       rawRefs.push({
-        name: refCap.node.text,
+        name: text,
+        kind,
         line: refCap.node.startPosition.row,
         col: refCap.node.startPosition.column,
       });
@@ -101,7 +107,7 @@ export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
       .map((s, i) => ({ s, i }))
       .filter(({ s }) => SCOPE_KINDS.has(s.kind) && containsPoint(s, r.line, r.col))
       .sort((a, b) => rangeSize(a.s) - rangeSize(b.s))[0];
-    return { name: r.name, kind: 'call', line: r.line, col: r.col, enclosingIndex: enclosing ? enclosing.i : null };
+    return { name: r.name, kind: r.kind, line: r.line, col: r.col, enclosingIndex: enclosing ? enclosing.i : null };
   });
 
   return { symbols, refs };

@@ -8,6 +8,11 @@ import type { UiState } from '../shared/protocol';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
 
+const INDEXER_CALL_ALLOWED = new Set([
+  'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
+  'searchSymbols', 'searchText', 'getCallers', 'getCallees',
+]);
+
 let win: BrowserWindow | null = null;
 let indexer: IndexerManager | null = null;
 let files: ProjectFiles | null = null;
@@ -101,13 +106,26 @@ function registerIpc(): void {
       console.error('[indexFile]', rel, err.message);
     });
   });
+  ipcMain.handle('indexer:indexBuffer', (_e, rel: string, content: string) => {
+    if (!indexer) return { indexed: false }; // 인덱서 없으면 조용히 무시 (편집은 계속 가능)
+    return indexer.rpc.request('indexBuffer', { path: rel, content }, { timeoutMs: 180_000 });
+  });
   ipcMain.handle('indexer:getFileOutline', (_e, rel: string) => {
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
     // 초기 인덱싱 큐잉 대비 — indexDone 후 요청이 원칙이나 대형 프로젝트 여유
     return indexer.rpc.request('getFileOutline', { path: rel }, { timeoutMs: 180_000 });
   });
+  ipcMain.handle('indexer:call', (_e, method: string, params: unknown) => {
+    if (!INDEXER_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 메서드: ${method}`);
+    if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
+    return indexer.rpc.request(method, params, { timeoutMs: 180_000 });
+  });
   ipcMain.handle('ui:saveState', (_e, state: UiState) => {
     if (currentRoot) persistence.saveUiState(currentRoot, state);
+  });
+  ipcMain.handle('bookmarks:load', () => (currentRoot ? persistence.loadBookmarks(currentRoot) : []));
+  ipcMain.handle('bookmarks:save', (_e, list: unknown[]) => {
+    if (currentRoot) persistence.saveBookmarks(currentRoot, list);
   });
 }
 

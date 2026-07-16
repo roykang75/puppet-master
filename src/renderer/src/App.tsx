@@ -9,7 +9,12 @@ import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
-import { EditorPane, getContent, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { BookmarksSection } from './components/BookmarksSection';
+import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { SearchOverlay } from './components/SearchOverlay';
+import { goBack, goForward, navHistory } from './navigation';
+import { computeAnchor } from './bookmarks';
+import type { Bookmark } from './bookmarks';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
@@ -27,8 +32,11 @@ async function openProject(root: string): Promise<void> {
     initLayouts(res.uiState?.panelLayouts);
     // 프로젝트 전환 시 이전 프로젝트의 모델 전부 폐기 — URI가 root 무관이라 재사용 오염 방지
     disposeAllModels();
+    navHistory.reset(); // 이전 프로젝트의 뒤로/앞으로 히스토리 폐기
+
     st.setProject(res.root);
     applyUiState(res.uiState);
+    void window.si.loadBookmarks().then((l) => st.setBookmarks(l as Bookmark[]));
   } catch (e) {
     st.setError(e instanceof Error ? e.message : String(e));
   }
@@ -41,6 +49,25 @@ function applyUiState(ui: UiState | null): void {
   if (ui.activeTab) st.setActive(ui.activeTab);
 }
 
+async function toggleBookmark(): Promise<void> {
+  const st = useAppStore.getState();
+  const loc = getCursorLocation();
+  if (!loc) return;
+  // 같은 path + 같은 저장 line이면 제거, 아니면 추가
+  const dup = st.bookmarks.find((b) => b.path === loc.path && b.line === loc.line);
+  let next: Bookmark[];
+  if (dup) {
+    next = st.bookmarks.filter((b) => b !== dup);
+  } else {
+    const symbols = await window.si.getFileOutline(loc.path).catch(() => []);
+    const anchor = computeAnchor(symbols, loc.line);
+    const text = (getContent(loc.path)?.split('\n')[loc.line - 1] ?? '').trim().slice(0, 60);
+    next = [...st.bookmarks, { path: loc.path, line: loc.line, ...anchor, text }];
+  }
+  st.setBookmarks(next);
+  void window.si.saveBookmarks(next);
+}
+
 function handleIndexerEvent(event: string, payload: unknown): void {
   const st = useAppStore.getState();
   if (event === 'indexProgress') st.setIndexing(payload as IndexProgressPayload);
@@ -51,7 +78,13 @@ function handleIndexerEvent(event: string, payload: unknown): void {
   }
   if (event === 'indexError') st.setError((payload as { message: string }).message);
   if (event === 'fileIndexed' || event === 'fileRemoved') {
-    const p = (payload as FileIndexedPayload).path;
+    const payload2 = payload as FileIndexedPayload;
+    const p = payload2.path;
+    // 버퍼 인덱싱 유래 — dirty/디스크 리로드 블록 전체 스킵 (자기 타이핑이 ⚠를 만들면 안 됨)
+    if (payload2.source === 'buffer') {
+      if (p === st.activePath) st.bumpOutline();
+      return;
+    }
     if (p === st.activePath) st.bumpOutline();
     const tab = st.tabs.find((t) => t.path === p);
     if (tab) {
@@ -105,9 +138,11 @@ function Workspace() {
               defaultLayout={sideV.defaultLayout}
               onLayoutChanged={sideV.onLayoutChanged}
             >
-              <Panel id="project" defaultSize="55" minSize="20"><ProjectWindow /></Panel>
+              <Panel id="project" defaultSize="45" minSize="15"><ProjectWindow /></Panel>
               <Separator className="resize-handle resize-handle-v" />
-              <Panel id="symbols" minSize="20"><SymbolWindow /></Panel>
+              <Panel id="symbols" defaultSize="30" minSize="15"><SymbolWindow /></Panel>
+              <Separator className="resize-handle resize-handle-v" />
+              <Panel id="bookmarks" defaultSize="25" minSize="10"><BookmarksSection /></Panel>
             </Group>
           </Panel>
           <Separator className="resize-handle resize-handle-h" />
@@ -161,17 +196,62 @@ export function App() {
     };
     const onSave = () => void save();
     const onKey = (ev: KeyboardEvent) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && (ev.key === 'f' || ev.key === 'F')) {
+        ev.preventDefault();
+        useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
+        return;
+      }
+      if ((ev.metaKey || ev.ctrlKey) && ev.key === 'F2') {
+        ev.preventDefault();
+        void toggleBookmark();
+        return;
+      }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') {
         ev.preventDefault();
         ev.stopPropagation(); // 캡처 단계에서 소비 — Monaco 자체 바인딩과의 이중 발화 방지
         void save();
+        return;
+      }
+      if (ev.altKey && ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        goBack();
+        return;
+      }
+      if (ev.altKey && ev.key === 'ArrowRight') {
+        ev.preventDefault();
+        goForward();
+        return;
+      }
+      // Backspace 뒤로 — 에디터/입력 요소 밖에서만 (스펙 결정 기록)
+      const el = document.activeElement;
+      if (
+        ev.key === 'Backspace' &&
+        !el?.closest('.editor-host') &&
+        !(el instanceof HTMLInputElement) &&
+        !(el instanceof HTMLTextAreaElement)
+      ) {
+        ev.preventDefault();
+        goBack();
+      }
+    };
+    // 마우스 뒤로/앞으로 버튼 (button 3/4)
+    const onMouse = (ev: MouseEvent) => {
+      if (ev.button === 3) {
+        ev.preventDefault();
+        goBack();
+      }
+      if (ev.button === 4) {
+        ev.preventDefault();
+        goForward();
       }
     };
     window.addEventListener('si:save', onSave);
     window.addEventListener('keydown', onKey, true);
+    window.addEventListener('mouseup', onMouse);
     return () => {
       window.removeEventListener('si:save', onSave);
       window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mouseup', onMouse);
     };
   }, []);
 
@@ -183,6 +263,7 @@ export function App() {
         <Workspace key={root} />
       </div>
       <StatusBar />
+      <SearchOverlay />
     </div>
   );
 }

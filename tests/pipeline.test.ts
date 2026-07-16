@@ -66,4 +66,20 @@ describe('Indexer', () => {
     expect(db.prepare(`SELECT count(*) c FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path='util.c'`).get()).toEqual({ c: 0 });
     expect(db.prepare(`SELECT count(*) c FROM file_text WHERE path='util.c'`).get()).toEqual({ c: 0 });
   });
+
+  describe('indexContent (버퍼 인덱싱)', () => {
+    it('문자열로 인덱싱하고 해시 가드가 동작한다', () => {
+      const rel = 'buf.ts';
+      const c1 = 'export function alpha() { return 1; }\n';
+      expect(idx.indexContent(rel, c1)).toBe(true);
+      expect(idx.indexContent(rel, c1)).toBe(false); // 동일 해시 스킵
+      const c2 = c1 + 'export function beta() { return 2; }\n';
+      expect(idx.indexContent(rel, c2)).toBe(true);
+      const names = (db.prepare(`SELECT s.name FROM symbols s JOIN files f ON f.id=s.file_id WHERE f.path=?`).all(rel) as any[]).map((r) => r.name);
+      expect(names).toContain('beta');
+      // FTS도 갱신
+      const fts = db.prepare(`SELECT path FROM file_text WHERE file_text MATCH 'beta'`).all();
+      expect(fts.length).toBeGreaterThan(0);
+    });
+  });
 });

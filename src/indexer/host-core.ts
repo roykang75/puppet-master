@@ -5,14 +5,17 @@ import { openDb } from './db';
 import { Indexer } from './pipeline';
 import { watchProject } from './watcher';
 import * as queries from './api';
+import { resolveSymbol } from './resolve';
 import { createRpcServer, Transport } from '../shared/rpc';
 import {
   PROTOCOL_VERSION,
   OpenProjectParams,
   FileParams,
+  IndexBufferParams,
   SearchParams,
   NameParams,
   SymbolIdParams,
+  ResolveParams,
 } from '../shared/protocol';
 
 export interface IndexerHostHandle {
@@ -44,7 +47,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
       });
       watcher = watchProject(root, {
         onChangeOrAdd: (abs) => {
-          if (opened().indexer.indexFile(abs)) server.emit('fileIndexed', { path: rel(abs) });
+          if (opened().indexer.indexFile(abs)) server.emit('fileIndexed', { path: rel(abs), source: 'disk' });
         },
         onRemove: (abs) => {
           opened().indexer.removeFile(abs);
@@ -55,7 +58,12 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     },
     indexFile(params: FileParams) {
       const changed = opened().indexer.indexFile(path.join(root, params.path));
-      if (changed) server.emit('fileIndexed', { path: params.path });
+      if (changed) server.emit('fileIndexed', { path: params.path, source: 'disk' });
+      return { indexed: changed };
+    },
+    indexBuffer(params: IndexBufferParams) {
+      const changed = opened().indexer.indexContent(params.path, params.content);
+      if (changed) server.emit('fileIndexed', { path: params.path, source: 'buffer' });
       return { indexed: changed };
     },
     getFileOutline: (p: FileParams) => queries.getSymbolsForFile(opened().db, p.path),
@@ -64,6 +72,10 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getDefinitions: (p: NameParams) => queries.getDefinitions(opened().db, p.name),
     getCallers: (p: NameParams) => queries.getCallers(opened().db, p.name),
     getCallees: (p: SymbolIdParams) => queries.getCallees(opened().db, p.symbolId),
+    resolve: (p: ResolveParams) => resolveSymbol(opened().db, p.name, p.fromPath),
+    getReferences: (p: NameParams) => queries.getReferences(opened().db, p.name),
+    getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
+    getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
   });
 
   server.emit('ready', { protocolVersion: PROTOCOL_VERSION });

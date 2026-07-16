@@ -41,7 +41,17 @@ body {
 .symbol-kind { display: inline-block; width: 18px; color: var(--accent); font-weight: 600; }
 .symbol-line { color: var(--fg-dim); margin-left: 6px; font-size: 11px; }
 
+.ref-highlight { background: rgba(74, 158, 255, 0.18); border-radius: 2px; }
+
+.context-header { margin-left: 10px; color: var(--accent); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.context-header:hover { text-decoration: underline; }
+.context-body { display: flex; flex-direction: column; }
+.context-editor { flex: 1; min-height: 0; }
+
 .tabs { flex: none; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.nav-buttons { display: flex; align-items: center; padding: 0 4px; border-right: 1px solid var(--border); }
+.nav-btn { padding: 2px 6px; cursor: pointer; color: var(--fg-dim); font-size: 11px; }
+.nav-btn:hover { color: var(--fg); }
 .tab {
   display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer;
   border-right: 1px solid var(--border); white-space: nowrap; color: var(--fg-dim);
@@ -75,3 +85,24 @@ body {
 .recent-list { display: flex; flex-direction: column; gap: 4px; }
 .recent-item { color: var(--accent); cursor: pointer; }
 .recent-item:hover { text-decoration: underline; }
+
+.search-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 50; display: flex; justify-content: center; }
+.search-box { margin-top: 8vh; width: 640px; max-height: 60vh; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.search-box input { padding: 10px 12px; font-size: 14px; background: var(--bg); color: var(--fg); border: none; border-bottom: 1px solid var(--border); outline: none; border-radius: 6px 6px 0 0; }
+.search-results { overflow-y: auto; }
+.search-section { padding: 4px 12px; font-size: 11px; text-transform: uppercase; color: var(--fg-dim); background: var(--bg); }
+.search-item { display: flex; justify-content: space-between; gap: 12px; padding: 5px 12px; cursor: pointer; }
+.search-item:hover, .search-item.selected { background: var(--bg-active); }
+.search-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-snippet { color: var(--fg-dim); font-size: 12px; }
+.search-detail { color: var(--fg-dim); font-size: 12px; white-space: nowrap; }
+
+.rel-tabs { flex: none; display: flex; gap: 2px; padding: 2px 6px; border-bottom: 1px solid var(--border); }
+.rel-tab { padding: 2px 8px; font-size: 11px; cursor: pointer; color: var(--fg-dim); border-radius: 3px; }
+.rel-tab.active { background: var(--bg-active); color: var(--fg); }
+.rel-item { display: flex; align-items: center; gap: 6px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.rel-item:hover { background: var(--bg-hover); }
+.rel-label { overflow: hidden; text-overflow: ellipsis; }
+.rel-kind { color: var(--fg-dim); font-size: 11px; }
+.rel-detail { margin-left: auto; color: var(--fg-dim); font-size: 11px; }
+.rel-group { padding: 2px 8px; color: var(--fg-dim); font-size: 11px; background: var(--bg); }

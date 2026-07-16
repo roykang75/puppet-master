@@ -41,10 +41,10 @@ export function SymbolWindow() {
         {indexing && <div className="hint">인덱싱 중…</div>}
         {!indexing &&
           symbols.map((s) => (
-            <div key={s.id} className="symbol-item" onClick={() => revealLine(s.line)}>
+            <div key={s.id} className="symbol-item" onClick={() => revealLine(s.line + 1)}>
               <span className="symbol-kind">{KIND_BADGE[s.kind] ?? '?'}</span>
               {s.name}
-              <span className="symbol-line">:{s.line}</span>
+              <span className="symbol-line">:{s.line + 1}</span>
             </div>
           ))}
       </div>
