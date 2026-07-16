@@ -28,9 +28,9 @@ body {
 .panel-body { flex: 1; overflow: auto; min-height: 0; }
 .hint { padding: 8px; color: var(--fg-dim); }
 
-.resize-handle { background: var(--border); }
-.resize-handle[data-panel-group-direction='horizontal'] { width: 3px; }
-.resize-handle[data-panel-group-direction='vertical'] { height: 3px; }
+.resize-handle { background: var(--border); flex: none; }
+.resize-handle-h { width: 3px; }
+.resize-handle-v { height: 3px; }
 
 .tree-item { padding: 2px 8px; cursor: pointer; white-space: nowrap; }
 .tree-item:hover { background: var(--bg-hover); }

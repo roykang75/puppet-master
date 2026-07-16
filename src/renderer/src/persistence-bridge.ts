@@ -1,0 +1,29 @@
+import { useAppStore } from './store';
+
+let panelLayouts: Record<string, string> = {};
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+export function initLayouts(saved: Record<string, string> | undefined | null): void {
+  panelLayouts = { ...(saved ?? {}) };
+}
+
+export const layoutStorage = {
+  getItem: (name: string): string | null => panelLayouts[name] ?? null,
+  setItem: (name: string, value: string): void => {
+    panelLayouts[name] = value;
+    scheduleSave();
+  },
+};
+
+export function scheduleSave(): void {
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(() => {
+    const s = useAppStore.getState();
+    if (!s.root) return;
+    void window.si.saveUiState({
+      panelLayouts,
+      openTabs: s.tabs.map((t) => t.path),
+      activeTab: s.activePath,
+    });
+  }, 500);
+}
