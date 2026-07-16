@@ -10,6 +10,7 @@ import {
   PROTOCOL_VERSION,
   OpenProjectParams,
   FileParams,
+  IndexBufferParams,
   SearchParams,
   NameParams,
   SymbolIdParams,
@@ -44,7 +45,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
       });
       watcher = watchProject(root, {
         onChangeOrAdd: (abs) => {
-          if (opened().indexer.indexFile(abs)) server.emit('fileIndexed', { path: rel(abs) });
+          if (opened().indexer.indexFile(abs)) server.emit('fileIndexed', { path: rel(abs), source: 'disk' });
         },
         onRemove: (abs) => {
           opened().indexer.removeFile(abs);
@@ -55,7 +56,12 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     },
     indexFile(params: FileParams) {
       const changed = opened().indexer.indexFile(path.join(root, params.path));
-      if (changed) server.emit('fileIndexed', { path: params.path });
+      if (changed) server.emit('fileIndexed', { path: params.path, source: 'disk' });
+      return { indexed: changed };
+    },
+    indexBuffer(params: IndexBufferParams) {
+      const changed = opened().indexer.indexContent(params.path, params.content);
+      if (changed) server.emit('fileIndexed', { path: params.path, source: 'buffer' });
       return { indexed: changed };
     },
     getFileOutline: (p: FileParams) => queries.getSymbolsForFile(opened().db, p.path),

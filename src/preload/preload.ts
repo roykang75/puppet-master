@@ -14,6 +14,8 @@ const api = {
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),
+  indexBuffer: (rel: string, content: string): Promise<{ indexed: boolean }> =>
+    ipcRenderer.invoke('indexer:indexBuffer', rel, content),
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   onIndexerEvent: (cb: (event: string, payload: unknown) => void): void => {
     ipcRenderer.on('indexer:event', (_e, msg: { event: string; payload: unknown }) => cb(msg.event, msg.payload));

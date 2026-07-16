@@ -29,6 +29,21 @@ export function disposeAllModels(): void {
   for (const model of monaco.editor.getModels()) model.dispose();
 }
 
+const bufferTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleBufferIndex(relPath: string, model: import('monaco-editor').editor.ITextModel): void {
+  const prev = bufferTimers.get(relPath);
+  if (prev) clearTimeout(prev);
+  bufferTimers.set(
+    relPath,
+    setTimeout(() => {
+      bufferTimers.delete(relPath);
+      if (model.isDisposed()) return;
+      void window.si.indexBuffer(relPath, model.getValue()).catch(() => {});
+    }, 500),
+  );
+}
+
 export function EditorPane() {
   const activePath = useAppStore((s) => s.activePath);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -66,7 +81,10 @@ export function EditorPane() {
       .then((content) => {
         if (cancelled) return;
         const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel(content, undefined, uri);
-        model.onDidChangeContent(() => useAppStore.getState().setDirty(activePath, true));
+        model.onDidChangeContent(() => {
+          useAppStore.getState().setDirty(activePath, true);
+          scheduleBufferIndex(activePath, model); // 500ms 유휴 재파싱 (스펙 §8)
+        });
         editorInstance?.setModel(model);
       })
       .catch(() => {

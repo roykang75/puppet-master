@@ -101,6 +101,10 @@ function registerIpc(): void {
       console.error('[indexFile]', rel, err.message);
     });
   });
+  ipcMain.handle('indexer:indexBuffer', (_e, rel: string, content: string) => {
+    if (!indexer) return { indexed: false }; // 인덱서 없으면 조용히 무시 (편집은 계속 가능)
+    return indexer.rpc.request('indexBuffer', { path: rel, content }, { timeoutMs: 180_000 });
+  });
   ipcMain.handle('indexer:getFileOutline', (_e, rel: string) => {
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
     // 초기 인덱싱 큐잉 대비 — indexDone 후 요청이 원칙이나 대형 프로젝트 여유

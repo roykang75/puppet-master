@@ -67,6 +67,16 @@ describe('indexer host', () => {
     const outline2 = await rpc.request<SymbolHit[]>('getFileOutline', { path: 'a.ts' });
     expect(outline2.map((s) => s.name)).toContain('beta');
 
+    // indexBuffer: 디스크 미저장 내용 인덱싱 + source:'buffer' 이벤트
+    const res3 = await rpc.request<{ indexed: boolean }>('indexBuffer', {
+      path: 'a.ts',
+      content: 'export function alpha() { return 1; }\nexport function beta() { return 2; }\nexport function gamma() { return 3; }\n',
+    });
+    expect(res3.indexed).toBe(true);
+    expect(events.some((e) => e.event === 'fileIndexed' && (e.payload as { source?: string }).source === 'buffer')).toBe(true);
+    const outline3 = await rpc.request<SymbolHit[]>('getFileOutline', { path: 'a.ts' });
+    expect(outline3.map((s) => s.name)).toContain('gamma');
+
     // 프로젝트 미오픈 상태 보호는 별도 인스턴스로 확인
     const pair2 = makePair();
     const rpc2 = createRpcClient(pair2.client);

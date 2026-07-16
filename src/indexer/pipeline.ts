@@ -64,7 +64,15 @@ export class Indexer {
     } catch {
       return false;
     }
-    const rel = this.toRel(absPath);
+    return this.indexContent(this.toRel(absPath), content);
+  }
+
+  /** 디스크 대신 주어진 내용으로 인덱싱 (유휴 재파싱용). 해시 가드 동일 — 저장 시 indexFile과 자연 수렴.
+   *  @returns true면 인덱싱함, false면 해시 동일로 스킵 */
+  indexContent(relPath: string, content: string): boolean {
+    const spec = languageForPath(relPath);
+    if (!spec) return false;
+    const rel = relPath;
     const hash = crypto.createHash('sha1').update(content).digest('hex');
     const existing = this.db.prepare(`SELECT id, hash FROM files WHERE path=?`).get(rel) as { id: number; hash: string } | undefined;
     if (existing && existing.hash === hash) return false;

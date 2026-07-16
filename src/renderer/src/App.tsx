@@ -51,7 +51,13 @@ function handleIndexerEvent(event: string, payload: unknown): void {
   }
   if (event === 'indexError') st.setError((payload as { message: string }).message);
   if (event === 'fileIndexed' || event === 'fileRemoved') {
-    const p = (payload as FileIndexedPayload).path;
+    const payload2 = payload as FileIndexedPayload;
+    const p = payload2.path;
+    // 버퍼 인덱싱 유래 — dirty/디스크 리로드 블록 전체 스킵 (자기 타이핑이 ⚠를 만들면 안 됨)
+    if (payload2.source === 'buffer') {
+      if (p === st.activePath) st.bumpOutline();
+      return;
+    }
     if (p === st.activePath) st.bumpOutline();
     const tab = st.tabs.find((t) => t.path === p);
     if (tab) {
