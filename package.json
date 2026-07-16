@@ -4,19 +4,35 @@
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json && vite build",
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "vite build",
+    "dev:renderer": "vite",
+    "dev": "VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "start": "electron .",
     "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
     "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3",
     "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3",
     "bench": "node dist/scripts/bench.js"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
+    "@playwright/test": "^1.61.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "electron": "^43.1.1",
+    "monaco-editor": "^0.55.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-resizable-panels": "^4.12.2",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10",
+    "zustand": "^5.0.14"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
