@@ -124,5 +124,23 @@
 - [ ] **렌더러 typecheck 게이트 존재**: `npm run build`는 `typecheck:renderer`(src/renderer/tsconfig.json,
   `--noEmit`)를 포함 — 신규 자동완성 컴포넌트도 이 게이트를 통과해야 빌드·E2E가 성립한다.
 
+### ✅ Plan 5: AI 코드 자동완성 (v1.5 마감 — Task 1~5, 검증 green)
+- [x] 계획/설계 문서 작성 (`docs/superpowers/plans/2026-07-17-plan5-ai-completion.md`, `docs/superpowers/specs/2026-07-17-plan5-ai-completion-design.md` — 결정 기록 포함)
+- [x] 설정: main `safeStorage` API 키 저장 + 설정 오버레이(Cmd/Ctrl+,) — 키는 렌더러/디스크 평문에 두지 않음
+- [x] 어댑터: Anthropic(`messages.create`) / OpenAI(`chat.completions.create`, `baseURL`로 로컬 LLM) + 프롬프트·후처리·오류 분류(auth/transient/other)
+- [x] 서비스: 컨텍스트 빌드(아웃라인 시그니처 캐시, 인덱서 무변경 read-only 조회) + `completion:request` IPC
+- [x] 렌더러: InlineCompletionsProvider 고스트 텍스트(내장 debounce 300ms) + 비활성 정책(세대 토큰/60초 백오프) + 상태바 표기
+- [x] 검증: `npm run build` + `npm test` **146/146** green, `npm run test:e2e` 기존 **3 specs 회귀 없음**(provider `none` 기본이라 기존 흐름 무영향), node ABI 복구 후 재검증 green
+
+**알려진 한계 (v1.5, 의도된 편차):**
+- **스트리밍 고스트 텍스트 없음**: Monaco `InlineCompletionsProvider`는 항목 배열을 한 번에 반환하는 API라 점진 렌더 경로가 없음 → 짧은 완성 + 300ms 디바운스에선 스트리밍 이득이 사실상 0. 어댑터 인터페이스는 후속 스트리밍 도입 여지를 유지.
+- **실 API 자동화 검증 없음**: 실제 provider 호출은 API 키가 필요해 CI/E2E에서 제외. fake 서버 통합 테스트(`completion-openai-integration.test.ts`)와 서비스/어댑터/설정 단위 테스트로 대체. 실 API 왕복은 수동 검증 대상.
+- **로컬 LLM 지원**: 별도 어댑터 없이 OpenAI 어댑터의 `baseURL`로 Ollama/LM Studio/llama.cpp 지원(상위 스펙 §7).
+- **provider `none`(기본) 완전 비활성**: 미설정 시 고스트 텍스트/네트워크 호출이 발생하지 않아 오프라인·무비용 — 기존 인덱싱/분석 경로에 영향 없음.
+
+### 🔜 다음 단계
+
+**v2 착수는 사용자 결정 필요** — 아래 백로그 항목은 범위/우선순위 합의 후 개별 계획 문서를 작성하고 시작한다.
+
 ### v2 이후 (백로그)
-- [ ] LSP 보강(정밀 모드), 심볼 자동완성(비-AI), 스니펫/Clip Window, Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 채팅
+- [ ] LSP 보강(정밀 모드), 심볼 자동완성(비-AI), 스니펫/Clip Window, Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 채팅, AI 완성 스트리밍
