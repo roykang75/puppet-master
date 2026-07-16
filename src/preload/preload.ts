@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -44,6 +44,8 @@ const api = {
     s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string },
     apiKey?: string,
   ): Promise<void> => ipcRenderer.invoke('settings:completion:set', s, apiKey),
+  requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
+    ipcRenderer.invoke('completion:request', ctx),
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
   saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
