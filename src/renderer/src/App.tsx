@@ -59,7 +59,15 @@ function handleIndexerEvent(event: string, payload: unknown): void {
         if (getContent(p) !== null) st.markDiskChanged(p);
       } else {
         // dirty 아님 → 디스크 내용으로 조용히 리로드 (자기 저장으로 인한 이벤트면 내용 동일 → no-op)
-        void window.si.readFile(p).then((content) => setDiskContent(p, content)).catch(() => {});
+        void window.si
+          .readFile(p)
+          .then((content) => {
+            // readFile 사이에 사용자가 입력해 dirty가 됐으면 덮어쓰지 않고 ⚠ 표시로 전환
+            const now = useAppStore.getState().tabs.find((t) => t.path === p);
+            if (now?.dirty) st.markDiskChanged(p);
+            else setDiskContent(p, content);
+          })
+          .catch(() => {});
       }
     }
   }

@@ -20,6 +20,7 @@ export function SymbolWindow() {
       return;
     }
     let cancelled = false;
+    setSymbols([]); // 파일 전환 시 이전 파일 심볼 잔상 제거
     void window.si
       .getFileOutline(activePath)
       .then((hits) => {
