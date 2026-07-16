@@ -51,6 +51,10 @@ describe('indexer host', () => {
     }, { timeoutMs: 60_000 });
     expect(stats.files).toBe(1);
 
+    await expect(
+      rpc.request('openProject', { root, dbPath: path.join(work, 'index', 'test.db') }),
+    ).rejects.toThrow('project already open');
+
     const outline = await rpc.request<SymbolHit[]>('getFileOutline', { path: 'a.ts' });
     expect(outline.map((s) => s.name)).toContain('alpha');
 

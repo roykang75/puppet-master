@@ -33,6 +33,8 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
 
   const server = createRpcServer(transport, {
     openProject(params: OpenProjectParams) {
+      // 호스트당 openProject는 1회 — 프로젝트 전환은 새 utilityProcess 기동으로 처리 (main 설계)
+      if (db) throw new Error('project already open');
       root = params.root;
       fs.mkdirSync(path.dirname(params.dbPath), { recursive: true });
       db = openDb(params.dbPath);
