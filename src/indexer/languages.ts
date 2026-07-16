@@ -18,6 +18,8 @@ const C_QUERY = `
 (translation_unit (declaration declarator: (identifier) @name) @def.variable)
 (translation_unit (declaration declarator: (init_declarator declarator: (identifier) @name)) @def.variable)
 (call_expression function: (identifier) @ref.call)
+(preproc_include path: (string_literal) @ref.import)
+(preproc_include path: (system_lib_string) @ref.import)
 `;
 
 const TS_QUERY = `
@@ -33,6 +35,11 @@ const TS_QUERY = `
 (call_expression function: (identifier) @ref.call)
 (call_expression function: (member_expression property: (property_identifier) @ref.call))
 (new_expression constructor: (identifier) @ref.call)
+(import_statement source: (string) @ref.import)
+(export_statement source: (string) @ref.import)
+(class_declaration (class_heritage (extends_clause value: (identifier) @ref.extends)))
+(class_declaration (class_heritage (implements_clause (type_identifier) @ref.extends)))
+(interface_declaration (extends_type_clause (type_identifier) @ref.extends))
 `;
 
 const CPP_QUERY = `
@@ -48,6 +55,9 @@ const CPP_QUERY = `
 (preproc_function_def name: (identifier) @name) @def.macro
 (call_expression function: (identifier) @ref.call)
 (call_expression function: (field_expression field: (field_identifier) @ref.call))
+(preproc_include path: (string_literal) @ref.import)
+(preproc_include path: (system_lib_string) @ref.import)
+(base_class_clause (type_identifier) @ref.extends)
 `;
 
 const PY_QUERY = `
@@ -56,6 +66,11 @@ const PY_QUERY = `
 (module (expression_statement (assignment left: (identifier) @name) @def.variable))
 (call function: (identifier) @ref.call)
 (call function: (attribute attribute: (identifier) @ref.call))
+(import_statement name: (dotted_name) @ref.import)
+(import_from_statement module_name: (dotted_name) @ref.import)
+(import_from_statement module_name: (relative_import) @ref.import)
+(class_definition superclasses: (argument_list (identifier) @ref.extends))
+(class_definition superclasses: (argument_list (attribute attribute: (identifier) @ref.extends)))
 `;
 
 const JAVA_QUERY = `
@@ -67,6 +82,9 @@ const JAVA_QUERY = `
 (field_declaration declarator: (variable_declarator name: (identifier) @name)) @def.field
 (method_invocation name: (identifier) @ref.call)
 (object_creation_expression type: (type_identifier) @ref.call)
+(import_declaration (scoped_identifier) @ref.import)
+(class_declaration superclass: (superclass (type_identifier) @ref.extends))
+(class_declaration interfaces: (super_interfaces (type_list (type_identifier) @ref.extends)))
 `;
 
 // require는 문법 패키지에 타입 정의가 없어 불가피
