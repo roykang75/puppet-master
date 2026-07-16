@@ -8,14 +8,11 @@ import { RelationPanel } from './components/RelationPanel';
 import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
-import { EditorPane, getContent, disposeAllModels } from './components/EditorPane';
+import { SymbolWindow } from './components/SymbolWindow';
+import { EditorPane, getContent, setDiskContent, disposeAllModels } from './components/EditorPane';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
-// Task 9에서 실제 컴포넌트로 교체된다
-const SymbolWindow = () => (
-  <div className="panel"><div className="panel-title">Symbols</div><div className="panel-body" /></div>
-);
 const EditorArea = () => (
   <div className="editor-area">
     <FileTabs />
@@ -56,7 +53,15 @@ function handleIndexerEvent(event: string, payload: unknown): void {
   if (event === 'fileIndexed' || event === 'fileRemoved') {
     const p = (payload as FileIndexedPayload).path;
     if (p === st.activePath) st.bumpOutline();
-    // 열린 파일의 외부 변경 처리는 Task 9에서 확장
+    const tab = st.tabs.find((t) => t.path === p);
+    if (tab) {
+      if (event === 'fileRemoved' || tab.dirty) {
+        if (getContent(p) !== null) st.markDiskChanged(p);
+      } else {
+        // dirty 아님 → 디스크 내용으로 조용히 리로드 (자기 저장으로 인한 이벤트면 내용 동일 → no-op)
+        void window.si.readFile(p).then((content) => setDiskContent(p, content)).catch(() => {});
+      }
+    }
   }
 }
 
