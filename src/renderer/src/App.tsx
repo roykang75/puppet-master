@@ -6,17 +6,22 @@ import { EmptyState } from './components/EmptyState';
 import { StatusBar } from './components/StatusBar';
 import { RelationPanel } from './components/RelationPanel';
 import { ContextPanel } from './components/ContextPanel';
+import { ProjectWindow } from './components/ProjectWindow';
+import { FileTabs } from './components/FileTabs';
+import { EditorPane, getContent } from './components/EditorPane';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
-// Task 8/9에서 실제 컴포넌트로 교체된다
-const ProjectWindow = () => (
-  <div className="panel"><div className="panel-title">Project</div><div className="panel-body" /></div>
-);
+// Task 9에서 실제 컴포넌트로 교체된다
 const SymbolWindow = () => (
   <div className="panel"><div className="panel-title">Symbols</div><div className="panel-body" /></div>
 );
-const EditorArea = () => <div className="editor-area" />;
+const EditorArea = () => (
+  <div className="editor-area">
+    <FileTabs />
+    <EditorPane />
+  </div>
+);
 
 async function openProject(root: string): Promise<void> {
   const st = useAppStore.getState();
@@ -116,6 +121,37 @@ export function App() {
     });
     const unsub = useAppStore.subscribe(scheduleSave);
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    const save = async () => {
+      const st = useAppStore.getState();
+      if (!st.activePath) return;
+      const tab = st.tabs.find((t) => t.path === st.activePath);
+      if (!tab?.dirty) return;
+      const content = getContent(st.activePath);
+      if (content == null) return;
+      try {
+        await window.si.saveFile(st.activePath, content);
+        st.setDirty(st.activePath, false);
+        st.setError(null);
+      } catch (e) {
+        st.setError(`저장 실패: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    };
+    const onSave = () => void save();
+    const onKey = (ev: KeyboardEvent) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') {
+        ev.preventDefault();
+        void save();
+      }
+    };
+    window.addEventListener('si:save', onSave);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('si:save', onSave);
+      window.removeEventListener('keydown', onKey, true);
+    };
   }, []);
 
   if (!root) return <EmptyState onOpen={(r) => void openProject(r)} />;
