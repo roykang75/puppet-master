@@ -19,6 +19,7 @@ interface AppState {
   cursorSymbol: { name: string; path: string; line: number; col: number } | null;
   pendingJump: { path: string; line: number; col: number } | null;
   searchOpen: boolean;
+  settingsOpen: boolean;
   renameRequest: { name: string; path: string } | null;
   bookmarks: Bookmark[];
   setProject(root: string): void;
@@ -34,6 +35,7 @@ interface AppState {
   setCursorSymbol(s: AppState['cursorSymbol']): void;
   setPendingJump(j: AppState['pendingJump']): void;
   setSearchOpen(v: boolean): void;
+  setSettingsOpen(v: boolean): void;
   setRenameRequest(r: { name: string; path: string } | null): void;
   setBookmarks(list: Bookmark[]): void;
 }
@@ -49,6 +51,7 @@ export const useAppStore = create<AppState>((set) => ({
   cursorSymbol: null,
   pendingJump: null,
   searchOpen: false,
+  settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
   bookmarks: [],
   setProject: (root) =>
@@ -79,6 +82,7 @@ export const useAppStore = create<AppState>((set) => ({
   setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
   setPendingJump: (pendingJump) => set({ pendingJump }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
   setBookmarks: (bookmarks) => set({ bookmarks }),
 }));

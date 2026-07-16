@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron';
 import * as path from 'path';
 import { spawnIndexer, IndexerManager } from './indexer-manager';
 import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
+import { SettingsStore, SettingsCrypto } from './settings';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
 import type { UiState, RenameFileGroup, RenameApplyResult } from '../shared/protocol';
@@ -23,6 +24,7 @@ let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
 let quitting = false;
 let persistence: Persistence;
+let settingsStore: SettingsStore;
 
 const sendMenu = (action: MenuAction) => win?.webContents.send('menu', action);
 const sendIndexerEvent = (event: string, payload: unknown) =>
@@ -172,6 +174,14 @@ function registerIpc(): void {
   ipcMain.handle('bookmarks:save', (_e, list: unknown[]) => {
     if (currentRoot) persistence.saveBookmarks(currentRoot, list);
   });
+  ipcMain.handle('settings:completion:get', () => settingsStore.toPublic());
+  ipcMain.handle(
+    'settings:completion:set',
+    (_e, s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string }, apiKey?: string) => {
+      // throw는 그대로 렌더러로 전파 — 오버레이가 오류를 표시한다 (safeStorage 미지원 등)
+      settingsStore.setCompletion(s, apiKey);
+    },
+  );
 }
 
 function createWindow(): void {
@@ -191,6 +201,12 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   persistence = new Persistence(app.getPath('userData'));
+  const settingsCrypto: SettingsCrypto = {
+    isAvailable: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (s) => safeStorage.encryptString(s),
+    decrypt: (b) => safeStorage.decryptString(b),
+  };
+  settingsStore = new SettingsStore(app.getPath('userData'), settingsCrypto);
   createWindow();
   buildMenu(persistence.loadRecent(), sendMenu);
   registerIpc();

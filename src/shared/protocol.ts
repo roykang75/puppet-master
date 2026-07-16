@@ -47,6 +47,15 @@ export interface FileIndexedPayload {
   source?: 'buffer' | 'disk'; // 생략 시 'disk'
 }
 
+// ── AI 코드 자동완성 설정 (main safeStorage ↔ 렌더러) ──
+// API 키는 절대 렌더러로 전달하지 않는다 — hasApiKey 불리언만 노출.
+export interface CompletionSettings {
+  provider: 'none' | 'anthropic' | 'openai';
+  model: string;
+  baseURL?: string;
+  hasApiKey: boolean;
+}
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)
