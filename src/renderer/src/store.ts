@@ -15,6 +15,8 @@ interface AppState {
   tabs: Tab[];
   activePath: string | null;
   outlineVersion: number;
+  cursorSymbol: { name: string; path: string; line: number; col: number } | null;
+  pendingJump: { path: string; line: number; col: number } | null;
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -25,6 +27,8 @@ interface AppState {
   setDirty(path: string, dirty: boolean): void;
   markDiskChanged(path: string): void;
   bumpOutline(): void;
+  setCursorSymbol(s: AppState['cursorSymbol']): void;
+  setPendingJump(j: AppState['pendingJump']): void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -35,7 +39,10 @@ export const useAppStore = create<AppState>((set) => ({
   tabs: [],
   activePath: null,
   outlineVersion: 0,
-  setProject: (root) => set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null }),
+  cursorSymbol: null,
+  pendingJump: null,
+  setProject: (root) =>
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -59,4 +66,6 @@ export const useAppStore = create<AppState>((set) => ({
   markDiskChanged: (path) =>
     set((s) => ({ tabs: s.tabs.map((t) => (t.path === path ? { ...t, diskChanged: true } : t)) })),
   bumpOutline: () => set((s) => ({ outlineVersion: s.outlineVersion + 1 })),
+  setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
+  setPendingJump: (pendingJump) => set({ pendingJump }),
 }));

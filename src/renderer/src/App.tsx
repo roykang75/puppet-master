@@ -10,6 +10,7 @@ import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { EditorPane, getContent, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { goBack, goForward } from './navigation';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
@@ -171,13 +172,48 @@ export function App() {
         ev.preventDefault();
         ev.stopPropagation(); // 캡처 단계에서 소비 — Monaco 자체 바인딩과의 이중 발화 방지
         void save();
+        return;
+      }
+      if (ev.altKey && ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        goBack();
+        return;
+      }
+      if (ev.altKey && ev.key === 'ArrowRight') {
+        ev.preventDefault();
+        goForward();
+        return;
+      }
+      // Backspace 뒤로 — 에디터/입력 요소 밖에서만 (스펙 결정 기록)
+      const el = document.activeElement;
+      if (
+        ev.key === 'Backspace' &&
+        !el?.closest('.editor-host') &&
+        !(el instanceof HTMLInputElement) &&
+        !(el instanceof HTMLTextAreaElement)
+      ) {
+        ev.preventDefault();
+        goBack();
+      }
+    };
+    // 마우스 뒤로/앞으로 버튼 (button 3/4)
+    const onMouse = (ev: MouseEvent) => {
+      if (ev.button === 3) {
+        ev.preventDefault();
+        goBack();
+      }
+      if (ev.button === 4) {
+        ev.preventDefault();
+        goForward();
       }
     };
     window.addEventListener('si:save', onSave);
     window.addEventListener('keydown', onKey, true);
+    window.addEventListener('mouseup', onMouse);
     return () => {
       window.removeEventListener('si:save', onSave);
       window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mouseup', onMouse);
     };
   }, []);
 

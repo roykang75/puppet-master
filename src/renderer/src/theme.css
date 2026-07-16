@@ -41,7 +41,12 @@ body {
 .symbol-kind { display: inline-block; width: 18px; color: var(--accent); font-weight: 600; }
 .symbol-line { color: var(--fg-dim); margin-left: 6px; font-size: 11px; }
 
+.ref-highlight { background: rgba(74, 158, 255, 0.18); border-radius: 2px; }
+
 .tabs { flex: none; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.nav-buttons { display: flex; align-items: center; padding: 0 4px; border-right: 1px solid var(--border); }
+.nav-btn { padding: 2px 6px; cursor: pointer; color: var(--fg-dim); font-size: 11px; }
+.nav-btn:hover { color: var(--fg); }
 .tab {
   display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer;
   border-right: 1px solid var(--border); white-space: nowrap; color: var(--fg-dim);
