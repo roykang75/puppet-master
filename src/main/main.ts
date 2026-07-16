@@ -12,6 +12,7 @@ if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
   'searchSymbols', 'searchText', 'getCallers', 'getCallees', 'getRenameTargets',
+  'getFileTokens',
 ]);
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;

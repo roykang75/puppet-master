@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { monaco } from '../monaco-setup';
 import { useAppStore } from '../store';
 import { jumpTo, setCurrentLocProvider, type Loc } from '../navigation';
+import { buildTokenDecorations } from '../semantic-tokens';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -54,6 +55,14 @@ function highlightReferences(model: import('monaco-editor').editor.ITextModel, w
 function clearReferenceHighlights(): void {
   refDecorations?.clear();
   refDecorations = null;
+}
+
+// 시맨틱 토큰(글자색) — 참조 하이라이트(배경색)와 독립된 별도 컬렉션.
+let semDecorations: import('monaco-editor').editor.IEditorDecorationsCollection | null = null;
+
+function clearSemanticTokens(): void {
+  semDecorations?.clear();
+  semDecorations = null;
 }
 
 async function resolveAndJump(name: string, fromPath: string): Promise<void> {
@@ -120,6 +129,8 @@ let cursorTimer: ReturnType<typeof setTimeout> | null = null;
 export function EditorPane() {
   const activePath = useAppStore((s) => s.activePath);
   const pendingJump = useAppStore((s) => s.pendingJump);
+  const outlineVersion = useAppStore((s) => s.outlineVersion);
+  const indexing = useAppStore((s) => s.indexing);
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,6 +244,41 @@ export function EditorPane() {
       cancelled = true;
     };
   }, [activePath]);
+
+  // 시맨틱 토큰 색칠 — 심볼 DB 기반. 파일 전환/재인덱싱(outlineVersion) 시 재적용.
+  useEffect(() => {
+    clearSemanticTokens();
+    if (!activePath || indexing) return; // 인덱싱 중/비활성 → 색칠 없음(무해)
+    let cancelled = false;
+    const uri = uriOf(activePath);
+    const apply = (attempt = 0): void => {
+      if (cancelled) return;
+      const model = monaco.editor.getModel(uri);
+      // 모델이 아직 로드/활성화되지 않았으면 잠시 후 재시도 (파일 첫 열림 레이스)
+      if (!model || editorInstance?.getModel() !== model) {
+        if (attempt < 20) setTimeout(() => apply(attempt + 1), 100);
+        return;
+      }
+      void window.si
+        .getFileTokens(activePath)
+        .then((tokens) => {
+          if (cancelled || !editorInstance || editorInstance.getModel() !== model) return;
+          const decos = buildTokenDecorations(tokens.symbols, tokens.refs);
+          semDecorations?.clear();
+          semDecorations = editorInstance.createDecorationsCollection(
+            decos.map((d) => ({
+              range: new monaco.Range(d.line + 1, d.col + 1, d.line + 1, d.col + 1 + d.length),
+              options: { inlineClassName: d.className },
+            })),
+          );
+        })
+        .catch(() => {}); // 인덱서 미기동/비지원 파일 등 — 조용히 무시
+    };
+    apply();
+    return () => {
+      cancelled = true;
+    };
+  }, [activePath, outlineVersion, indexing]);
 
   // pendingJump 소비 — activePath 모델 세팅 이후 반영 (모델 로드 전이면 위 effect가 재시도)
   useEffect(() => {

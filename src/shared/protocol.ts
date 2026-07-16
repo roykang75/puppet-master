@@ -34,6 +34,11 @@ export interface RenameApplyResult {
   skipped: Array<{ path: string; line: number; col: number }>;
 }
 
+// ── 시맨틱 토큰 (getFileTokens) ──
+export interface FileRefRow { name: string; kind: string; line: number; col: number }
+// symbols는 indexer/api.ts의 SymbolHit[] (타입 전용 참조 — 런타임 순환 없음)
+export interface FileTokens { symbols: import('../indexer/api').SymbolHit[]; refs: FileRefRow[] }
+
 // ── 이벤트 페이로드 (인덱서 → UI) ──
 export interface ReadyPayload { protocolVersion: number }
 export interface IndexProgressPayload { done: number; total: number; file: string }

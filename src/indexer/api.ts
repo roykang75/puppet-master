@@ -1,6 +1,6 @@
 import type { Database } from 'better-sqlite3';
 import { splitName } from './fragments';
-import type { RenameOccurrence, RenameFileGroup, RenameTargets } from '../shared/protocol';
+import type { RenameOccurrence, RenameFileGroup, RenameTargets, FileRefRow } from '../shared/protocol';
 
 export interface SymbolHit {
   id: number;
@@ -63,6 +63,18 @@ export function getDefinitions(db: Database, name: string): SymbolHit[] {
 
 export function getSymbolsForFile(db: Database, relPath: string): SymbolHit[] {
   return db.prepare(`${HIT_SELECT} WHERE f.path = ? ORDER BY line`).all(relPath) as SymbolHit[];
+}
+
+/** 파일 내 참조(call/extends) — 시맨틱 토큰 색칠용. 0-기반 좌표. */
+export function getRefsForFile(db: Database, relPath: string): FileRefRow[] {
+  return db
+    .prepare(
+      `SELECT r.name, r.kind, r.line, r.col
+       FROM refs r JOIN files f ON f.id = r.file_id
+       WHERE f.path = ? AND r.kind IN ('call','extends')
+       ORDER BY r.line, r.col`,
+    )
+    .all(relPath) as FileRefRow[];
 }
 
 export function getCallers(db: Database, name: string): CallerHit[] {

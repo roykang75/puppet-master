@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { openDb } from '../src/indexer/db';
 import { Indexer } from '../src/indexer/pipeline';
-import { getRenameTargets } from '../src/indexer/api';
+import { getRenameTargets, getRefsForFile } from '../src/indexer/api';
 import type { RenameFileGroup } from '../src/shared/protocol';
 import type { Database } from 'better-sqlite3';
 
@@ -69,5 +69,17 @@ describe('getRenameTargets', () => {
     const aU = group(t.unconfirmed, 'a.ts');
     // a.ts의 유일한 helper는 정의(groups)이므로 unconfirmed 그룹 자체가 없어야 한다
     expect(aU).toBeUndefined();
+  });
+});
+
+describe('getRefsForFile', () => {
+  it('b.ts의 helper 호출 참조를 반환 (call/extends만)', () => {
+    const refs = getRefsForFile(db, 'b.ts');
+    const call = refs.find((r) => r.name === 'helper' && r.kind === 'call');
+    expect(call).toBeDefined();
+    expect(call!.line).toBe(1);
+    expect(call!.col).toBe(30);
+    // a.ts에는 참조가 없다 (정의만)
+    expect(getRefsForFile(db, 'a.ts').length).toBe(0);
   });
 });

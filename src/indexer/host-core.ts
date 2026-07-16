@@ -67,6 +67,10 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
       return { indexed: changed };
     },
     getFileOutline: (p: FileParams) => queries.getSymbolsForFile(opened().db, p.path),
+    getFileTokens: (p: FileParams) => ({
+      symbols: queries.getSymbolsForFile(opened().db, p.path),
+      refs: queries.getRefsForFile(opened().db, p.path),
+    }),
     searchSymbols: (p: SearchParams) => queries.searchSymbols(opened().db, p.query, p.limit),
     searchText: (p: SearchParams) => queries.searchText(opened().db, p.query, p.limit),
     getDefinitions: (p: NameParams) => queries.getDefinitions(opened().db, p.name),
