@@ -17,11 +17,14 @@ const kindRank = (k: string) => {
 
 const EXTS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.java', '.c', '.h', '.cpp', '.cc', '.cxx', '.hpp', '.hh'];
 
+// SQLite LIKE 특수문자(%, _, \) 이스케이프 — import 문자열이 와일드카드로 오작동하는 것 방지
+const likeEscape = (s: string) => s.replace(/[\\%_]/g, (c) => '\\' + c);
+
 /** fromPath의 import 문자열 하나를 프로젝트 rel 파일 경로들로 휴리스틱 매칭 */
 export function matchImport(db: Database, imp: string, fromPath: string): string[] {
   const out = new Set<string>();
   const byPath = db.prepare(`SELECT path FROM files WHERE path = ?`);
-  const bySuffix = db.prepare(`SELECT path FROM files WHERE path LIKE ?`);
+  const bySuffix = db.prepare(`SELECT path FROM files WHERE path LIKE ? ESCAPE '\\'`);
   const tryExact = (p: string) => {
     const norm = path.posix.normalize(p);
     if (byPath.get(norm) as { path: string } | undefined) out.add(norm);
@@ -35,14 +38,14 @@ export function matchImport(db: Database, imp: string, fromPath: string): string
   } else {
     // 비상대: basename 매칭 — C include("util.h"), Java(a.b.C), Python(a.b) 등
     const lastSeg = imp.split('/').pop()!;
-    const hasExt = /\.[a-z]+$/i.test(lastSeg);
+    const hasExt = EXTS.some((e) => lastSeg.endsWith(e));
     if (hasExt) {
-      for (const row of bySuffix.all(`%/${lastSeg}`) as { path: string }[]) out.add(row.path);
+      for (const row of bySuffix.all(`%/${likeEscape(lastSeg)}`) as { path: string }[]) out.add(row.path);
       tryExact(lastSeg); // 루트 직속
     } else {
       const dotted = lastSeg.split('.').pop()!; // java.util.List → List / os.path → path
       for (const e of EXTS) {
-        for (const row of bySuffix.all(`%/${dotted}${e}`) as { path: string }[]) out.add(row.path);
+        for (const row of bySuffix.all(`%/${likeEscape(dotted + e)}`) as { path: string }[]) out.add(row.path);
         tryExact(`${dotted}${e}`);
       }
     }

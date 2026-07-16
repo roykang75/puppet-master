@@ -60,4 +60,37 @@ describe('resolveSymbol 우선순위', () => {
     expect(imported).toContain('inc/util.h');
     db2.close();
   });
+  it('LIKE 와일드카드 이스케이프: my_util.h가 myXutil.h를 오매칭하지 않음', () => {
+    // SQLite LIKE에서 '_'는 임의 한 글자 → 이스케이프 없으면 my_util.h가 myXutil.h도 매칭
+    const proj3 = path.join(work, 'proj3');
+    fs.mkdirSync(path.join(proj3, 'inc'), { recursive: true });
+    fs.writeFileSync(path.join(proj3, 'main2.c'), '#include "my_util.h"\nint go2() { return helper2(); }\n');
+    fs.writeFileSync(path.join(proj3, 'inc', 'my_util.h'), 'int helper2() { return 1; }\n');
+    fs.writeFileSync(path.join(proj3, 'inc', 'myXutil.h'), 'int helper2() { return 9; }\n');
+    const db3 = openDb(path.join(work, 'test3.db'));
+    new Indexer(db3, proj3).indexProject();
+    const cands = resolveSymbol(db3, 'helper2', 'main2.c');
+    const byPath = new Map(cands.map((c) => [c.path, c.confidence]));
+    expect(byPath.get('inc/my_util.h')).toBe('imported');
+    expect(byPath.get('inc/myXutil.h')).toBe('global');
+    db3.close();
+  });
+  it('Python 점 import: from mypkg.mod import thing → mypkg/mod.py가 imported', () => {
+    const proj4 = path.join(work, 'proj4');
+    fs.mkdirSync(path.join(proj4, 'mypkg'), { recursive: true });
+    fs.writeFileSync(path.join(proj4, 'app.py'), 'from mypkg.mod import thing\ndef go(): return thing()\n');
+    fs.writeFileSync(path.join(proj4, 'mypkg', 'mod.py'), 'def thing(): return 1\n');
+    fs.writeFileSync(path.join(proj4, 'other.py'), 'def thing(): return 2\n');
+    const db4 = openDb(path.join(work, 'test4.db'));
+    new Indexer(db4, proj4).indexProject();
+    const cands = resolveSymbol(db4, 'thing', 'app.py');
+    const byPath = new Map(cands.map((c) => [c.path, c.confidence]));
+    expect(byPath.get('mypkg/mod.py')).toBe('imported');
+    expect(byPath.get('other.py')).toBe('global');
+    // imported가 global보다 앞선다
+    const idxImported = cands.findIndex((c) => c.path === 'mypkg/mod.py');
+    const idxGlobal = cands.findIndex((c) => c.path === 'other.py');
+    expect(idxImported).toBeLessThan(idxGlobal);
+    db4.close();
+  });
 });
