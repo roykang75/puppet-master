@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { getContent } from './EditorPane';
 import type { RenameFileGroup, RenameOccurrence, RenameTargets, RenameApplyResult } from '../../../shared/protocol';
+import { keyOf, mergeCheckedGroups } from './renameMerge';
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
-const keyOf = (path: string, occ: RenameOccurrence): string => `${path}:${occ.line}:${occ.col}`;
 
 export function RenameOverlay() {
   const request = useAppStore((s) => s.renameRequest);
@@ -71,14 +71,11 @@ export function RenameOverlay() {
     [targets],
   );
 
-  const checkedGroups = useMemo<RenameFileGroup[]>(() => {
-    const out: RenameFileGroup[] = [];
-    for (const g of allGroups) {
-      const occs = g.occurrences.filter((o) => checked.has(keyOf(g.path, o)));
-      if (occs.length > 0) out.push({ path: g.path, occurrences: occs });
-    }
-    return out;
-  }, [allGroups, checked]);
+  // groups/unconfirmed가 같은 파일을 가질 수 있어 path 기준으로 병합 (renameMerge 참고)
+  const checkedGroups = useMemo<RenameFileGroup[]>(
+    () => (targets ? mergeCheckedGroups(targets.groups, targets.unconfirmed, checked) : []),
+    [targets, checked],
+  );
 
   if (!request) return null;
 
