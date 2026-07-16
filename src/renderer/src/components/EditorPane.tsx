@@ -3,6 +3,7 @@ import { monaco } from '../monaco-setup';
 import { useAppStore } from '../store';
 import { jumpTo, setCurrentLocProvider, type Loc } from '../navigation';
 import { buildTokenDecorations } from '../semantic-tokens';
+import { registerCompletionProvider } from '../completion-provider';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -138,8 +139,10 @@ export function EditorPane() {
       theme: 'vs-dark',
       automaticLayout: true,
       minimap: { enabled: true },
+      inlineSuggest: { enabled: true }, // AI 고스트 텍스트 활성화
       model: null,
     });
+    registerCompletionProvider(monaco); // 앱 수명 1회 (내부 플래그로 재마운트 이중 등록 방지)
     editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
       window.dispatchEvent(new CustomEvent('si:save')),
     );

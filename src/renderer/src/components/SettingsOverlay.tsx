@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
+import { refreshCompletionSettings } from '../completion-provider';
 import type { CompletionSettings } from '../../../shared/protocol';
 
 type Provider = 'none' | 'anthropic' | 'openai';
@@ -61,7 +62,10 @@ export function SettingsOverlay() {
         { provider, model, baseURL: provider === 'openai' && baseURL ? baseURL : undefined },
         apiKey || undefined,
       )
-      .then(() => close())
+      .then(() => {
+        void refreshCompletionSettings(); // 설정 캐시 갱신 + auth 비활성 해제
+        close();
+      })
       .catch((e) => {
         setError(e instanceof Error ? e.message : String(e));
         setSaving(false);

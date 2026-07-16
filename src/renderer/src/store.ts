@@ -21,6 +21,7 @@ interface AppState {
   searchOpen: boolean;
   settingsOpen: boolean;
   renameRequest: { name: string; path: string } | null;
+  completionStatus: string | null;
   bookmarks: Bookmark[];
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
@@ -37,6 +38,7 @@ interface AppState {
   setSearchOpen(v: boolean): void;
   setSettingsOpen(v: boolean): void;
   setRenameRequest(r: { name: string; path: string } | null): void;
+  setCompletionStatus(msg: string | null): void;
   setBookmarks(list: Bookmark[]): void;
 }
 
@@ -53,6 +55,7 @@ export const useAppStore = create<AppState>((set) => ({
   searchOpen: false,
   settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
+  completionStatus: null,
   bookmarks: [],
   setProject: (root) =>
     set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, bookmarks: [] }),
@@ -84,5 +87,6 @@ export const useAppStore = create<AppState>((set) => ({
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
+  setCompletionStatus: (completionStatus) => set({ completionStatus }),
   setBookmarks: (bookmarks) => set({ bookmarks }),
 }));
