@@ -142,9 +142,15 @@ export function EditorPane() {
         const model = editorInstance?.getModel();
         if (!model || !st.activePath) return;
         const word = model.getWordAtPosition(e.position);
-        st.setCursorSymbol(
-          word ? { name: word.word, path: st.activePath, line: e.position.lineNumber, col: e.position.column } : null,
-        );
+        const prev = st.cursorSymbol;
+        const next = word
+          ? { name: word.word, path: st.activePath, line: e.position.lineNumber, col: e.position.column }
+          : null;
+        // 같은 심볼(name/path 동일)이면 새 객체를 만들지 않는다 — cursorSymbol 정체성 변화로 인한
+        // Relation/Context 재실행(수동 트리 확장 폐기)을 방지 (position 필드는 resolve 입력이 아님)
+        if (!(prev?.name === next?.name && prev?.path === next?.path && (prev === null) === (next === null))) {
+          st.setCursorSymbol(next);
+        }
         highlightReferences(model, word?.word ?? null);
       }, 150);
     });

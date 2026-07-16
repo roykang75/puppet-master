@@ -12,7 +12,7 @@ import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
 import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
 import { SearchOverlay } from './components/SearchOverlay';
-import { goBack, goForward } from './navigation';
+import { goBack, goForward, navHistory } from './navigation';
 import { computeAnchor } from './bookmarks';
 import type { Bookmark } from './bookmarks';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
@@ -32,6 +32,8 @@ async function openProject(root: string): Promise<void> {
     initLayouts(res.uiState?.panelLayouts);
     // 프로젝트 전환 시 이전 프로젝트의 모델 전부 폐기 — URI가 root 무관이라 재사용 오염 방지
     disposeAllModels();
+    navHistory.reset(); // 이전 프로젝트의 뒤로/앞으로 히스토리 폐기
+
     st.setProject(res.root);
     applyUiState(res.uiState);
     void window.si.loadBookmarks().then((l) => st.setBookmarks(l as Bookmark[]));

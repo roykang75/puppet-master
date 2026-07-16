@@ -33,8 +33,7 @@ export function matchImport(db: Database, imp: string, fromPath: string): string
     const base = path.posix.join(path.posix.dirname(fromPath), imp);
     tryExact(base);
     for (const e of EXTS) tryExact(base + e);
-    tryExact(base + '/index.ts');
-    tryExact(base + '/index.js');
+    for (const e of ['/index.ts', '/index.tsx', '/index.js', '/index.jsx', '/index.mjs', '/index.cjs']) tryExact(base + e);
   } else {
     // 비상대: basename 매칭 — C include("util.h"), Java(a.b.C), Python(a.b) 등
     const lastSeg = imp.split('/').pop()!;

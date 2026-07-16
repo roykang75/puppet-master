@@ -75,6 +75,27 @@ describe('resolveSymbol 우선순위', () => {
     expect(byPath.get('inc/myXutil.h')).toBe('global');
     db3.close();
   });
+  it('디렉터리 index 폴백: ./components → components/index.tsx가 imported', () => {
+    const proj5 = path.join(work, 'proj5');
+    fs.mkdirSync(path.join(proj5, 'components'), { recursive: true });
+    fs.writeFileSync(path.join(proj5, 'app.tsx'),
+      `import { Widget } from './components';\nfunction App() { return Widget(); }\n`);
+    fs.writeFileSync(path.join(proj5, 'components', 'index.tsx'),
+      `export function Widget() { return 1; }\n`);
+    // 데코이: 동일 이름 Widget이 무관 파일에도 존재
+    fs.writeFileSync(path.join(proj5, 'other.tsx'), `export function Widget() { return 2; }\n`);
+    const db5 = openDb(path.join(work, 'test5.db'));
+    new Indexer(db5, proj5).indexProject();
+    const cands = resolveSymbol(db5, 'Widget', 'app.tsx');
+    const byPath = new Map(cands.map((c) => [c.path, c.confidence]));
+    expect(byPath.get('components/index.tsx')).toBe('imported');
+    expect(byPath.get('other.tsx')).toBe('global');
+    // imported가 데코이(global)보다 앞선다
+    const idxImported = cands.findIndex((c) => c.path === 'components/index.tsx');
+    const idxDecoy = cands.findIndex((c) => c.path === 'other.tsx');
+    expect(idxImported).toBeLessThan(idxDecoy);
+    db5.close();
+  });
   it('Python 점 import: from mypkg.mod import thing → mypkg/mod.py가 imported', () => {
     const proj4 = path.join(work, 'proj4');
     fs.mkdirSync(path.join(proj4, 'mypkg'), { recursive: true });

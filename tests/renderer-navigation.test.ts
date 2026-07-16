@@ -23,6 +23,16 @@ describe('NavHistory', () => {
     h.push(L(2));
     expect(h.forward(L(2))).toBeNull();
   });
+  it('reset은 back/forward 스택을 모두 비운다', () => {
+    const h = new NavHistory();
+    h.push(L(1));
+    h.back(L(50)); // forward 스택에 50 적재
+    h.reset();
+    expect(h.back(L(9))).toBeNull();
+    expect(h.forward(L(9))).toBeNull();
+    expect(h.canBack).toBe(false);
+    expect(h.canForward).toBe(false);
+  });
   it('연속 동일 위치는 dedupe, 상한 100', () => {
     const h = new NavHistory();
     h.push(L(1));

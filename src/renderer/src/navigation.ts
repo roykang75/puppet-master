@@ -35,6 +35,11 @@ export class NavHistory {
     return next;
   }
 
+  reset(): void {
+    this.backStack = [];
+    this.forwardStack = [];
+  }
+
   get canBack(): boolean {
     return this.backStack.length > 0;
   }
