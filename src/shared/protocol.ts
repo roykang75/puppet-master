@@ -56,6 +56,18 @@ export interface CompletionSettings {
   hasApiKey: boolean;
 }
 
+// ── AI 코드 자동완성 요청/응답 (커서 컨텍스트 → 완성 텍스트) ──
+export interface CompletionContext {
+  path: string;
+  languageId: string;
+  prefix: string;
+  suffix: string;
+}
+export interface CompletionResult {
+  text: string | null;
+  error?: { kind: 'auth' | 'transient' | 'other'; message: string };
+}
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)
