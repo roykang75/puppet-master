@@ -24,39 +24,46 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
   indexer?.kill();
   const mgr = spawnIndexer();
   indexer = mgr;
-  mgr.onExit((code) => {
-    if (quitting || mgr !== indexer || !win) return; // 교체/종료 중이면 무시
-    void dialog
-      .showMessageBox(win, {
-        type: 'error',
-        message: `인덱서 프로세스가 비정상 종료되었습니다 (code ${code}).`,
-        buttons: ['재시작', '무시'],
+  try {
+    mgr.onExit((code) => {
+      if (quitting || mgr !== indexer || !win) return; // 교체/종료 중이면 무시
+      void dialog
+        .showMessageBox(win, {
+          type: 'error',
+          message: `인덱서 프로세스가 비정상 종료되었습니다 (code ${code}).`,
+          buttons: ['재시작', '무시'],
+        })
+        .then((r) => {
+          if (r.response === 0 && currentRoot) void openProjectInMain(currentRoot);
+        });
+    });
+    mgr.rpc.onEvent(sendIndexerEvent);
+    await mgr.whenReady;
+
+    files = new ProjectFiles(root);
+    currentRoot = root;
+    persistence.addRecent(root);
+    buildMenu(persistence.loadRecent(), sendMenu);
+
+    // 인덱싱은 백그라운드로 — 파일 열람/편집은 즉시 가능 (스펙 §5)
+    mgr.rpc
+      .request('openProject', { root, dbPath: persistence.dbPathFor(root) }, { timeoutMs: 180_000 })
+      .then((stats) => {
+        sendIndexerEvent('indexDone', stats);
+        if (process.env.SI_SMOKE === '1') {
+          console.log('[smoke]', JSON.stringify(stats));
+          app.quit();
+        }
       })
-      .then((r) => {
-        if (r.response === 0 && currentRoot) void openProjectInMain(currentRoot);
-      });
-  });
-  mgr.rpc.onEvent(sendIndexerEvent);
-  await mgr.whenReady;
+      .catch((err: Error) => sendIndexerEvent('indexError', { message: err.message }));
 
-  files = new ProjectFiles(root);
-  currentRoot = root;
-  persistence.addRecent(root);
-  buildMenu(persistence.loadRecent(), sendMenu);
-
-  // 인덱싱은 백그라운드로 — 파일 열람/편집은 즉시 가능 (스펙 §5)
-  mgr.rpc
-    .request('openProject', { root, dbPath: persistence.dbPathFor(root) }, { timeoutMs: 180_000 })
-    .then((stats) => {
-      sendIndexerEvent('indexDone', stats);
-      if (process.env.SI_SMOKE === '1') {
-        console.log('[smoke]', JSON.stringify(stats));
-        app.quit();
-      }
-    })
-    .catch((err: Error) => sendIndexerEvent('indexError', { message: err.message }));
-
-  return { root, uiState: persistence.loadUiState(root) };
+    return { root, uiState: persistence.loadUiState(root) };
+  } catch (err) {
+    // 실패 시 방금 띄운 host를 정리해 분열 상태 방지 — 다음 열기가 fresh spawn
+    if (indexer === mgr) indexer = null;
+    mgr.kill();
+    throw err;
+  }
 }
 
 function requireFiles(): ProjectFiles {
@@ -96,7 +103,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('indexer:getFileOutline', (_e, rel: string) => {
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
-    return indexer.rpc.request('getFileOutline', { path: rel });
+    // 초기 인덱싱 큐잉 대비 — indexDone 후 요청이 원칙이나 대형 프로젝트 여유
+    return indexer.rpc.request('getFileOutline', { path: rel }, { timeoutMs: 180_000 });
   });
   ipcMain.handle('ui:saveState', (_e, state: UiState) => {
     if (currentRoot) persistence.saveUiState(currentRoot, state);
