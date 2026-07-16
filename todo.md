@@ -91,7 +91,7 @@
   인덱서 FTS에 줄 오프셋 저장을 추가해야 함.
 - [ ] **ABI 이중성 규칙 재확인**: `npm test`(vitest)=node ABI, Electron/`npm run test:e2e`=electron ABI.
   `test:e2e`는 내부에서 `build && rebuild:electron`을 수행하므로, E2E 후 반드시 `npm run rebuild:node`로
-  되돌려 커밋/휴지 상태를 node ABI(88/88)로 유지할 것. (Plan 4 패키징에서 `CXXFLAGS` cross-env 이슈와 함께 다룸.)
+  되돌려 커밋/휴지 상태를 node ABI(전체 스위트 green)로 유지할 것. (Plan 4 패키징에서 `CXXFLAGS` cross-env 이슈와 함께 다룸.)
 
 ### ✅ Plan 4: Smart Rename + 마감 (완료 — Task 1~7, E2E rename 흐름 통과)
 - [x] Smart Rename (해석 결과 → 파일별 체크박스 미리보기 → 확정 일괄 변경)
