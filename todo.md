@@ -93,16 +93,36 @@
   `test:e2e`는 내부에서 `build && rebuild:electron`을 수행하므로, E2E 후 반드시 `npm run rebuild:node`로
   되돌려 커밋/휴지 상태를 node ABI(88/88)로 유지할 것. (Plan 4 패키징에서 `CXXFLAGS` cross-env 이슈와 함께 다룸.)
 
-### Plan 4: Smart Rename + 마감
-- [ ] Smart Rename (해석 결과 → 파일별 체크박스 미리보기 → 확정 일괄 변경)
-- [ ] 심볼 DB 기반 시맨틱 토큰 색상 (전역/멤버/로컬 구분)
-- [ ] 패키징 (electron-builder 등, 네이티브 모듈 포함 검증, cross-env)
+### ✅ Plan 4: Smart Rename + 마감 (완료 — Task 1~7, E2E rename 흐름 통과)
+- [x] Smart Rename (해석 결과 → 파일별 체크박스 미리보기 → 확정 일괄 변경)
+  - `getRenameTargets`: 정의+참조는 groups(기본 체크), FTS 단어경계 스캔 잔여는 unconfirmed(기본 해제)
+  - RenameOverlay: F2 → 오버레이(select/applying/done phase), dirty 탭 차단, 식별자 검증, 건너뜀 요약
+  - 적용: main 프로세스가 파일별 치환+저장+재인덱싱 → 열린 탭은 fileIndexed로 라이브 리로드
+- [x] 심볼 DB 기반 시맨틱 토큰 색상 (전역/멤버/로컬 구분 — `semantic-tokens.ts`, outlineVersion 재적용)
+- [x] 패키징 (electron-builder) — **macOS 전용, 무서명**
+  - `electron-builder.yml`: `mac.target: [dir, dmg, zip]`, `identity: null`(무서명), `npmRebuild: false`
+  - 네이티브 모듈은 `asarUnpack`(better-sqlite3, tree-sitter*)으로 asar 밖에 언팩
+  - `npm run package` = build → rebuild:electron(electron ABI) → `electron-builder --mac`
+  - 미포함(범위 밖): Windows/Linux 타깃, 코드서명/공증, auto-update, CI 릴리스 파이프라인
+- [x] Playwright E2E rename 흐름 (F2 → 오버레이 → 적용 → 디스크/버퍼/아웃라인 갱신) — 3 specs 전부 통과
 
-### Plan 5 (v1.5): AI 코드 자동완성
-- [ ] Monaco InlineCompletionsProvider (고스트 텍스트, 300ms 디바운스/취소)
-- [ ] CompletionService + ProviderAdapter 2종 (Anthropic SDK / OpenAI 호환 — 로컬 LLM은 baseURL로)
-- [ ] ContextBuilder — 심볼 DB에서 관련 시그니처를 프롬프트에 포함
-- [ ] API 키 safeStorage 암호화 저장, provider 미설정 시 기능 비활성
+### 📌 Plan 5 인계 노트 (Plan 4에서 이월)
+
+- [ ] **AI 자동완성은 additive 모듈** (마스터 스펙 §7): 인덱서/DB 스키마는 **무변경**이 원칙.
+  자동완성은 렌더러(InlineCompletionsProvider) + main(키/네트워크) 신규 모듈로만 얹고,
+  기존 인덱싱/쿼리 경로는 건드리지 않는다.
+- [ ] **API 키는 main의 safeStorage 전용**: 키는 절대 렌더러/디스크 평문에 두지 않고 main 프로세스의
+  `safeStorage`로만 암·복호화. provider **미설정 시 기능 완전 비활성**(고스트 텍스트/네트워크 호출 자체가
+  발생하지 않아야 함 — 기본 상태에서 오프라인·무비용 보장).
+- [ ] **ContextBuilder용 심볼 시그니처 조회는 기존 api로 충분**: `getRenameTargets`/`getCallers`/`getCallees`/
+  정의 미리보기(Context)가 쓰는 심볼·refs 쿼리(`src/indexer/api.ts`)로 프롬프트 컨텍스트 구성 가능 —
+  인덱서에 신규 RPC를 추가할 필요 없음(필요 시 read-only 조회만 얇게 추가).
+- [ ] **ABI 이중성 / 패키징 운영 규칙 재확인**: `npm test`(vitest)=**node ABI**, Electron·`npm run test:e2e`·
+  `npm run package`=**electron ABI**. `test:e2e`/`package`는 내부에서 `rebuild:electron`을 수행하므로,
+  실행 후 반드시 `npm run rebuild:node`로 되돌려 커밋/휴지 상태를 node ABI(110/110)로 유지할 것.
+  패키징은 macOS 무서명 `dir/dmg/zip`이며, 크로스 플랫폼·서명은 별도 작업.
+- [ ] **렌더러 typecheck 게이트 존재**: `npm run build`는 `typecheck:renderer`(src/renderer/tsconfig.json,
+  `--noEmit`)를 포함 — 신규 자동완성 컴포넌트도 이 게이트를 통과해야 빌드·E2E가 성립한다.
 
 ### v2 이후 (백로그)
 - [ ] LSP 보강(정밀 모드), 심볼 자동완성(비-AI), 스니펫/Clip Window, Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 채팅
