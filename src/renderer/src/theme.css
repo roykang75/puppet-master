@@ -96,3 +96,12 @@ body {
 .search-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-snippet { color: var(--fg-dim); font-size: 12px; }
 .search-detail { color: var(--fg-dim); font-size: 12px; white-space: nowrap; }
+
+.rel-tabs { flex: none; display: flex; gap: 2px; padding: 2px 6px; border-bottom: 1px solid var(--border); }
+.rel-tab { padding: 2px 8px; font-size: 11px; cursor: pointer; color: var(--fg-dim); border-radius: 3px; }
+.rel-tab.active { background: var(--bg-active); color: var(--fg); }
+.rel-item { display: flex; align-items: center; gap: 6px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.rel-item:hover { background: var(--bg-hover); }
+.rel-label { overflow: hidden; text-overflow: ellipsis; }
+.rel-kind { color: var(--fg-dim); font-size: 11px; }
+.rel-detail { margin-left: auto; color: var(--fg-dim); font-size: 11px; }
