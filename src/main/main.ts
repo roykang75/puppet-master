@@ -4,14 +4,18 @@ import { spawnIndexer, IndexerManager } from './indexer-manager';
 import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
 import { buildMenu, MenuAction } from './menu';
-import type { UiState } from '../shared/protocol';
+import { applyRenameToContent } from './rename';
+import type { UiState, RenameFileGroup, RenameApplyResult } from '../shared/protocol';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
 
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
-  'searchSymbols', 'searchText', 'getCallers', 'getCallees',
+  'searchSymbols', 'searchText', 'getCallers', 'getCallees', 'getRenameTargets',
+  'getFileTokens',
 ]);
+
+const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 let win: BrowserWindow | null = null;
 let indexer: IndexerManager | null = null;
@@ -120,6 +124,47 @@ function registerIpc(): void {
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
     return indexer.rpc.request(method, params, { timeoutMs: 180_000 });
   });
+  ipcMain.handle(
+    'rename:apply',
+    (_e, oldName: string, newName: string, targets: RenameFileGroup[]): RenameApplyResult => {
+      const f = requireFiles();
+      // UI가 이미 검증하지만 main도 방어적으로 식별자 재검증
+      if (!IDENT_RE.test(newName)) throw new Error(`유효하지 않은 식별자: ${newName}`);
+      let changedFiles = 0;
+      let replaced = 0;
+      const skipped: RenameApplyResult['skipped'] = [];
+      for (const group of targets) {
+        let content: string;
+        try {
+          content = f.readFile(group.path);
+        } catch {
+          // 읽기 실패 → 이 파일의 모든 대상 위치를 skip 처리하고 계속
+          for (const o of group.occurrences) skipped.push({ path: group.path, line: o.line, col: o.col });
+          continue;
+        }
+        const r = applyRenameToContent(content, group.occurrences, oldName, newName);
+        for (const s of r.skipped) skipped.push({ path: group.path, line: s.line, col: s.col });
+        if (r.replaced === 0) continue;
+        try {
+          f.saveFile(group.path, r.content);
+        } catch {
+          // 쓰기 실패 → 치환됐던(=r.skipped 아닌) 위치를 skip으로 보고, 계속 진행
+          const skipSet = new Set(r.skipped.map((s) => `${s.line}:${s.col}`));
+          for (const o of group.occurrences) {
+            if (!skipSet.has(`${o.line}:${o.col}`)) skipped.push({ path: group.path, line: o.line, col: o.col });
+          }
+          continue;
+        }
+        changedFiles++;
+        replaced += r.replaced;
+        // 변경 파일마다 재인덱싱 (비동기, 실패해도 로그만) — file:save 핸들러 패턴
+        indexer?.rpc.request('indexFile', { path: group.path }, { timeoutMs: 180_000 }).catch((err: Error) => {
+          console.error('[rename indexFile]', group.path, err.message);
+        });
+      }
+      return { changedFiles, replaced, skipped };
+    },
+  );
   ipcMain.handle('ui:saveState', (_e, state: UiState) => {
     if (currentRoot) persistence.saveUiState(currentRoot, state);
   });

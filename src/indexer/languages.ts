@@ -1,4 +1,4 @@
-import Parser = require('tree-sitter');
+import Parser from 'tree-sitter';
 import * as path from 'path';
 
 export interface LanguageSpec {

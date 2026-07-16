@@ -1,0 +1,16 @@
+appId: dev.roy.sourceinsight
+productName: SourceInSight
+npmRebuild: false            # 선빌드(rebuild:electron)가 electron ABI를 준비 — 기본 rebuild는 CXXFLAGS 미주입으로 실패
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/tree-sitter/**"
+  - "**/node_modules/tree-sitter-*/**"
+mac:
+  target: [dir, dmg, zip]
+  identity: null
+  category: public.app-category.developer-tools

@@ -67,6 +67,10 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
       return { indexed: changed };
     },
     getFileOutline: (p: FileParams) => queries.getSymbolsForFile(opened().db, p.path),
+    getFileTokens: (p: FileParams) => ({
+      symbols: queries.getSymbolsForFile(opened().db, p.path),
+      refs: queries.getRefsForFile(opened().db, p.path),
+    }),
     searchSymbols: (p: SearchParams) => queries.searchSymbols(opened().db, p.query, p.limit),
     searchText: (p: SearchParams) => queries.searchText(opened().db, p.query, p.limit),
     getDefinitions: (p: NameParams) => queries.getDefinitions(opened().db, p.name),
@@ -74,6 +78,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getCallees: (p: SymbolIdParams) => queries.getCallees(opened().db, p.symbolId),
     resolve: (p: ResolveParams) => resolveSymbol(opened().db, p.name, p.fromPath),
     getReferences: (p: NameParams) => queries.getReferences(opened().db, p.name),
+    getRenameTargets: (p: NameParams) => queries.getRenameTargets(opened().db, p.name),
     getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
     getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
   });

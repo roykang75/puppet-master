@@ -92,12 +92,12 @@ export class Indexer {
         );
       }
       const insSym = this.db.prepare(
-        `INSERT INTO symbols (name,kind,file_id,start_line,start_col,end_line,end_col,scope,signature) VALUES (?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO symbols (name,kind,file_id,start_line,start_col,end_line,end_col,name_line,name_col,scope,signature) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       );
       const insFrag = this.db.prepare(`INSERT INTO name_fragments (fragment, symbol_id) VALUES (?,?)`);
       const ids: number[] = [];
       for (const s of symbols) {
-        const id = Number(insSym.run(s.name, s.kind, fileId, s.startLine, s.startCol, s.endLine, s.endCol, s.scope, s.signature).lastInsertRowid);
+        const id = Number(insSym.run(s.name, s.kind, fileId, s.startLine, s.startCol, s.endLine, s.endCol, s.nameLine, s.nameCol, s.scope, s.signature).lastInsertRowid);
         ids.push(id);
         for (const f of splitName(s.name)) insFrag.run(f, id);
       }
