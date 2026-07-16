@@ -3,7 +3,7 @@ import { computeAnchor, resolveBookmarkLine } from '../src/renderer/src/bookmark
 import type { SymbolHit } from '../src/indexer/api';
 
 const sym = (name: string, line0: number): SymbolHit =>
-  ({ id: 1, name, kind: 'function', scope: '', signature: '', path: 'a.ts', line: line0 } as SymbolHit);
+  ({ id: 1, name, kind: 'function', scope: '', signature: '', path: 'a.ts', line: line0, nameLine: line0, nameCol: 0 } as SymbolHit);
 
 describe('computeAnchor', () => {
   it('줄 이전의 가장 가까운 심볼 + 오프셋', () => {

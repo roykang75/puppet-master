@@ -74,6 +74,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getCallees: (p: SymbolIdParams) => queries.getCallees(opened().db, p.symbolId),
     resolve: (p: ResolveParams) => resolveSymbol(opened().db, p.name, p.fromPath),
     getReferences: (p: NameParams) => queries.getReferences(opened().db, p.name),
+    getRenameTargets: (p: NameParams) => queries.getRenameTargets(opened().db, p.name),
     getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
     getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
   });

@@ -1,5 +1,6 @@
 import type { Database } from 'better-sqlite3';
 import { splitName } from './fragments';
+import type { RenameOccurrence, RenameFileGroup, RenameTargets } from '../shared/protocol';
 
 export interface SymbolHit {
   id: number;
@@ -100,6 +101,78 @@ export function getReferences(db: Database, name: string, limit = 200): RefHit[]
        ORDER BY f.path, r.line LIMIT ?`,
     )
     .all(name, limit) as RefHit[];
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Smart Rename 대상 수집 (0-기반):
+ *  - groups: 정의(name_line/name_col, isDefinition:true) + 참조(kind call/extends, isDefinition:false).
+ *    path별로 묶고, (line,col) 정렬·중복 제거(같은 위치가 정의이자 참조면 정의 우선).
+ *  - unconfirmed: FTS(file_text MATCH)로 name을 포함한 파일 content를 줄 단위로 스캔,
+ *    단어 경계(`(?<![A-Za-z0-9_$])name(?![A-Za-z0-9_$])`) 발생 중 groups에 없는 위치.
+ */
+export function getRenameTargets(db: Database, name: string): RenameTargets {
+  const defs = db
+    .prepare(
+      `SELECT f.path AS path, s.name_line AS line, s.name_col AS col
+       FROM symbols s JOIN files f ON f.id = s.file_id WHERE s.name = ?`,
+    )
+    .all(name) as { path: string; line: number; col: number }[];
+  const refs = db
+    .prepare(
+      `SELECT f.path AS path, r.line AS line, r.col AS col
+       FROM refs r JOIN files f ON f.id = r.file_id
+       WHERE r.name = ? AND r.kind IN ('call','extends')`,
+    )
+    .all(name) as { path: string; line: number; col: number }[];
+
+  // path → (line:col → occurrence). 정의 우선이므로 정의를 먼저 넣고 참조는 미존재일 때만.
+  const groupMap = new Map<string, Map<string, RenameOccurrence>>();
+  const add = (path: string, line: number, col: number, isDefinition: boolean) => {
+    let m = groupMap.get(path);
+    if (!m) { m = new Map(); groupMap.set(path, m); }
+    const key = `${line}:${col}`;
+    if (!m.has(key)) m.set(key, { line, col, isDefinition });
+  };
+  for (const d of defs) add(d.path, d.line, d.col, true);
+  for (const r of refs) add(r.path, r.line, r.col, false);
+
+  const groups: RenameFileGroup[] = [];
+  for (const [path, m] of groupMap) {
+    const occurrences = [...m.values()].sort((a, b) => (a.line - b.line) || (a.col - b.col));
+    groups.push({ path, occurrences });
+  }
+  groups.sort((a, b) => a.path.localeCompare(b.path));
+
+  // unconfirmed: FTS로 후보 파일을 좁힌 뒤 단어 경계 스캔. groups와 중복 제거.
+  const escaped = `"${name.replace(/"/g, '""')}"`;
+  const rows = db
+    .prepare(`SELECT path, content FROM file_text WHERE file_text MATCH ?`)
+    .all(escaped) as { path: string; content: string }[];
+  const re = new RegExp(`(?<![A-Za-z0-9_$])${escapeRegExp(name)}(?![A-Za-z0-9_$])`, 'g');
+
+  const unconfirmed: RenameFileGroup[] = [];
+  for (const row of rows) {
+    const inGroup = groupMap.get(row.path);
+    const found: RenameOccurrence[] = [];
+    const contentLines = row.content.split('\n');
+    for (let ln = 0; ln < contentLines.length; ln++) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(contentLines[ln])) !== null) {
+        const key = `${ln}:${m.index}`;
+        if (inGroup && inGroup.has(key)) continue;
+        found.push({ line: ln, col: m.index, isDefinition: false });
+      }
+    }
+    if (found.length) unconfirmed.push({ path: row.path, occurrences: found });
+  }
+  unconfirmed.sort((a, b) => a.path.localeCompare(b.path));
+
+  return { groups, unconfirmed };
 }
 
 export function getSuperclasses(db: Database, symbolId: number): SymbolHit[] {

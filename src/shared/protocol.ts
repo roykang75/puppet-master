@@ -24,6 +24,16 @@ export interface NameParams { name: string }
 export interface SymbolIdParams { symbolId: number }
 export interface ResolveParams { name: string; fromPath: string }
 
+// ── Smart Rename (0-기반 좌표) ──
+export interface RenameOccurrence { line: number; col: number; isDefinition: boolean }
+export interface RenameFileGroup { path: string; occurrences: RenameOccurrence[] }
+export interface RenameTargets { groups: RenameFileGroup[]; unconfirmed: RenameFileGroup[] }
+export interface RenameApplyResult {
+  changedFiles: number;
+  replaced: number;
+  skipped: Array<{ path: string; line: number; col: number }>;
+}
+
 // ── 이벤트 페이로드 (인덱서 → UI) ──
 export interface ReadyPayload { protocolVersion: number }
 export interface IndexProgressPayload { done: number; total: number; file: string }
