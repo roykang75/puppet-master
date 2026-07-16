@@ -27,7 +27,7 @@
 ## 📌 Plan 2 인계 노트 (최종 리뷰 이월 항목)
 
 - [x] **워처 ↔ 스캐너 제외 규칙 정합** (M-A): Plan 2 Task 2에서 공유 ignore 필터로 scanner/watcher 정합 완료
-- [ ] **해석 모듈에서 스코프 한정**: `getCallees`/`getDefinitions`는 전역 이름 매칭(스펙 §5 A안 의도) — Plan 2+ 해석 모듈이 로컬→파일→import→전역 우선순위 필터 담당
+- [~] **해석 모듈에서 스코프 한정**: `resolve` 모듈 도입으로 부분 해소 — 파일 로컬 → import → 전역 우선순위로 후보 정렬(Plan 3 Task 3). 단, 로컬(블록/함수 내부) 스코프 한정은 여전히 이름 기반 근사치이며 정밀 스코프는 미구현 (LSP 교체 여지로 격리).
 - [ ] `skipped` 카운트 시맨틱 세분화 (해시동일/IO실패 구분) — UI에서 스킵 사유 표시 시
 - [ ] 2MB 초과 파일: 심볼 스킵되나 FTS엔 전체 삽입 — 동작 문서화 또는 정책 통일
 - [ ] 중첩 .gitignore 미지원 (루트만) — 대형 저장소에서 필요 시 확장
@@ -65,14 +65,33 @@
 - [ ] **검색/정의점프/Relation·Context**: 인덱서 RPC(fragment 검색, FTS, 정의/호출자/피호출)는 준비 완료.
   Plan 3은 UI 배선만 하면 됨 (RelationPanel/ContextPanel은 이미 플레이스홀더 존재).
 
-### Plan 3: 분석 기능
-- [ ] Context Window (커서 심볼 정의 미리보기, ~150ms 디바운스)
-- [ ] Relation Window (Call/Callers/References/Class 탭, 깊이 3 + 지연 로드)
-- [ ] 통합 검색 UI (fragment + FTS, 미리보기)
-- [ ] Browser Mode 내비게이션 (Ctrl+클릭 점프, Backspace 뒤로, 히스토리)
-- [ ] 자동 참조 하이라이트
-- [ ] 영구 북마크 (함수/클래스 기준 오프셋, 프로젝트별)
-- [ ] 심볼 해석 모듈 (스펙 §5 — 스코프/import 우선순위, LSP 교체 가능하게 격리)
+### ✅ Plan 3: 분석 기능 (완료 — Task 1~9, E2E 분석 흐름 통과)
+- [x] 계획 문서 작성 (`docs/superpowers/plans/`)
+- [x] Context Window (커서 심볼 정의 미리보기, ~150ms 디바운스)
+- [x] Relation Window (Call/Callers/References/Class 탭, 깊이 3 + 지연 로드)
+- [x] 통합 검색 UI (fragment + FTS, 미리보기)
+- [x] Browser Mode 내비게이션 (Ctrl+클릭 점프, Backspace 뒤로, 히스토리)
+- [x] 자동 참조 하이라이트
+- [x] 영구 북마크 (함수/클래스 기준 오프셋, 프로젝트별)
+- [x] 심볼 해석 모듈 (스펙 §5 — 스코프/import 우선순위, LSP 교체 가능하게 격리)
+- [x] Playwright E2E 분석 흐름 (검색 점프 → 뒤로 → Context → Relation Callers → 북마크)
+
+### 📌 Plan 4 인계 노트 (Plan 3에서 이월)
+
+- [ ] **Smart Rename 후보 구성**: `getReferences`(이름 기반 전체 참조) + `resolve`(정의 후보 정렬) 조합으로
+  파일별 변경 후보 목록을 구성 가능 — 남은 작업은 파일별 체크박스 **미리보기 UI**와 확정 시 일괄 치환뿐.
+  (참조는 whole-word 이름 매칭이라 동명 심볼 오포함 가능 → 미리보기에서 사용자가 걸러내는 것이 전제.)
+- [ ] **시맨틱 토큰**: `getSymbolsForFile` + refs로 파일 단위 토큰(전역/멤버/로컬) 색상 구성 가능 —
+  Monaco DocumentSemanticTokensProvider에 배선하면 됨. 로컬 스코프 구분은 resolve의 근사치 한계를 그대로 승계.
+- [ ] **Relation 트리 이름 기반 재귀의 동명 혼입**: `getCallers`/`getCallees`가 심볼 이름으로 매칭하므로
+  서로 다른 파일의 동명 함수가 한 트리에 섞일 수 있음 (순환 가드는 key=name:path:line로 무한재귀만 방지).
+  정밀화하려면 call 엣지를 symbolId 기준으로 좁혀야 함.
+- [ ] **FTS 결과에 줄 정보 없음**: 전문 검색(`searchText`)은 파일·스니펫만 반환 → 점프는 모델 로드 후
+  Monaco `findMatches` 폴백으로 첫 일치 위치를 찾음(EditorPane.findFirstAndReveal). 정확한 줄 앵커가 필요하면
+  인덱서 FTS에 줄 오프셋 저장을 추가해야 함.
+- [ ] **ABI 이중성 규칙 재확인**: `npm test`(vitest)=node ABI, Electron/`npm run test:e2e`=electron ABI.
+  `test:e2e`는 내부에서 `build && rebuild:electron`을 수행하므로, E2E 후 반드시 `npm run rebuild:node`로
+  되돌려 커밋/휴지 상태를 node ABI(88/88)로 유지할 것. (Plan 4 패키징에서 `CXXFLAGS` cross-env 이슈와 함께 다룸.)
 
 ### Plan 4: Smart Rename + 마감
 - [ ] Smart Rename (해석 결과 → 파일별 체크박스 미리보기 → 확정 일괄 변경)
