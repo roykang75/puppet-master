@@ -25,6 +25,9 @@ async function loadSettings(): Promise<void> {
 /** SettingsOverlay 저장 성공 후 호출 — 캐시 재조회 + auth 비활성 해제. */
 export async function refreshCompletionSettings(): Promise<void> {
   authDisabled = false; // 설정 변경 → 인증 오류 비활성 해제
+  disabledUntil = 0; // transient/other 백오프도 해제 — 설정 변경으로 재시도 허용
+  generation++; // 세대 증가 — 설정 변경 전 in-flight 응답이 이후 표시되지 않도록 (stale ghost 차단)
+  useAppStore.getState().setCompletionStatus(null); // 이전 오류 상태 표시 제거
   await loadSettings();
 }
 

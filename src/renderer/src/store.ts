@@ -58,7 +58,7 @@ export const useAppStore = create<AppState>((set) => ({
   completionStatus: null,
   bookmarks: [],
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, bookmarks: [] }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, bookmarks: [] }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),

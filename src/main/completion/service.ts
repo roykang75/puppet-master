@@ -72,8 +72,8 @@ export class CompletionService {
       return { text };
     } catch (e) {
       const kind = classifyError(e);
-      const message = e instanceof Error ? e.message : String((e as { message?: unknown })?.message ?? e);
-      return { text: null, error: { kind, message } };
+      // provider 원문 메시지는 IPC 경계를 넘기지 않음 (키 자료 에코 방어) — kind 기반 고정 문자열만 전달.
+      return { text: null, error: { kind, message: kind } };
     }
   }
 
