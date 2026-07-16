@@ -22,6 +22,7 @@ export interface IndexBufferParams { path: string; content: string }
 export interface SearchParams { query: string; limit?: number }
 export interface NameParams { name: string }
 export interface SymbolIdParams { symbolId: number }
+export interface ResolveParams { name: string; fromPath: string }
 
 // ── 이벤트 페이로드 (인덱서 → UI) ──
 export interface ReadyPayload { protocolVersion: number }

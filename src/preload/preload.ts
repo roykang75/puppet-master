@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { UiState } from '../shared/protocol';
-import type { SymbolHit } from '../indexer/api';
+import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
+import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
 import type { RecentEntry } from '../main/persistence';
 import type { MenuAction } from '../main/menu';
@@ -16,6 +17,22 @@ const api = {
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),
   indexBuffer: (rel: string, content: string): Promise<{ indexed: boolean }> =>
     ipcRenderer.invoke('indexer:indexBuffer', rel, content),
+  resolve: (name: string, fromPath: string): Promise<Candidate[]> =>
+    ipcRenderer.invoke('indexer:call', 'resolve', { name, fromPath }),
+  getReferences: (name: string): Promise<RefHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'getReferences', { name }),
+  getSuperclasses: (symbolId: number): Promise<SymbolHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'getSuperclasses', { symbolId }),
+  getSubclasses: (name: string): Promise<SymbolHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'getSubclasses', { name }),
+  searchSymbols: (query: string): Promise<SymbolHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'searchSymbols', { query }),
+  searchText: (query: string): Promise<TextHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'searchText', { query }),
+  getCallers: (name: string): Promise<CallerHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'getCallers', { name }),
+  getCallees: (symbolId: number): Promise<SymbolHit[]> =>
+    ipcRenderer.invoke('indexer:call', 'getCallees', { symbolId }),
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   onIndexerEvent: (cb: (event: string, payload: unknown) => void): void => {
     ipcRenderer.on('indexer:event', (_e, msg: { event: string; payload: unknown }) => cb(msg.event, msg.payload));

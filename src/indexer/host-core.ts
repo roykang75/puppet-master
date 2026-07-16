@@ -5,6 +5,7 @@ import { openDb } from './db';
 import { Indexer } from './pipeline';
 import { watchProject } from './watcher';
 import * as queries from './api';
+import { resolveSymbol } from './resolve';
 import { createRpcServer, Transport } from '../shared/rpc';
 import {
   PROTOCOL_VERSION,
@@ -14,6 +15,7 @@ import {
   SearchParams,
   NameParams,
   SymbolIdParams,
+  ResolveParams,
 } from '../shared/protocol';
 
 export interface IndexerHostHandle {
@@ -70,6 +72,10 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getDefinitions: (p: NameParams) => queries.getDefinitions(opened().db, p.name),
     getCallers: (p: NameParams) => queries.getCallers(opened().db, p.name),
     getCallees: (p: SymbolIdParams) => queries.getCallees(opened().db, p.symbolId),
+    resolve: (p: ResolveParams) => resolveSymbol(opened().db, p.name, p.fromPath),
+    getReferences: (p: NameParams) => queries.getReferences(opened().db, p.name),
+    getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
+    getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
   });
 
   server.emit('ready', { protocolVersion: PROTOCOL_VERSION });
