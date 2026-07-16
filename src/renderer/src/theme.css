@@ -43,6 +43,11 @@ body {
 
 .ref-highlight { background: rgba(74, 158, 255, 0.18); border-radius: 2px; }
 
+.context-header { margin-left: 10px; color: var(--accent); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.context-header:hover { text-decoration: underline; }
+.context-body { display: flex; flex-direction: column; }
+.context-editor { flex: 1; min-height: 0; }
+
 .tabs { flex: none; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .nav-buttons { display: flex; align-items: center; padding: 0 4px; border-right: 1px solid var(--border); }
 .nav-btn { padding: 2px 6px; cursor: pointer; color: var(--fg-dim); font-size: 11px; }
