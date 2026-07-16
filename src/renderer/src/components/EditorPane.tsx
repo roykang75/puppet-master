@@ -80,6 +80,25 @@ function applyPendingJump(): void {
   st.setPendingJump(null);
 }
 
+/** 텍스트 검색 결과 점프: 파일 열고 첫 일치 위치로 이동 (FTS는 줄 정보가 없음) */
+export function findFirstAndReveal(path: string, query: string): void {
+  jumpTo(path, 1);
+  // 모델 로드 후 첫 일치 탐색 — pendingJump 소비 시점에 이어서 실행되도록 지연 재시도
+  const tryFind = (attempt = 0): void => {
+    const model = monaco.editor.getModel(uriOf(path));
+    if (!model) {
+      if (attempt < 20) setTimeout(() => tryFind(attempt + 1), 100);
+      return;
+    }
+    const m = model.findMatches(query, false, false, false, null, false, 1)[0];
+    if (m && editorInstance?.getModel() === model) {
+      editorInstance.revealLineInCenter(m.range.startLineNumber);
+      editorInstance.setPosition({ lineNumber: m.range.startLineNumber, column: m.range.startColumn });
+    }
+  };
+  tryFind();
+}
+
 const bufferTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function scheduleBufferIndex(relPath: string, model: import('monaco-editor').editor.ITextModel): void {

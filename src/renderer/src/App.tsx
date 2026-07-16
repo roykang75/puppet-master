@@ -10,6 +10,7 @@ import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { EditorPane, getContent, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { SearchOverlay } from './components/SearchOverlay';
 import { goBack, goForward } from './navigation';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
@@ -168,6 +169,11 @@ export function App() {
     };
     const onSave = () => void save();
     const onKey = (ev: KeyboardEvent) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && (ev.key === 'f' || ev.key === 'F')) {
+        ev.preventDefault();
+        useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
+        return;
+      }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') {
         ev.preventDefault();
         ev.stopPropagation(); // 캡처 단계에서 소비 — Monaco 자체 바인딩과의 이중 발화 방지
@@ -225,6 +231,7 @@ export function App() {
         <Workspace key={root} />
       </div>
       <StatusBar />
+      <SearchOverlay />
     </div>
   );
 }

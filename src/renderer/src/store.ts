@@ -17,6 +17,7 @@ interface AppState {
   outlineVersion: number;
   cursorSymbol: { name: string; path: string; line: number; col: number } | null;
   pendingJump: { path: string; line: number; col: number } | null;
+  searchOpen: boolean;
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -29,6 +30,7 @@ interface AppState {
   bumpOutline(): void;
   setCursorSymbol(s: AppState['cursorSymbol']): void;
   setPendingJump(j: AppState['pendingJump']): void;
+  setSearchOpen(v: boolean): void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -41,8 +43,9 @@ export const useAppStore = create<AppState>((set) => ({
   outlineVersion: 0,
   cursorSymbol: null,
   pendingJump: null,
+  searchOpen: false,
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -68,4 +71,5 @@ export const useAppStore = create<AppState>((set) => ({
   bumpOutline: () => set((s) => ({ outlineVersion: s.outlineVersion + 1 })),
   setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
   setPendingJump: (pendingJump) => set({ pendingJump }),
+  setSearchOpen: (searchOpen) => set({ searchOpen }),
 }));
