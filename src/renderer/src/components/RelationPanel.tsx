@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import type { Candidate } from '../../../indexer/resolve';
@@ -15,6 +15,7 @@ interface Node {
   name: string;
   symbolId: number | null;
   expandable: boolean;
+  expanded: boolean;       // 펼침 상태 (children 폐기 없이 토글)
   children: Node[] | null; // null = 미로드
 }
 
@@ -23,7 +24,7 @@ const keyOf = (name: string, path: string, line: number) => `${name}:${path}:${l
 function symToNode(s: SymbolHit): Node {
   return {
     key: keyOf(s.name, s.path, s.line), label: s.name, detail: `${s.path}:${s.line + 1}`,
-    path: s.path, line: s.line + 1, name: s.name, symbolId: s.id, expandable: true, children: null,
+    path: s.path, line: s.line + 1, name: s.name, symbolId: s.id, expandable: true, expanded: false, children: null,
   };
 }
 
@@ -32,7 +33,7 @@ function callerToNode(c: CallerHit): Node {
   return {
     key: keyOf(nm, c.path, c.line), label: nm, detail: `${c.path}:${c.line + 1}`,
     path: c.path, line: c.line + 1, name: nm, symbolId: c.callerId,
-    expandable: c.callerName !== null, children: null,
+    expandable: c.callerName !== null, expanded: false, children: null,
   };
 }
 
@@ -56,6 +57,19 @@ async function loadChildren(tab: Tab, node: Node, visited: Set<string>): Promise
   return next.map((n) => (visited.has(n.key) ? { ...n, expandable: false } : n));
 }
 
+type Ref = { path: string; line: number; kind: string; enclosingName: string | null };
+
+// path별 그룹 (첫 등장 순서 보존)
+function groupByPath(refs: Ref[]): Array<[string, Ref[]]> {
+  const groups = new Map<string, Ref[]>();
+  for (const r of refs) {
+    const g = groups.get(r.path);
+    if (g) g.push(r);
+    else groups.set(r.path, [r]);
+  }
+  return [...groups];
+}
+
 export function RelationPanel() {
   const cursorSymbol = useAppStore((s) => s.cursorSymbol);
   const outlineVersion = useAppStore((s) => s.outlineVersion);
@@ -63,12 +77,14 @@ export function RelationPanel() {
   const [tab, setTab] = useState<Tab>('callers');
   const [root, setRoot] = useState<Candidate | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [refs, setRefs] = useState<Array<{ path: string; line: number; kind: string; enclosingName: string | null }>>([]);
+  const [refs, setRefs] = useState<Ref[]>([]);
   const [visited] = useState(() => new Set<string>());
+  const genRef = useRef(0);
 
   useEffect(() => {
     if (indexing || !cursorSymbol) { setRoot(null); setNodes([]); setRefs([]); return; }
     let cancelled = false;
+    const gen = ++genRef.current;
     void (async () => {
       const cands = await window.si.resolve(cursorSymbol.name, cursorSymbol.path).catch(() => []);
       if (cancelled) return;
@@ -92,12 +108,17 @@ export function RelationPanel() {
     return () => { cancelled = true; };
   }, [cursorSymbol, tab, outlineVersion, indexing]);
 
-  const expand = async (node: Node, list: Node[], setList: (n: Node[]) => void) => {
-    if (node.children !== null) { node.children = null; setList([...list]); return; } // 접기
-    const children = await loadChildren(tab, node, visited).catch(() => []);
-    children.forEach((c) => visited.add(c.key));
-    node.children = children;
-    setList([...list]);
+  const expand = async (node: Node) => {
+    if (node.expanded) { node.expanded = false; setNodes((cur) => [...cur]); return; } // 접기
+    if (node.children === null) {                                                       // 최초 펼침만 fetch
+      const gen = genRef.current;
+      const children = await loadChildren(tab, node, visited).catch(() => []);
+      if (gen !== genRef.current) return;                                               // stale 응답 무시
+      children.forEach((c) => visited.add(c.key));
+      node.children = children;
+    }
+    node.expanded = true;
+    setNodes((cur) => [...cur]);
   };
 
   const renderNodes = (ns: Node[], depth: number): React.ReactNode =>
@@ -106,20 +127,24 @@ export function RelationPanel() {
         <div className="rel-item" style={{ paddingLeft: depth * 14 + 8 }}>
           <span
             className="tree-icon"
-            onClick={(e) => { e.stopPropagation(); if (n.expandable) void expand(n, nodes, setNodes); }}
+            onClick={(e) => { e.stopPropagation(); if (n.expandable) void expand(n); }}
           >
-            {n.expandable ? (n.children !== null ? '▾' : '▸') : '·'}
+            {n.expandable ? (n.expanded ? '▾' : '▸') : '·'}
           </span>
           <span className="rel-label" onClick={() => jumpTo(n.path, n.line)}>{n.label}</span>
           <span className="rel-detail">{n.detail}</span>
         </div>
-        {n.children && renderNodes(n.children, depth + 1)}
+        {n.expanded && n.children && renderNodes(n.children, depth + 1)}
       </div>
     ));
 
+  const treeTitle = root
+    ? ` — ${root.name}${tab !== 'refs' && nodes.length > 0 ? ` (${nodes.length})` : ''}`
+    : '';
+
   return (
     <div className="panel">
-      <div className="panel-title">Relation{root ? ` — ${root.name}` : ''}</div>
+      <div className="panel-title">Relation{treeTitle}</div>
       <div className="rel-tabs">
         {(['calls', 'callers', 'refs', 'class'] as Tab[]).map((t) => (
           <span key={t} className={`rel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
@@ -131,13 +156,22 @@ export function RelationPanel() {
         {indexing && <div className="hint">인덱싱 중…</div>}
         {!indexing && !root && <div className="hint">심볼 위에 커서를 두세요</div>}
         {!indexing && root && tab === 'refs' && (
-          refs.length === 0 ? <div className="hint">참조 없음</div> :
-          refs.map((r, i) => (
-            <div key={i} className="rel-item" style={{ paddingLeft: 8 }} onClick={() => jumpTo(r.path, r.line)}>
-              <span className="rel-label">{r.enclosingName ?? '(파일)'}<span className="rel-kind"> {r.kind}</span></span>
-              <span className="rel-detail">{r.path}:{r.line}</span>
-            </div>
-          ))
+          refs.length === 0 ? <div className="hint">참조 없음</div> : (
+            <>
+              <div className="hint">참조 {refs.length}개{refs.length === 200 ? ' — 상위 200개만 표시' : ''}</div>
+              {groupByPath(refs).map(([path, group]) => (
+                <div key={path}>
+                  <div className="rel-group">{path} ({group.length})</div>
+                  {group.map((r, i) => (
+                    <div key={i} className="rel-item" style={{ paddingLeft: 8 }} onClick={() => jumpTo(r.path, r.line)}>
+                      <span className="rel-label">{r.enclosingName ?? '(파일)'}<span className="rel-kind"> {r.kind}</span></span>
+                      <span className="rel-detail">:{r.line}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </>
+          )
         )}
         {!indexing && root && tab !== 'refs' && (
           nodes.length === 0 ? <div className="hint">{tab === 'class' ? '클래스 관계 없음' : '결과 없음'}</div> : renderNodes(nodes, 0)

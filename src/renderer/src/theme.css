@@ -105,3 +105,4 @@ body {
 .rel-label { overflow: hidden; text-overflow: ellipsis; }
 .rel-kind { color: var(--fg-dim); font-size: 11px; }
 .rel-detail { margin-left: auto; color: var(--fg-dim); font-size: 11px; }
+.rel-group { padding: 2px 8px; color: var(--fg-dim); font-size: 11px; background: var(--bg); }
