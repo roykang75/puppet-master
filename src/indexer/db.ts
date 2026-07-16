@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 
-export const SCHEMA_VERSION = 2; // v2: refs.kind에 'import'/'extends' 추가 (구조 동일, 재인덱싱 강제)
+export const SCHEMA_VERSION = 3; // v3: symbols에 name_line/name_col(심볼 이름 식별자 위치) 추가
 
 const SCHEMA = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -20,6 +20,8 @@ CREATE TABLE symbols (
   start_col INTEGER NOT NULL,
   end_line INTEGER NOT NULL,
   end_col INTEGER NOT NULL,
+  name_line INTEGER NOT NULL DEFAULT 0,
+  name_col INTEGER NOT NULL DEFAULT 0,
   scope TEXT NOT NULL DEFAULT '',
   signature TEXT NOT NULL DEFAULT ''
 );

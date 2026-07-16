@@ -7,6 +7,8 @@ export interface SymbolRow {
   startCol: number;
   endLine: number;
   endCol: number;
+  nameLine: number;
+  nameCol: number;
   scope: string;
   signature: string;
 }
@@ -78,6 +80,8 @@ export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
         startCol: d.startPosition.column,
         endLine: d.endPosition.row,
         endCol: d.endPosition.column,
+        nameLine: nameCap.node.startPosition.row,
+        nameCol: nameCap.node.startPosition.column,
         scope: '',
         signature: firstLine(d.text),
       });

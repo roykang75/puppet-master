@@ -9,6 +9,8 @@ export interface SymbolHit {
   signature: string;
   path: string;
   line: number;
+  nameLine: number;
+  nameCol: number;
 }
 
 export interface TextHit {
@@ -33,7 +35,7 @@ export interface RefHit {
   enclosingName: string | null;
 }
 
-const HIT_SELECT = `SELECT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, f.path
+const HIT_SELECT = `SELECT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, s.name_line AS nameLine, s.name_col AS nameCol, f.path
 FROM symbols s JOIN files f ON f.id = s.file_id`;
 
 export function searchSymbols(db: Database, query: string, limit = 50): SymbolHit[] {
@@ -113,7 +115,7 @@ export function getSuperclasses(db: Database, symbolId: number): SymbolHit[] {
 export function getSubclasses(db: Database, name: string): SymbolHit[] {
   return db
     .prepare(
-      `SELECT DISTINCT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, f.path
+      `SELECT DISTINCT s.id, s.name, s.kind, s.scope, s.signature, s.start_line AS line, s.name_line AS nameLine, s.name_col AS nameCol, f.path
        FROM refs r
        JOIN symbols s ON s.id = r.enclosing_symbol_id
        JOIN files f ON f.id = s.file_id
