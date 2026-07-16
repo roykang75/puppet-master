@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTokenDecorations } from '../src/renderer/src/semantic-tokens';
+import { buildTokenDecorations, MAX_TOKENS } from '../src/renderer/src/semantic-tokens';
 import type { SymbolHit } from '../src/indexer/api';
 import type { FileRefRow } from '../src/shared/protocol';
 
@@ -72,5 +72,21 @@ describe('buildTokenDecorations', () => {
   it('매핑되지 않는 kind는 제외', () => {
     const decos = buildTokenDecorations([sym({ name: 'weird', kind: 'label', nameLine: 0, nameCol: 0 })], []);
     expect(decos).toEqual([]);
+  });
+
+  it('대용량 입력은 MAX_TOKENS에서 상한(심볼 우선, 그다음 ref)', () => {
+    const symbols = Array.from({ length: MAX_TOKENS + 500 }, (_, i) =>
+      sym({ name: `fn${i}`, kind: 'function', nameLine: i, nameCol: 0 }),
+    );
+    const refs: FileRefRow[] = Array.from({ length: 500 }, (_, i) => ({
+      name: 'fn0',
+      kind: 'call',
+      line: i,
+      col: 0,
+    }));
+    const decos = buildTokenDecorations(symbols, refs);
+    expect(decos.length).toBe(MAX_TOKENS);
+    // 심볼이 먼저 채우므로 전부 sem-func(정의)이고 ref는 들어갈 자리가 없다
+    expect(decos.every((d) => d.className === 'sem-func')).toBe(true);
   });
 });

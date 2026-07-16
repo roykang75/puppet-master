@@ -10,6 +10,10 @@ export interface TokenDecoration {
   className: string;
 }
 
+/** 데코 상한 — 대용량 파일에서 outlineVersion 재-인덱스마다 무제한 생성되는 것을 방지.
+ *  심볼 우선, 그다음 참조 순으로 채워 결정적으로 자른다(EditorPane의 참조 하이라이트 200 상한과 동일 취지). */
+export const MAX_TOKENS = 3000;
+
 /** 심볼 kind(+scope) → CSS 클래스. 매핑 없으면 null(색칠 제외). */
 function classFor(kind: string, scope: string): string | null {
   switch (kind) {
@@ -46,11 +50,13 @@ export function buildTokenDecorations(symbols: SymbolHit[], refs: FileRefRow[]):
   for (const s of symbols) {
     const className = classFor(s.kind, s.scope);
     if (!className) continue;
-    decos.push({ line: s.nameLine, col: s.nameCol, length: s.name.length, className });
     if (!nameClass.has(s.name)) nameClass.set(s.name, className);
+    if (decos.length >= MAX_TOKENS) continue;
+    decos.push({ line: s.nameLine, col: s.nameCol, length: s.name.length, className });
   }
 
   for (const r of refs) {
+    if (decos.length >= MAX_TOKENS) break;
     const className = nameClass.get(r.name);
     if (!className) continue;
     decos.push({ line: r.line, col: r.col, length: r.name.length, className });

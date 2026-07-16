@@ -43,9 +43,12 @@ body {
 
 .ref-highlight { background: rgba(74, 158, 255, 0.18); border-radius: 2px; }
 
-/* 시맨틱 토큰 색칠 (심볼 DB 기반, inlineClassName) */
-.sem-func { color: #dcdcaa; } .sem-type { color: #4ec9b0; } .sem-macro { color: #c586c0; }
-.sem-ns { color: #4ec9b0; } .sem-member { color: #9cdcfe; } .sem-global { color: #9cdcfe; font-weight: 600; }
+/* 시맨틱 토큰 색칠 (심볼 DB 기반, inlineClassName)
+   .monaco-editor 선행자로 특이도 상승(0,2,0): Monaco가 데코 span에 토큰 클래스(.mtkN)를
+   함께 붙이고, 그 테마 규칙(.mtkN, 특이도 0,1,0)을 theme.css보다 나중에 document.head에
+   주입한다. 동일 특이도면 나중 규칙이 이기므로 특이도를 올려야 색이 보인다(!important 불필요). */
+.monaco-editor .sem-func { color: #dcdcaa; } .monaco-editor .sem-type { color: #4ec9b0; } .monaco-editor .sem-macro { color: #c586c0; }
+.monaco-editor .sem-ns { color: #4ec9b0; } .monaco-editor .sem-member { color: #9cdcfe; } .monaco-editor .sem-global { color: #9cdcfe; font-weight: 600; }
 
 .context-header { margin-left: 10px; color: var(--accent); cursor: pointer; text-transform: none; letter-spacing: 0; }
 .context-header:hover { text-decoration: underline; }
