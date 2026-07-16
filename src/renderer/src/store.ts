@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { IndexStats } from '../../indexer/pipeline';
+import type { Bookmark } from './bookmarks';
 
 export interface Tab {
   path: string;
@@ -18,6 +19,7 @@ interface AppState {
   cursorSymbol: { name: string; path: string; line: number; col: number } | null;
   pendingJump: { path: string; line: number; col: number } | null;
   searchOpen: boolean;
+  bookmarks: Bookmark[];
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -31,6 +33,7 @@ interface AppState {
   setCursorSymbol(s: AppState['cursorSymbol']): void;
   setPendingJump(j: AppState['pendingJump']): void;
   setSearchOpen(v: boolean): void;
+  setBookmarks(list: Bookmark[]): void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -44,8 +47,9 @@ export const useAppStore = create<AppState>((set) => ({
   cursorSymbol: null,
   pendingJump: null,
   searchOpen: false,
+  bookmarks: [],
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, bookmarks: [] }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -72,4 +76,5 @@ export const useAppStore = create<AppState>((set) => ({
   setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
   setPendingJump: (pendingJump) => set({ pendingJump }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  setBookmarks: (bookmarks) => set({ bookmarks }),
 }));

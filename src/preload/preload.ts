@@ -34,6 +34,8 @@ const api = {
   getCallees: (symbolId: number): Promise<SymbolHit[]> =>
     ipcRenderer.invoke('indexer:call', 'getCallees', { symbolId }),
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
+  loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
+  saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
   onIndexerEvent: (cb: (event: string, payload: unknown) => void): void => {
     ipcRenderer.on('indexer:event', (_e, msg: { event: string; payload: unknown }) => cb(msg.event, msg.payload));
   },

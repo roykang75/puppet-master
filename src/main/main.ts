@@ -123,6 +123,10 @@ function registerIpc(): void {
   ipcMain.handle('ui:saveState', (_e, state: UiState) => {
     if (currentRoot) persistence.saveUiState(currentRoot, state);
   });
+  ipcMain.handle('bookmarks:load', () => (currentRoot ? persistence.loadBookmarks(currentRoot) : []));
+  ipcMain.handle('bookmarks:save', (_e, list: unknown[]) => {
+    if (currentRoot) persistence.saveBookmarks(currentRoot, list);
+  });
 }
 
 function createWindow(): void {

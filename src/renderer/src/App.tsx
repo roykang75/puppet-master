@@ -9,9 +9,12 @@ import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
-import { EditorPane, getContent, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { BookmarksSection } from './components/BookmarksSection';
+import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
 import { SearchOverlay } from './components/SearchOverlay';
 import { goBack, goForward } from './navigation';
+import { computeAnchor } from './bookmarks';
+import type { Bookmark } from './bookmarks';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
@@ -31,6 +34,7 @@ async function openProject(root: string): Promise<void> {
     disposeAllModels();
     st.setProject(res.root);
     applyUiState(res.uiState);
+    void window.si.loadBookmarks().then((l) => st.setBookmarks(l as Bookmark[]));
   } catch (e) {
     st.setError(e instanceof Error ? e.message : String(e));
   }
@@ -41,6 +45,25 @@ function applyUiState(ui: UiState | null): void {
   const st = useAppStore.getState();
   for (const p of ui.openTabs) st.openTab(p);
   if (ui.activeTab) st.setActive(ui.activeTab);
+}
+
+async function toggleBookmark(): Promise<void> {
+  const st = useAppStore.getState();
+  const loc = getCursorLocation();
+  if (!loc) return;
+  // 같은 path + 같은 저장 line이면 제거, 아니면 추가
+  const dup = st.bookmarks.find((b) => b.path === loc.path && b.line === loc.line);
+  let next: Bookmark[];
+  if (dup) {
+    next = st.bookmarks.filter((b) => b !== dup);
+  } else {
+    const symbols = await window.si.getFileOutline(loc.path).catch(() => []);
+    const anchor = computeAnchor(symbols, loc.line);
+    const text = (getContent(loc.path)?.split('\n')[loc.line - 1] ?? '').trim().slice(0, 60);
+    next = [...st.bookmarks, { path: loc.path, line: loc.line, ...anchor, text }];
+  }
+  st.setBookmarks(next);
+  void window.si.saveBookmarks(next);
 }
 
 function handleIndexerEvent(event: string, payload: unknown): void {
@@ -113,9 +136,11 @@ function Workspace() {
               defaultLayout={sideV.defaultLayout}
               onLayoutChanged={sideV.onLayoutChanged}
             >
-              <Panel id="project" defaultSize="55" minSize="20"><ProjectWindow /></Panel>
+              <Panel id="project" defaultSize="45" minSize="15"><ProjectWindow /></Panel>
               <Separator className="resize-handle resize-handle-v" />
-              <Panel id="symbols" minSize="20"><SymbolWindow /></Panel>
+              <Panel id="symbols" defaultSize="30" minSize="15"><SymbolWindow /></Panel>
+              <Separator className="resize-handle resize-handle-v" />
+              <Panel id="bookmarks" defaultSize="25" minSize="10"><BookmarksSection /></Panel>
             </Group>
           </Panel>
           <Separator className="resize-handle resize-handle-h" />
@@ -172,6 +197,11 @@ export function App() {
       if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && (ev.key === 'f' || ev.key === 'F')) {
         ev.preventDefault();
         useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
+        return;
+      }
+      if ((ev.metaKey || ev.ctrlKey) && ev.key === 'F2') {
+        ev.preventDefault();
+        void toggleBookmark();
         return;
       }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') {
