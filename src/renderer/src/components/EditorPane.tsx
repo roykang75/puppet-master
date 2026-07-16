@@ -175,6 +175,15 @@ export function EditorPane() {
       if (word) void resolveAndJump(word.word, loc.path);
     });
 
+    // F2 → Smart Rename 오버레이 열기 (커서 단어 기준)
+    editorInstance.addCommand(monaco.KeyCode.F2, () => {
+      const loc = getCursorLocation();
+      const model = editorInstance?.getModel();
+      if (!loc || !model) return;
+      const word = model.getWordAtPosition({ lineNumber: loc.line, column: loc.col });
+      if (word) useAppStore.getState().setRenameRequest({ name: word.word, path: loc.path });
+    });
+
     return () => {
       if (cursorTimer) {
         clearTimeout(cursorTimer);

@@ -12,6 +12,7 @@ import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
 import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
 import { SearchOverlay } from './components/SearchOverlay';
+import { RenameOverlay } from './components/RenameOverlay';
 import { goBack, goForward, navHistory } from './navigation';
 import { computeAnchor } from './bookmarks';
 import type { Bookmark } from './bookmarks';
@@ -266,6 +267,7 @@ export function App() {
       </div>
       <StatusBar />
       <SearchOverlay />
+      <RenameOverlay />
     </div>
   );
 }
