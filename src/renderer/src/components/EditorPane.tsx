@@ -25,6 +25,10 @@ export function disposeModel(relPath: string): void {
   monaco.editor.getModel(uriOf(relPath))?.dispose();
 }
 
+export function disposeAllModels(): void {
+  for (const model of monaco.editor.getModels()) model.dispose();
+}
+
 export function EditorPane() {
   const activePath = useAppStore((s) => s.activePath);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -65,7 +69,11 @@ export function EditorPane() {
         model.onDidChangeContent(() => useAppStore.getState().setDirty(activePath, true));
         editorInstance?.setModel(model);
       })
-      .catch(() => useAppStore.getState().closeTab(activePath)); // 읽기 실패(삭제된 파일 등) → 탭 닫기
+      .catch(() => {
+        // 읽기 실패(삭제된 파일 등) → 모델 폐기 후 탭 닫기 ("close ⇒ dispose" 불변식 유지)
+        disposeModel(activePath);
+        useAppStore.getState().closeTab(activePath);
+      });
     return () => {
       cancelled = true;
     };

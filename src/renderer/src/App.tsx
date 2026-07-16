@@ -8,7 +8,7 @@ import { RelationPanel } from './components/RelationPanel';
 import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
-import { EditorPane, getContent } from './components/EditorPane';
+import { EditorPane, getContent, disposeAllModels } from './components/EditorPane';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
 
@@ -28,6 +28,8 @@ async function openProject(root: string): Promise<void> {
   try {
     const res = await window.si.openProject(root);
     initLayouts(res.uiState?.panelLayouts);
+    // 프로젝트 전환 시 이전 프로젝트의 모델 전부 폐기 — URI가 root 무관이라 재사용 오염 방지
+    disposeAllModels();
     st.setProject(res.root);
     applyUiState(res.uiState);
   } catch (e) {
@@ -124,25 +126,31 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    let saving = false;
     const save = async () => {
+      if (saving) return;
       const st = useAppStore.getState();
       if (!st.activePath) return;
       const tab = st.tabs.find((t) => t.path === st.activePath);
       if (!tab?.dirty) return;
       const content = getContent(st.activePath);
       if (content == null) return;
+      saving = true;
       try {
         await window.si.saveFile(st.activePath, content);
         st.setDirty(st.activePath, false);
         st.setError(null);
       } catch (e) {
         st.setError(`저장 실패: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        saving = false;
       }
     };
     const onSave = () => void save();
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') {
         ev.preventDefault();
+        ev.stopPropagation(); // 캡처 단계에서 소비 — Monaco 자체 바인딩과의 이중 발화 방지
         void save();
       }
     };
