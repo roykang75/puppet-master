@@ -1,11 +1,14 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron';
 import * as path from 'path';
 import { spawnIndexer, IndexerManager } from './indexer-manager';
 import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
+import { SettingsStore, SettingsCrypto } from './settings';
+import { CompletionService } from './completion/service';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext } from '../shared/protocol';
+import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
 
@@ -23,10 +26,18 @@ let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
 let quitting = false;
 let persistence: Persistence;
+let settingsStore: SettingsStore;
+let completionService: CompletionService;
 
 const sendMenu = (action: MenuAction) => win?.webContents.send('menu', action);
-const sendIndexerEvent = (event: string, payload: unknown) =>
+const sendIndexerEvent = (event: string, payload: unknown) => {
+  // 파일 재인덱싱 완료 시 해당 path의 아웃라인 캐시 무효화 (다음 완성 요청이 최신 시그니처 반영)
+  if (event === 'fileIndexed') {
+    const p = (payload as { path?: unknown })?.path;
+    if (typeof p === 'string') completionService?.invalidateOutline(p);
+  }
   win?.webContents.send('indexer:event', { event, payload });
+};
 
 async function openProjectInMain(root: string): Promise<{ root: string; uiState: UiState | null }> {
   root = path.resolve(root); // 정규화 — Persistence가 원본 문자열을 해시하므로 상대경로가 상태를 분기시키는 것을 방지
@@ -51,6 +62,7 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
 
     files = new ProjectFiles(root);
     currentRoot = root;
+    completionService?.clearOutlineCache(); // 프로젝트 전환 — rel path 충돌 방지
     persistence.addRecent(root);
     buildMenu(persistence.loadRecent(), sendMenu);
 
@@ -172,6 +184,16 @@ function registerIpc(): void {
   ipcMain.handle('bookmarks:save', (_e, list: unknown[]) => {
     if (currentRoot) persistence.saveBookmarks(currentRoot, list);
   });
+  ipcMain.handle('settings:completion:get', () => settingsStore.toPublic());
+  ipcMain.handle(
+    'settings:completion:set',
+    (_e, s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string }, apiKey?: string) => {
+      // throw는 그대로 렌더러로 전파 — 오버레이가 오류를 표시한다 (safeStorage 미지원 등)
+      settingsStore.setCompletion(s, apiKey);
+      completionService.invalidateAdapter(); // 설정/키 변경 반영 — 다음 요청이 새 어댑터 생성
+    },
+  );
+  ipcMain.handle('completion:request', (_e, ctx: CompletionContext) => completionService.request(ctx));
 }
 
 function createWindow(): void {
@@ -191,6 +213,20 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   persistence = new Persistence(app.getPath('userData'));
+  const settingsCrypto: SettingsCrypto = {
+    isAvailable: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (s) => safeStorage.encryptString(s),
+    decrypt: (b) => safeStorage.decryptString(b),
+  };
+  settingsStore = new SettingsStore(app.getPath('userData'), settingsCrypto);
+  completionService = new CompletionService({
+    getSettings: () => settingsStore.getCompletion(),
+    getApiKey: () => settingsStore.getApiKey(),
+    getOutline: async (p: string): Promise<SymbolHit[]> => {
+      if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
+      return indexer.rpc.request('getFileOutline', { path: p }, { timeoutMs: 5_000 }) as Promise<SymbolHit[]>;
+    },
+  });
   createWindow();
   buildMenu(persistence.loadRecent(), sendMenu);
   registerIpc();

@@ -13,6 +13,7 @@ import { BookmarksSection } from './components/BookmarksSection';
 import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
 import { SearchOverlay } from './components/SearchOverlay';
 import { RenameOverlay } from './components/RenameOverlay';
+import { SettingsOverlay } from './components/SettingsOverlay';
 import { goBack, goForward, navHistory } from './navigation';
 import { computeAnchor } from './bookmarks';
 import type { Bookmark } from './bookmarks';
@@ -204,6 +205,11 @@ export function App() {
         useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
         return;
       }
+      if ((ev.metaKey || ev.ctrlKey) && ev.key === ',') {
+        ev.preventDefault();
+        useAppStore.getState().setSettingsOpen(!useAppStore.getState().settingsOpen);
+        return;
+      }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === 'F2') {
         ev.preventDefault();
         void toggleBookmark();
@@ -230,6 +236,7 @@ export function App() {
       if (
         ev.key === 'Backspace' &&
         !el?.closest('.editor-host') &&
+        !el?.closest('.search-backdrop') &&
         !(el instanceof HTMLInputElement) &&
         !(el instanceof HTMLTextAreaElement)
       ) {
@@ -268,6 +275,7 @@ export function App() {
       <StatusBar />
       <SearchOverlay />
       <RenameOverlay />
+      <SettingsOverlay />
     </div>
   );
 }

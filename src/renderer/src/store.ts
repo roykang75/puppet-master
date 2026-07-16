@@ -19,7 +19,9 @@ interface AppState {
   cursorSymbol: { name: string; path: string; line: number; col: number } | null;
   pendingJump: { path: string; line: number; col: number } | null;
   searchOpen: boolean;
+  settingsOpen: boolean;
   renameRequest: { name: string; path: string } | null;
+  completionStatus: string | null;
   bookmarks: Bookmark[];
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
@@ -34,7 +36,9 @@ interface AppState {
   setCursorSymbol(s: AppState['cursorSymbol']): void;
   setPendingJump(j: AppState['pendingJump']): void;
   setSearchOpen(v: boolean): void;
+  setSettingsOpen(v: boolean): void;
   setRenameRequest(r: { name: string; path: string } | null): void;
+  setCompletionStatus(msg: string | null): void;
   setBookmarks(list: Bookmark[]): void;
 }
 
@@ -49,10 +53,12 @@ export const useAppStore = create<AppState>((set) => ({
   cursorSymbol: null,
   pendingJump: null,
   searchOpen: false,
+  settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
+  completionStatus: null,
   bookmarks: [],
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, bookmarks: [] }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, bookmarks: [] }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -79,6 +85,8 @@ export const useAppStore = create<AppState>((set) => ({
   setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
   setPendingJump: (pendingJump) => set({ pendingJump }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
+  setCompletionStatus: (completionStatus) => set({ completionStatus }),
   setBookmarks: (bookmarks) => set({ bookmarks }),
 }));
