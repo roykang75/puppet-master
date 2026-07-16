@@ -26,26 +26,44 @@
 
 ## 📌 Plan 2 인계 노트 (최종 리뷰 이월 항목)
 
-- [ ] **워처 ↔ 스캐너 제외 규칙 정합**: `watcher.ts`는 .gitignore를 안 보므로, Plan 2에서 워처→인덱서 배선 시 gitignore 필터를 공유할 것 (M-A)
+- [x] **워처 ↔ 스캐너 제외 규칙 정합** (M-A): Plan 2 Task 2에서 공유 ignore 필터로 scanner/watcher 정합 완료
 - [ ] **해석 모듈에서 스코프 한정**: `getCallees`/`getDefinitions`는 전역 이름 매칭(스펙 §5 A안 의도) — Plan 2+ 해석 모듈이 로컬→파일→import→전역 우선순위 필터 담당
 - [ ] `skipped` 카운트 시맨틱 세분화 (해시동일/IO실패 구분) — UI에서 스킵 사유 표시 시
 - [ ] 2MB 초과 파일: 심볼 스킵되나 FTS엔 전체 삽입 — 동작 문서화 또는 정책 통일
 - [ ] 중첩 .gitignore 미지원 (루트만) — 대형 저장소에서 필요 시 확장
 - [ ] Windows 지원 시: `rebuild:electron`의 인라인 `CXXFLAGS`를 cross-env로 (Plan 4 패키징에서)
-- [ ] 워처 테스트 타이밍 의존성 — 느린 CI에서 flaky 관측 시 한도 재조정
+- [x] 워처 테스트 타이밍 의존성 — 근본 해소됨 (chokidar ready 경합을 결정적 대기로 제거)
 
 ---
 
 ## 🔜 앞으로 할 작업 (각 단계 완료 후 상세 계획 작성)
 
-### Plan 2: UI 셸
-- [ ] 계획 문서 작성 (`docs/superpowers/plans/`)
-- [ ] Electron 창 + React + Vite 렌더러 셋업
-- [ ] 인덱서 utilityProcess 호스팅 + 버전 있는 IPC(RPC) 프로토콜
-- [ ] SI 스타일 패널 레이아웃 (접기/크기조절/배치 저장)
-- [ ] Monaco 에디터 + 파일 탭
-- [ ] Project Window (파일 트리), Symbol Window (파일별 아웃라인)
-- [ ] 워처 배선 (인계 노트의 gitignore 정합 포함)
+### ✅ Plan 2: UI 셸 (완료 — Task 1~10, E2E 스모크 통과)
+- [x] 계획 문서 작성 (`docs/superpowers/plans/`)
+- [x] Electron 창 + React + Vite 렌더러 셋업
+- [x] 인덱서 utilityProcess 호스팅 + 버전 있는 IPC(RPC) 프로토콜
+- [x] SI 스타일 패널 레이아웃 (접기/크기조절/배치 저장 — react-resizable-panels v4)
+- [x] Monaco 에디터 + 파일 탭 (dirty/디스크변경 표시, Ctrl/Cmd+S 저장)
+- [x] Project Window (파일 트리), Symbol Window (파일별 아웃라인)
+- [x] 워처 배선 (공유 ignore 필터로 gitignore 정합 포함)
+- [x] Playwright E2E 스모크 (열기→트리→편집→저장→아웃라인 갱신)
+
+### 📌 Plan 3 인계 노트 (Plan 2에서 이월)
+
+- [ ] **ABI 이중성 운영 규칙**: 네이티브 모듈(tree-sitter, better-sqlite3)은 두 ABI를 오간다.
+  `npm test`(vitest)는 **node ABI**, Electron 실행/`npm run test:e2e`는 **electron ABI**가 필요하다.
+  전환은 `npm run rebuild:node` ↔ `npm run rebuild:electron`. `test:e2e`는 자체적으로
+  `build && rebuild:electron && playwright test`를 수행하므로, E2E 실행 후에는 반드시
+  `npm run rebuild:node`로 되돌려 커밋/휴지 상태를 node ABI로 유지할 것.
+- [ ] **초기 인덱싱 중 인덱서 RPC 큐잉**: 아웃라인(`getFileOutline`)은 `indexDone` 이후에만 요청됨
+  (SymbolWindow가 `indexing` 상태를 게이트). 초기 인덱싱 중 심볼 관련 RPC는 결과가 비어있을 수 있음.
+- [ ] **비코드 파일 외부 변경 미통지**: 워처는 지원 확장자만 필터하므로, 비코드 파일의 외부 변경은
+  탭에 ⚠(disk-changed)로 통지되지 않음. 필요 시 워처 범위 확장.
+- [ ] **dirty 탭 닫기 확인 없음**: 편집 중(dirty) 탭을 닫아도 확인 다이얼로그 없이 즉시 폐기됨.
+- [ ] **Persistence JSON 비원자적 쓰기**: UI 상태/recent를 JSON에 직접 write — 쓰기 중 크래시 시 손상 가능.
+  Plan 3+에서 temp+rename 원자적 쓰기로 강화 고려.
+- [ ] **검색/정의점프/Relation·Context**: 인덱서 RPC(fragment 검색, FTS, 정의/호출자/피호출)는 준비 완료.
+  Plan 3은 UI 배선만 하면 됨 (RelationPanel/ContextPanel은 이미 플레이스홀더 존재).
 
 ### Plan 3: 분석 기능
 - [ ] Context Window (커서 심볼 정의 미리보기, ~150ms 디바운스)
