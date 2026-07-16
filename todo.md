@@ -32,7 +32,7 @@
 - [ ] 2MB 초과 파일: 심볼 스킵되나 FTS엔 전체 삽입 — 동작 문서화 또는 정책 통일
 - [ ] 중첩 .gitignore 미지원 (루트만) — 대형 저장소에서 필요 시 확장
 - [ ] Windows 지원 시: `rebuild:electron`의 인라인 `CXXFLAGS`를 cross-env로 (Plan 4 패키징에서)
-- [x] 워처 테스트 타이밍 의존성 — 근본 해소됨 (chokidar ready 경합을 결정적 대기로 제거)
+- [x] 워처 테스트 타이밍 의존성 — 근본 해소됨 (chokidar ready 경합을 결정적 대기로 제거, `9326251`)
 
 ---
 
