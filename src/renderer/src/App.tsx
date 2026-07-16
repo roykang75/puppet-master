@@ -164,7 +164,9 @@ export function App() {
     window.si.onIndexerEvent(handleIndexerEvent);
     window.si.onMenu((action) => {
       if (action.type === 'open-folder') {
-        void window.si.openFolderDialog().then((r) => r && openProject(r));
+        void window.si.openFolderDialog().then((r) => {
+          if (r) void openProject(r);
+        });
       }
       if (action.type === 'open-recent') void openProject(action.root);
       if (action.type === 'save') window.dispatchEvent(new CustomEvent('si:save'));

@@ -4,8 +4,9 @@
   "private": true,
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && npm run typecheck:renderer && vite build",
     "build:main": "tsc -p tsconfig.json",
+    "typecheck:renderer": "tsc -p src/renderer/tsconfig.json --noEmit",
     "build:renderer": "vite build",
     "dev:renderer": "vite",
     "dev": "VITE_DEV_SERVER_URL=http://localhost:5173 electron .",

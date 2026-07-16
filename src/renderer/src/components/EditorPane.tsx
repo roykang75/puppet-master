@@ -206,7 +206,9 @@ export function EditorPane() {
       .then((content) => {
         if (cancelled) return;
         const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel(content, undefined, uri);
-        model.onDidChangeContent(() => {
+        model.onDidChangeContent((e) => {
+          // setValue(디스크 리로드/setDiskContent)는 flush — 사용자 편집이 아니므로 dirty/버퍼인덱스 제외
+          if (e.isFlush) return;
           useAppStore.getState().setDirty(activePath, true);
           scheduleBufferIndex(activePath, model); // 500ms 유휴 재파싱 (스펙 §8)
         });
