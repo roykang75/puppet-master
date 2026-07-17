@@ -162,6 +162,7 @@ export function EditorPane() {
     editorInstance = monaco.editor.create(hostRef.current!, {
       automaticLayout: true,
       minimap: { enabled: true },
+      scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 }, // 얇은 스크롤바 (전역 톤 통일)
       inlineSuggest: { enabled: true }, // AI 고스트 텍스트 활성화
       // 단어 기반 자동완성 팝업이 열려 있는 동안 Monaco가 고스트 텍스트를 억제하므로
       // 자동 팝업을 끈다 (Ctrl+Space 수동 호출은 유지) — AI 완성이 주 UX

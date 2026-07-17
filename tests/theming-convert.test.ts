@@ -41,6 +41,17 @@ describe('convertTheme', () => {
     expect(t.uiVars['--warn']).toBeUndefined(); // 원본에 없음 → 생략(기존 CSS 기본값 유지)
   });
 
+  it('스크롤바 슬라이더 폴백 — 테마 정의가 없으면 톤다운 블랙, 있으면 테마 값 우선', () => {
+    const t = convertTheme(sample)!;
+    expect(t.monacoTheme.colors['scrollbarSlider.background']).toBe('#00000066');
+    expect(t.monacoTheme.colors['scrollbarSlider.hoverBackground']).toBe('#00000099');
+    const withOwn = convertTheme({
+      ...sample,
+      colors: { ...sample.colors, 'scrollbarSlider.background': '#12345678' },
+    })!;
+    expect(withOwn.monacoTheme.colors['scrollbarSlider.background']).toBe('#12345678');
+  });
+
   it('type 없으면 dark, 손상 입력은 null', () => {
     expect(convertTheme({ name: 'x', colors: {}, tokenColors: [] })!.kind).toBe('dark');
     expect(convertTheme(null)).toBeNull();

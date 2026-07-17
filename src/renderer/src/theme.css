@@ -18,6 +18,14 @@
 }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
+
+/* 얇은 톤다운 블랙 스크롤바 — 네이티브(webkit) 전역 (xterm 뷰포트 포함).
+   Monaco는 자체 슬라이더라 defineTheme scrollbarSlider 폴백으로 통일 (theming/convert.ts) */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.6); }
+::-webkit-scrollbar-corner { background: transparent; }
 body {
   background: var(--bg);
   color: var(--fg);
