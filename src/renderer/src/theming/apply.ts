@@ -19,4 +19,5 @@ export async function applyThemeById(monaco: typeof Monaco, id: string): Promise
   for (const v of UI_VARS) rootStyle.removeProperty(v); // 이전 테마 잔여 제거 → CSS 기본값 복귀
   for (const [k, val] of Object.entries(converted.uiVars)) rootStyle.setProperty(k, val);
   document.documentElement.dataset.themeKind = converted.kind; // sem 프리셋 전환
+  window.dispatchEvent(new CustomEvent('si:theme-changed'));
 }

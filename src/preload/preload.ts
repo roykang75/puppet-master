@@ -58,6 +58,23 @@ const api = {
     ipcRenderer.on('chat:event', h);
     return () => ipcRenderer.removeListener('chat:event', h);
   },
+  terminalSpawn: (): Promise<{ id: number } | { error: string }> =>
+    ipcRenderer.invoke('terminal:spawn'),
+  terminalInput: (id: number, data: string): Promise<void> =>
+    ipcRenderer.invoke('terminal:input', id, data),
+  terminalResize: (id: number, cols: number, rows: number): Promise<void> =>
+    ipcRenderer.invoke('terminal:resize', id, cols, rows),
+  terminalKill: (id: number): Promise<void> => ipcRenderer.invoke('terminal:kill', id),
+  onTerminalEvent: (
+    cb: (e: { type: 'data'; id: number; data: string } | { type: 'exit'; id: number }) => void,
+  ): (() => void) => {
+    const h = (
+      _e: Electron.IpcRendererEvent,
+      data: { type: 'data'; id: number; data: string } | { type: 'exit'; id: number },
+    ) => cb(data);
+    ipcRenderer.on('terminal:event', h);
+    return () => ipcRenderer.removeListener('terminal:event', h);
+  },
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
   getAppearance: (): Promise<{ theme: string }> => ipcRenderer.invoke('settings:appearance:get'),
   setAppearance: (a: { theme: string }): Promise<void> => ipcRenderer.invoke('settings:appearance:set', a),

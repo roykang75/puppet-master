@@ -193,3 +193,21 @@ body {
   flex: 1; resize: none; background: var(--bg); color: var(--fg);
   border: 1px solid var(--border); border-radius: 3px; padding: 4px 6px; font: inherit;
 }
+
+/* ── 내장 터미널 (Plan 9) ── */
+.terminal-panel { display: flex; flex-direction: column; height: 100%; }
+.terminal-tabs {
+  flex: none; display: flex; align-items: center; gap: 2px;
+  padding: 2px 4px; border-bottom: 1px solid var(--border); overflow-x: auto;
+}
+.terminal-tab {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px;
+  font-size: 11px; color: var(--fg-dim); cursor: pointer; border-radius: 3px; white-space: nowrap;
+}
+.terminal-tab.active { color: var(--fg); background: var(--bg-active); }
+.terminal-close, .terminal-add {
+  background: none; border: none; color: var(--fg-dim); cursor: pointer; font-size: 12px; padding: 0 2px;
+}
+.terminal-close:hover, .terminal-add:hover { color: var(--fg); }
+.terminal-hosts { flex: 1; min-height: 0; position: relative; }
+.terminal-host { height: 100%; width: 100%; padding: 2px; }

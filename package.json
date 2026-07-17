@@ -15,8 +15,8 @@
     "start": "electron .",
     "test": "vitest run",
     "test:e2e": "npm run build && npm run rebuild:electron && playwright test",
-    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3",
-    "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3",
+    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3,node-pty",
+    "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3 node-pty",
     "bench": "node dist/scripts/bench.js",
     "package": "npm run build && npm run rebuild:electron && electron-builder --mac"
   },
@@ -41,9 +41,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "better-sqlite3": "^12.11.1",
     "chokidar": "^4.0.3",
     "ignore": "^7.0.6",
+    "node-pty": "^1.1.0",
     "openai": "^6.47.0",
     "pyright": "^1.1.411",
     "tree-sitter": "^0.22.4",
