@@ -17,7 +17,8 @@ export function ProjectWindow() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<{ rel: string; isDir: boolean } | null>(null);
   // VS Code 스타일 인라인 생성 — 대상 폴더의 자식 목록 맨 위에 이름 입력 행을 띄운다
-  const [creating, setCreating] = useState<{ kind: 'file' | 'dir'; dir: string } | null>(null);
+  // anchor: 파일을 선택한 채 생성하면 그 파일 바로 아래에 입력 행을 붙인다 (VS Code 동작)
+  const [creating, setCreating] = useState<{ kind: 'file' | 'dir'; dir: string; anchor: string | null } | null>(null);
   const [createName, setCreateName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +72,7 @@ export function ProjectWindow() {
       setExpanded((prev) => new Set(prev).add(dir));
       loadDir(dir);
     }
-    setCreating({ kind, dir });
+    setCreating({ kind, dir, anchor: selected && !selected.isDir ? selected.rel : null });
     setCreateName('');
     setCreateError(null);
   };
@@ -134,7 +135,7 @@ export function ProjectWindow() {
 
   const renderDir = (rel: string, depth: number): React.ReactNode => (
     <>
-      {creating && creating.dir === rel && createRow(depth)}
+      {creating && creating.dir === rel && !creating.anchor && createRow(depth)}
       {(dirs[rel] ?? []).map((e) => {
         const childRel = rel ? `${rel}/${e.name}` : e.name;
         return (
@@ -158,6 +159,7 @@ export function ProjectWindow() {
               />
               {e.name}
             </div>
+            {creating && creating.dir === rel && creating.anchor === childRel && createRow(depth)}
             {e.isDir && expanded.has(childRel) && renderDir(childRel, depth + 1)}
           </div>
         );
