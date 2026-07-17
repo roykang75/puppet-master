@@ -81,7 +81,26 @@ body {
 .context-body { display: flex; flex-direction: column; }
 .context-editor { flex: 1; min-height: 0; }
 
-.tabs { flex: none; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow-x: auto; }
+/* 스크롤은 tab-strip이 담당 — .tabs가 클리핑하면 열린 파일 드롭다운이 잘린다 */
+.tabs { flex: none; position: relative; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+.tab-strip { flex: 1; min-width: 0; display: flex; overflow-x: auto; }
+.tabs-actions { flex: none; display: flex; align-items: center; padding: 0 4px; border-left: 1px solid var(--border); }
+.open-editors-backdrop { position: fixed; inset: 0; z-index: 40; }
+.open-editors-menu {
+  position: absolute; top: 100%; right: 4px; z-index: 41;
+  min-width: 240px; max-width: 420px; max-height: 50vh; overflow-y: auto;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); padding: 4px;
+}
+.open-editors-title { padding: 4px 8px 6px; font-size: 11px; color: var(--fg-dim); border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.open-editors-item {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  cursor: pointer; border-radius: 4px; white-space: nowrap;
+}
+.open-editors-item:hover { background: var(--bg-hover); }
+.open-editors-item.active { background: var(--bg-active); }
+.open-editors-name { flex: none; }
+.open-editors-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); font-size: 11px; text-align: right; }
 .nav-buttons { display: flex; align-items: center; padding: 0 4px; border-right: 1px solid var(--border); }
 .nav-btn { padding: 2px 6px; cursor: pointer; color: var(--fg-dim); font-size: 11px; }
 .nav-btn:hover { color: var(--fg); }
