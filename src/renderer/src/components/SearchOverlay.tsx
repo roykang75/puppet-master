@@ -92,8 +92,9 @@ export function SearchOverlay() {
   const idxOf = (it: Item) => items.indexOf(it);
 
   return (
-    <div className="search-backdrop" onClick={() => setOpen(false)}>
-      <div className="search-box" onClick={(e) => e.stopPropagation()}>
+    // click 대신 mousedown + target 검사 — 상자 안에서 드래그해 밖에서 떼도 닫히지 않도록
+    <div className="search-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
+      <div className="search-box">
         <input
           ref={inputRef}
           value={q}

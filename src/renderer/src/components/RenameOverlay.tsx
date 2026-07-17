@@ -178,8 +178,9 @@ export function RenameOverlay() {
   };
 
   return (
-    <div className="search-backdrop" onClick={close}>
-      <div className="search-box rename-box" onClick={(e) => e.stopPropagation()} onKeyDown={onKey}>
+    // click 대신 mousedown + target 검사 — 상자 안에서 드래그해 밖에서 떼도 닫히지 않도록
+    <div className="search-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+      <div className="search-box rename-box" onKeyDown={onKey}>
         <div className="rename-header">
           <span className="rename-title">이름 바꾸기: <b>{oldName}</b></span>
           <input

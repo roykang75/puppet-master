@@ -80,8 +80,10 @@ export function SettingsOverlay() {
   };
 
   return (
-    <div className="search-backdrop" onClick={close}>
-      <div className="search-box settings-box" onClick={(e) => e.stopPropagation()} onKeyDown={onKey}>
+    // click 대신 mousedown + target 검사 — 입력란에서 드래그해 밖에서 떼면 click target이
+    // 공통 조상(backdrop)으로 판정돼 창이 닫히는 문제 방지
+    <div className="search-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
+      <div className="search-box settings-box" onKeyDown={onKey}>
         <div className="settings-header">AI 코드 자동완성 설정</div>
 
         <div className="settings-body">
