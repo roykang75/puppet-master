@@ -23,8 +23,12 @@ html, body, #root { height: 100%; margin: 0; }
    Monaco는 자체 슬라이더라 defineTheme scrollbarSlider 폴백으로 통일 (theming/convert.ts) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
+/* 마우스가 스크롤 영역에 들어왔을 때만 썸 표시 (Monaco 에디터와 동일한 자동 숨김).
+   Chromium은 `:hover::-webkit-scrollbar-thumb`를 무시하므로(실측) CSS 변수로 우회 —
+   hover 체인의 요소에 변수만 바뀌고 스크롤바가 그 변수를 참조한다. */
+::-webkit-scrollbar-thumb { background: var(--sb-thumb, transparent); border-radius: 3px; }
+* { --sb-thumb: transparent; } /* 변수 상속 차단 — 조상 hover가 후손 스크롤바를 켜지 않게 */
+*:hover { --sb-thumb: #3f3f3f; }
 ::-webkit-scrollbar-corner { background: transparent; }
 body {
   background: var(--bg);
