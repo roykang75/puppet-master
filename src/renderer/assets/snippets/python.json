@@ -1,0 +1,7 @@
+{
+  "Function": { "prefix": "def", "body": ["def ${1:name}(${2:args}):", "\t$0"] },
+  "Main guard": { "prefix": "main", "body": ["if __name__ == \"__main__\":", "\t$0"] },
+  "For": { "prefix": "for", "body": ["for ${1:item} in ${2:items}:", "\t$0"] },
+  "Try/except": { "prefix": "try", "body": ["try:", "\t$1", "except ${2:Exception} as e:", "\t$0"] },
+  "Class": { "prefix": "class", "body": ["class ${1:Name}:", "\tdef __init__(self$2):", "\t\t$0"] }
+}

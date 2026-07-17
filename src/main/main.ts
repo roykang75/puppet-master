@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { spawnIndexer, IndexerManager } from './indexer-manager';
 import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
@@ -214,6 +215,15 @@ function registerIpc(): void {
     },
   );
   ipcMain.handle('completion:request', (_e, ctx: CompletionContext) => completionService.request(ctx));
+  ipcMain.handle('snippets:read', (_e, lang: string) => {
+    if (!/^[a-z]+$/.test(lang)) return null; // 경로 주입 방어
+    const p = path.join(app.getPath('userData'), 'snippets', `${lang}.json`);
+    try {
+      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    } catch {
+      return null; // 없음/손상 → 번들만 사용
+    }
+  });
 }
 
 function createWindow(): void {

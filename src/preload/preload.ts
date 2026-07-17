@@ -50,6 +50,7 @@ const api = {
   ): Promise<void> => ipcRenderer.invoke('settings:completion:set', s, apiKey),
   requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
     ipcRenderer.invoke('completion:request', ctx),
+  snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
   saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
