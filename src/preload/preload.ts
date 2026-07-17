@@ -51,6 +51,13 @@ const api = {
   requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
     ipcRenderer.invoke('completion:request', ctx),
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
+  getAppearance: (): Promise<{ theme: string }> => ipcRenderer.invoke('settings:appearance:get'),
+  setAppearance: (a: { theme: string }): Promise<void> => ipcRenderer.invoke('settings:appearance:set', a),
+  themeList: (): Promise<{ id: string; name: string }[]> => ipcRenderer.invoke('theme:list'),
+  themeRead: (id: string): Promise<unknown | null> => ipcRenderer.invoke('theme:read', id),
+  themeImport: (): Promise<{ id: string; name: string } | { error: string } | null> =>
+    ipcRenderer.invoke('theme:import'),
+  snippetsOpenFolder: (): Promise<void> => ipcRenderer.invoke('snippets:openFolder'),
   onigWasm: async (): Promise<ArrayBuffer> => {
     const buf: Uint8Array = await ipcRenderer.invoke('tm:onigWasm');
     return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;

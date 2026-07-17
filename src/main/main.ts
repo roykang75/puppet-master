@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawnIndexer, IndexerManager } from './indexer-manager';
@@ -227,6 +227,57 @@ function registerIpc(): void {
     } catch {
       return null; // 없음/손상 → 번들만 사용
     }
+  });
+  ipcMain.handle('settings:appearance:get', () => settingsStore.getAppearance());
+  ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
+
+  const themesDir = () => path.join(app.getPath('userData'), 'themes');
+  ipcMain.handle('theme:list', () => {
+    try {
+      return fs.readdirSync(themesDir())
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => {
+          const id = `user:${f.slice(0, -5)}`;
+          try {
+            const name = (JSON.parse(fs.readFileSync(path.join(themesDir(), f), 'utf8')) as { name?: string }).name;
+            return { id, name: name || f.slice(0, -5) };
+          } catch {
+            return { id, name: f.slice(0, -5) };
+          }
+        });
+    } catch {
+      return []; // 폴더 없음
+    }
+  });
+  ipcMain.handle('theme:read', (_e, id: string) => {
+    if (!id.startsWith('user:') || id.includes('..') || id.includes('/')) return null;
+    try {
+      return JSON.parse(fs.readFileSync(path.join(themesDir(), `${id.slice(5)}.json`), 'utf8'));
+    } catch {
+      return null;
+    }
+  });
+  ipcMain.handle('theme:import', async () => {
+    const r = await dialog.showOpenDialog(win!, {
+      properties: ['openFile'],
+      filters: [{ name: 'VS Code 테마', extensions: ['json'] }],
+    });
+    if (r.canceled || !r.filePaths[0]) return null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8')) as { name?: string; colors?: unknown; tokenColors?: unknown };
+      if (!raw.tokenColors && !raw.colors) return { error: 'VS Code 테마 형식이 아닙니다 (colors/tokenColors 없음)' };
+      fs.mkdirSync(themesDir(), { recursive: true });
+      const base = path.basename(r.filePaths[0], '.json').replace(/[^\w-]/g, '_');
+      fs.writeFileSync(path.join(themesDir(), `${base}.json`), JSON.stringify(raw));
+      return { id: `user:${base}`, name: raw.name || base };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : String(e) };
+    }
+  });
+  ipcMain.handle('snippets:openFolder', async () => {
+    const dir = path.join(app.getPath('userData'), 'snippets');
+    fs.mkdirSync(dir, { recursive: true });
+    await shell.openPath(dir);
   });
 }
 

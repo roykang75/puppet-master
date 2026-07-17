@@ -83,3 +83,16 @@ describe('SettingsStore', () => {
     expect(store.getCompletion()).toEqual({ provider: 'none', model: '' });
   });
 });
+
+describe('appearance', () => {
+  it('기본값 dark-plus, set→get 라운드트립, completion과 독립', () => {
+    const store = new SettingsStore(baseDir);
+    expect(store.getAppearance()).toEqual({ theme: 'dark-plus' });
+    store.setAppearance({ theme: 'monokai' });
+    expect(store.getAppearance()).toEqual({ theme: 'monokai' });
+    store.setCompletion({ provider: 'none', model: '' });
+    expect(store.getAppearance()).toEqual({ theme: 'monokai' }); // completion 저장이 appearance 보존
+    const store2 = new SettingsStore(baseDir);
+    expect(store2.getAppearance().theme).toBe('monokai');
+  });
+});
