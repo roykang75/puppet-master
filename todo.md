@@ -169,7 +169,9 @@
 
 ### 🔜 다음 단계
 
-**Plan 8 (AI 채팅)** — 사용자 합의된 순서 (2026-07-17). 범위 결정 필요: 단순 채팅 vs Claude Agent SDK 기반 에이전트 패널.
+**Plan 8 (AI 채팅)** — 스펙 확정(5b86c54): 코드 컨텍스트 채팅 + 스트리밍, 우측 탭. 구현 진행 중.
+**Plan 9 (내장 터미널)** — 다음 순서 확정 (2026-07-17): xterm.js + node-pty 하단 터미널, Claude Code CLI/codex 실행 목적. 로그인 셸 스폰(PATH), ABI 관리 목록에 node-pty 추가 필요.
+**Plan 10 후보 (에이전트 패널)** — Claude Agent SDK 기반, 사용자 결정 대기.
 
 ### v2 이후 (백로그)
 - [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
