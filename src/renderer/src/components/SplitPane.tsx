@@ -56,10 +56,10 @@ export function SplitPane() {
       readOnly: true,
       renderSideBySide: true,
       renderSideBySideInlineBreakpoint: 600, // 좁으면 인라인 diff로 자동 전환
-      // 미니맵 유지 — 그 위에 겹치는 오버레이는 전부 제거:
-      minimap: { enabled: true, showSlider: 'mouseover' },
-      renderOverviewRuler: false, // diff 마크 룰러 (미니맵이 diff를 이미 표시)
-      overviewRulerLanes: 0, // 커서/선택 데코레이션 룰러 캔버스 — 미니맵 옆 어두운 세로 막대의 정체
+      // Monaco DiffEditor는 진짜 미니맵을 강제 비활성(_adjustOptionsForSubEditor)하므로
+      // diff 위치 미니맵 역할은 diff 오버뷰 룰러(빨강/초록 마크)가 담당한다 — VS Code와 동일.
+      renderOverviewRuler: true,
+      overviewRulerLanes: 0, // 커서/선택 데코레이션 캔버스(룰러를 가리던 어두운 세로 막대)는 계속 제거
       overviewRulerBorder: false,
       scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
     });

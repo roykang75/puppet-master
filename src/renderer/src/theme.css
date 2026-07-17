@@ -148,8 +148,8 @@ body {
 .editor-split-row { flex: 1; min-height: 0; display: flex; }
 .editor-split-row .editor-host { flex: 1; min-width: 0; }
 .split-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
-/* diff 뷰: 미니맵은 유지하되 그 위에 겹치는 뷰포트 슬라이더는 숨긴다 (스크롤바가 별도로 있음) */
-.split-pane .minimap-slider { display: none; }
+/* diff 뷰: diff 룰러(미니맵 역할)는 유지하되 그 위의 뷰포트 핸들은 숨긴다 (스크롤바가 별도로 있음) */
+.split-pane .diffViewport { display: none; }
 .image-view {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
   overflow: auto; background: var(--bg);
