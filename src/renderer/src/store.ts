@@ -22,6 +22,7 @@ interface AppState {
   settingsOpen: boolean;
   renameRequest: { name: string; path: string } | null;
   completionStatus: string | null;
+  lspStopped: string[]; // 중지된 LSP 언어 목록 (예: ['ts'])
   bookmarks: Bookmark[];
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
@@ -39,6 +40,7 @@ interface AppState {
   setSettingsOpen(v: boolean): void;
   setRenameRequest(r: { name: string; path: string } | null): void;
   setCompletionStatus(msg: string | null): void;
+  setLspStopped(lang: string, stopped: boolean): void;
   setBookmarks(list: Bookmark[]): void;
 }
 
@@ -56,9 +58,10 @@ export const useAppStore = create<AppState>((set) => ({
   settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
   completionStatus: null,
+  lspStopped: [],
   bookmarks: [],
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, bookmarks: [] }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [] }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -88,5 +91,9 @@ export const useAppStore = create<AppState>((set) => ({
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
   setCompletionStatus: (completionStatus) => set({ completionStatus }),
+  setLspStopped: (lang, stopped) =>
+    set((s) => ({
+      lspStopped: stopped ? [...new Set([...s.lspStopped, lang])] : s.lspStopped.filter((l) => l !== lang),
+    })),
   setBookmarks: (bookmarks) => set({ bookmarks }),
 }));

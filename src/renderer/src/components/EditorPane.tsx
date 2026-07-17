@@ -4,6 +4,8 @@ import { useAppStore } from '../store';
 import { jumpTo, setCurrentLocProvider, type Loc } from '../navigation';
 import { buildTokenDecorations } from '../semantic-tokens';
 import { registerCompletionProvider } from '../completion-provider';
+import { registerLspFeatures, tryLspDefinition } from '../lsp-features';
+import { lspSync, isLspPath } from '../lsp-sync';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -25,10 +27,12 @@ export function setDiskContent(relPath: string, content: string): void {
 }
 
 export function disposeModel(relPath: string): void {
+  lspSync.lspClose(relPath); // close ⇒ dispose 불변식: 탭 닫기/삭제 파일 정리 시 didClose 통지
   monaco.editor.getModel(uriOf(relPath))?.dispose();
 }
 
 export function disposeAllModels(): void {
+  lspSync.lspCloseAll(); // 프로젝트 전환 — 열린 모든 LSP 문서 didClose
   for (const model of monaco.editor.getModels()) model.dispose();
 }
 
@@ -147,6 +151,7 @@ export function EditorPane() {
       model: null,
     });
     registerCompletionProvider(monaco); // 앱 수명 1회 (내부 플래그로 재마운트 이중 등록 방지)
+    registerLspFeatures(monaco); // 앱 수명 1회 (내부 플래그)
     editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
       window.dispatchEvent(new CustomEvent('si:save')),
     );
@@ -181,7 +186,13 @@ export function EditorPane() {
       const st = useAppStore.getState();
       if (!pos || !model || !st.activePath) return;
       const word = model.getWordAtPosition(pos);
-      if (word) void resolveAndJump(word.word, st.activePath);
+      if (word) {
+        const activePath = st.activePath;
+        void (async () => {
+          const jumped = await tryLspDefinition(activePath, pos.lineNumber, word.startColumn);
+          if (!jumped) void resolveAndJump(word.word, activePath);
+        })();
+      }
     });
 
     // F12 → 정의 점프
@@ -190,7 +201,12 @@ export function EditorPane() {
       const model = editorInstance?.getModel();
       if (!loc || !model) return;
       const word = model.getWordAtPosition({ lineNumber: loc.line, column: loc.col });
-      if (word) void resolveAndJump(word.word, loc.path);
+      if (word) {
+        void (async () => {
+          const jumped = await tryLspDefinition(loc.path, loc.line, word.startColumn);
+          if (!jumped) void resolveAndJump(word.word, loc.path);
+        })();
+      }
     });
 
     // F2 → Smart Rename 오버레이 열기 (커서 단어 기준)
@@ -224,6 +240,9 @@ export function EditorPane() {
     const existing = monaco.editor.getModel(uri);
     if (existing) {
       editorInstance?.setModel(existing);
+      // 이미 열린 탭으로 전환 시에도 LSP 언어에서만 자동 제안 유지 (스펙 §5)
+      const lspLang = isLspPath(activePath);
+      editorInstance?.updateOptions({ quickSuggestions: lspLang, suggestOnTriggerCharacters: lspLang });
       applyPendingJump();
       return;
     }
@@ -233,11 +252,16 @@ export function EditorPane() {
       .then((content) => {
         if (cancelled) return;
         const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel(content, undefined, uri);
+        lspSync.lspOpen(activePath, model.getValue());
+        // LSP 언어만 자동 제안 활성 — 그 외 언어는 AI 고스트 주 UX 유지 (스펙 §5)
+        const lspLang = isLspPath(activePath);
+        editorInstance?.updateOptions({ quickSuggestions: lspLang, suggestOnTriggerCharacters: lspLang });
         model.onDidChangeContent((e) => {
           // setValue(디스크 리로드/setDiskContent)는 flush — 사용자 편집이 아니므로 dirty/버퍼인덱스 제외
           if (e.isFlush) return;
           useAppStore.getState().setDirty(activePath, true);
           scheduleBufferIndex(activePath, model); // 500ms 유휴 재파싱 (스펙 §8)
+          lspSync.lspChange(activePath, model.getValue());
         });
         editorInstance?.setModel(model);
         applyPendingJump(); // 비동기 모델 로드 후 대기 중 점프 소비
