@@ -8,6 +8,7 @@ import { SettingsStore } from './settings';
 import { CompletionService } from './completion/service';
 import { ChatService } from './chat/service';
 import { LspManager } from './lsp/manager';
+import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
 import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, LspCallParams, ChatMessage, ChatContext } from '../shared/protocol';
@@ -29,6 +30,7 @@ const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 let win: BrowserWindow | null = null;
 let indexer: IndexerManager | null = null;
 let lsp: LspManager | null = null;
+let terminals: TerminalManager | null = null;
 let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
 let quitting = false;
@@ -77,6 +79,12 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
       onDiagnostics: (path, diagnostics) =>
         win?.webContents.send('lsp:event', { event: 'diagnostics', payload: { path, diagnostics } }),
       onStatus: (status) => win?.webContents.send('lsp:event', { event: 'status', payload: status }),
+    });
+    terminals?.killAll();
+    terminals = new TerminalManager({
+      cwd: root,
+      onData: (id, data) => win?.webContents.send('terminal:event', { type: 'data', id, data }),
+      onExit: (id) => win?.webContents.send('terminal:event', { type: 'exit', id }),
     });
     persistence.addRecent(root);
     buildMenu(persistence.loadRecent(), sendMenu);
@@ -151,6 +159,14 @@ function registerIpc(): void {
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
     return indexer.rpc.request(method, params, { timeoutMs: 180_000 });
   });
+  ipcMain.handle('terminal:spawn', () =>
+    terminals ? terminals.spawn() : { error: '프로젝트가 열려 있지 않습니다' },
+  );
+  ipcMain.handle('terminal:input', (_e, id: number, data: string) => terminals?.input(id, data));
+  ipcMain.handle('terminal:resize', (_e, id: number, cols: number, rows: number) =>
+    terminals?.resize(id, cols, rows),
+  );
+  ipcMain.handle('terminal:kill', (_e, id: number) => terminals?.kill(id));
   ipcMain.handle('lsp:call', (_e, method: string, params: unknown) => {
     if (!LSP_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 LSP 메서드: ${method}`);
     return lsp?.request(method as 'completion' | 'hover' | 'definition', params as LspCallParams) ?? null;
@@ -332,4 +348,5 @@ app.on('before-quit', () => {
   quitting = true;
   indexer?.kill();
   lsp?.shutdownAll();
+  terminals?.killAll();
 });
