@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
+import { VscAdd, VscArrowUp, VscCheck, VscCopy, VscDebugStop } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { buildChatContext } from '../chat-context';
 import { parseMarkdown, type InlineSpan } from '../chat-markdown';
@@ -151,7 +152,7 @@ export function ChatPanel() {
           />
           <span className="chat-context-label">{contextLabel}</span>
         </label>
-        <button className="chat-new" title="새 대화" onClick={() => useAppStore.getState().clearChat()}>＋</button>
+        <button className="chat-new" title="새 대화" onClick={() => useAppStore.getState().clearChat()}><VscAdd /></button>
       </div>
       <div className="chat-messages" ref={listRef}>
         {messages.length === 0 && <div className="hint">코드에 대해 물어보세요.</div>}
@@ -167,7 +168,7 @@ export function ChatPanel() {
               <div className="chat-msg-footer">
                 <span className="chat-time">{formatTime(m.ts)}</span>
                 <button className="chat-copy" title="복사" onClick={() => copy(i, m.content)}>
-                  {copiedIdx === i ? '✓' : '⧉'}
+                  {copiedIdx === i ? <VscCheck /> : <VscCopy />}
                 </button>
               </div>
             )}
@@ -202,9 +203,9 @@ export function ChatPanel() {
             ))}
           </select>
           {streaming ? (
-            <button className="chat-send chat-stop" title="중단" onClick={cancel}>■</button>
+            <button className="chat-send chat-stop" title="중단" onClick={cancel}><VscDebugStop /></button>
           ) : (
-            <button className="chat-send" title="전송 (Enter)" onClick={() => void send()} disabled={!input.trim()}>↑</button>
+            <button className="chat-send" title="전송 (Enter)" onClick={() => void send()} disabled={!input.trim()}><VscArrowUp /></button>
           )}
         </div>
       </div>

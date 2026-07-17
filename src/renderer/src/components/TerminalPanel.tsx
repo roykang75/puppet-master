@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { VscAdd, VscClose } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { createTerminalView, getTerminalView, disposeAllTerminalViews } from '../terminal-view';
 
@@ -59,10 +60,10 @@ export function TerminalPanel({ visible }: { visible: boolean }) {
             }}
           >
             {t.title}{t.exited ? ' (종료됨)' : ''}
-            <button className="terminal-close" onClick={(e) => { e.stopPropagation(); close(t.id); }}>×</button>
+            <button className="terminal-close" onClick={(e) => { e.stopPropagation(); close(t.id); }}><VscClose /></button>
           </span>
         ))}
-        <button className="terminal-add" onClick={() => void spawn()}>+</button>
+        <button className="terminal-add" title="새 터미널" onClick={() => void spawn()}><VscAdd /></button>
       </div>
       <div className="terminal-hosts" ref={hostRef}>
         {terminals.length === 0 && (

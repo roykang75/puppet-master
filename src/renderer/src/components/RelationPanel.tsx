@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { VscChevronDown, VscChevronRight, VscCircleSmallFilled } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import type { Candidate } from '../../../indexer/resolve';
@@ -129,7 +130,7 @@ export function RelationPanel() {
             className="tree-icon"
             onClick={(e) => { e.stopPropagation(); if (n.expandable) void expand(n); }}
           >
-            {n.expandable ? (n.expanded ? '▾' : '▸') : '·'}
+            {n.expandable ? (n.expanded ? <VscChevronDown /> : <VscChevronRight />) : <VscCircleSmallFilled />}
           </span>
           <span className="rel-label" onClick={() => jumpTo(n.path, n.line)}>{n.label}</span>
           <span className="rel-detail">{n.detail}</span>

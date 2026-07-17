@@ -1,3 +1,4 @@
+import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { disposeModel } from './EditorPane';
 import { goBack, goForward } from '../navigation';
@@ -10,14 +11,14 @@ export function FileTabs() {
   return (
     <div className="tabs">
       <div className="nav-buttons">
-        <span className="nav-btn" title="뒤로 (Alt+←)" onClick={goBack}>◀</span>
-        <span className="nav-btn" title="앞으로 (Alt+→)" onClick={goForward}>▶</span>
+        <span className="nav-btn" title="뒤로 (Alt+←)" onClick={goBack}><VscArrowLeft /></span>
+        <span className="nav-btn" title="앞으로 (Alt+→)" onClick={goForward}><VscArrowRight /></span>
       </div>
       {tabs.map((t) => (
         <div key={t.path} className={`tab${t.path === activePath ? ' active' : ''}`} onClick={() => setActive(t.path)}>
           <span>{t.path.split('/').pop()}</span>
-          {t.dirty && <span className="dirty-dot">●</span>}
-          {t.diskChanged && <span className="disk-changed" title="디스크에서 변경됨">⚠</span>}
+          {t.dirty && <span className="dirty-dot"><VscCircleFilled /></span>}
+          {t.diskChanged && <span className="disk-changed" title="디스크에서 변경됨"><VscWarning /></span>}
           <span
             className="tab-close"
             onClick={(e) => {
@@ -26,7 +27,7 @@ export function FileTabs() {
               closeTab(t.path);
             }}
           >
-            ×
+            <VscClose />
           </span>
         </div>
       ))}

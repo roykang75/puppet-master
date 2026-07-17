@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VscChevronDown, VscChevronRight, VscFile } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 
 interface DirEntry {
@@ -38,7 +39,9 @@ export function ProjectWindow() {
             style={{ paddingLeft: depth * 14 + 8 }}
             onClick={() => (e.isDir ? toggle(childRel) : openTab(childRel))}
           >
-            <span className="tree-icon">{e.isDir ? (expanded.has(childRel) ? '▾' : '▸') : '·'}</span>
+            <span className="tree-icon">
+              {e.isDir ? (expanded.has(childRel) ? <VscChevronDown /> : <VscChevronRight />) : <VscFile />}
+            </span>
             {e.name}
           </div>
           {e.isDir && expanded.has(childRel) && renderDir(childRel, depth + 1)}

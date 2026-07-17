@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { VscAdd, VscTrash } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { refreshCompletionSettings } from '../completion-provider';
 import { monaco } from '../monaco-setup';
@@ -162,7 +163,7 @@ export function SettingsOverlay() {
         <div className="settings-body">
           <div className="settings-section-title">
             <span>모델 프로파일 — 활성 1개를 자동완성/채팅이 사용</span>
-            <button className="rename-btn" onClick={addProfile}>＋ 모델 추가</button>
+            <button className="rename-btn icon-btn" onClick={addProfile}><VscAdd /> 모델 추가</button>
           </div>
 
           <label className="settings-field profile-none">
@@ -192,7 +193,7 @@ export function SettingsOverlay() {
                     onChange={(e) => update(i, { name: e.target.value })}
                   />
                 </label>
-                <button className="profile-remove" title="삭제" onClick={() => removeProfile(i)}>×</button>
+                <button className="profile-remove" title="삭제" onClick={() => removeProfile(i)}><VscTrash /></button>
               </div>
               <label className="settings-field">
                 <span className="settings-label">제공자</span>

@@ -1,3 +1,4 @@
+import { VscBookmark, VscClose } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import { resolveBookmarkLine } from '../bookmarks';
@@ -24,11 +25,12 @@ export function BookmarksSection() {
         {bookmarks.length === 0 && <div className="hint">Cmd/Ctrl+F2로 북마크 토글</div>}
         {bookmarks.map((bm, i) => (
           <div key={i} className="rel-item" style={{ paddingLeft: 8 }}>
+            <span className="tree-icon"><VscBookmark /></span>
             <span className="rel-label" onClick={() => void jump(bm)}>
               {bm.anchorName ? `${bm.anchorName}+${bm.offset}` : `:${bm.line}`} <span className="rel-kind">{bm.text}</span>
             </span>
             <span className="rel-detail">{bm.path}</span>
-            <span className="tab-close" onClick={() => remove(bm)}>×</span>
+            <span className="tab-close" onClick={() => remove(bm)}><VscClose /></span>
           </div>
         ))}
       </div>

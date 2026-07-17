@@ -49,6 +49,7 @@
     "node-pty": "^1.1.0",
     "openai": "^6.47.0",
     "pyright": "^1.1.411",
+    "react-icons": "^5.7.0",
     "tree-sitter": "^0.22.4",
     "tree-sitter-c": "^0.23.6",
     "tree-sitter-cpp": "^0.23.4",
