@@ -8,7 +8,7 @@
 
 포함:
 - **TextMate 문법 전체 도입**: Microsoft 공식 `vscode-textmate`(엔진) + `vscode-oniguruma`(WASM), Monaco 연결 어댑터 직접 작성. 6언어 tmLanguage JSON 번들 (VS Code 저장소, MIT — 라이선스 고지 포함)
-- **테마**: 번들 4종(Dark+, Light+, One Dark Pro, Dracula — 모두 MIT) + **VS Code 테마 JSON 임포트**(파일 선택 → userData/themes 복사) + **앱 UI 연동**(패널/트리/탭/상태바 CSS 변수를 테마에서 유도). 설정 오버레이에서 선택, 즉시 적용
+- **테마**: 번들 4종(Dark+, Light+, Monokai, One Dark Pro — 모두 MIT. Dark+/Light+/Monokai는 VS Code 저장소, One Dark Pro는 Binaryify 저장소에서 벤더링. Dracula는 배포 파일 경로 불안정으로 Monokai로 대체) + **VS Code 테마 JSON 임포트**(파일 선택 → userData/themes 복사) + **앱 UI 연동**(패널/트리/탭/상태바 CSS 변수를 테마에서 유도). 설정 오버레이에서 선택, 즉시 적용
 - **스니펫**: VS Code 스니펫 JSON 포맷(`prefix`/`body`/`description`, `$1`/`${2:기본값}`), 언어별 번들 기본 세트 + 사용자 정의(`userData/snippets/<언어>.json`), 완성 드롭다운 통합(kind=Snippet, placeholder Tab 이동), 설정에 "스니펫 폴더 열기" 버튼
 
 제외 (명시):
@@ -35,7 +35,9 @@ src/renderer/src/
   theming/convert.ts     테마 JSON → { monacoTheme, uiVars(CSS 변수), kind } 순수 변환
   theming/apply.ts       defineTheme + setTheme + document CSS 변수 주입
   snippets.ts            스니펫 JSON 파서 + CompletionItemProvider (kind=Snippet)
-assets/grammars/*.tmLanguage.json  6언어 (c, cpp, python, typescript(+tsx), javascript(+jsx), java)
+assets/grammars/*.tmLanguage.json  6언어 (c, cpp, python, typescript, javascript, java)
+  ※ 한계: Monaco는 .tsx/.jsx를 typescript/javascript languageId로 묶으므로 base 문법 적용 —
+    JSX 구문의 정밀 하이라이팅은 VS Code 대비 낮음 (React 전용 문법은 languageId 분리가 필요해 후속)
 assets/themes/*.json               번들 4종
 src/main/
   settings.ts            appearance: { theme: string } (기본 'dark-plus')
