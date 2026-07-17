@@ -169,7 +169,18 @@
 
 ### 🔜 다음 단계
 
-**Plan 8 (AI 채팅)** — 스펙 확정(5b86c54): 코드 컨텍스트 채팅 + 스트리밍, 우측 탭. 구현 진행 중.
+## ✅ Plan 8: AI 채팅 (v2 3탄) — 완료 (main 병합 8e85e76)
+
+- [x] 우측 "Relation | AI 채팅" 탭 전환 패널 — 스트리밍 메시지, Enter 전송(IME 가드), 중단/새 대화
+- [x] 자동 코드 컨텍스트 주입 + 토글: 선택 영역 우선, 없으면 커서 ±30줄 + 심볼 시그니처 ≤20 (표시줄로 투명하게)
+- [x] main 무상태 스트리밍 ChatService — completion 설정(provider/model/키) 재사용, 로컬 LM Studio 즉시 동작. 키/오류 상세는 IPC를 넘지 않음(kind만)
+- [x] 취소=부분 응답 유지+(중단됨), 프로젝트 전환 시 스트림 중단+대화 초기화(세션 메모리만)
+- [x] 검증: 단위/fake SSE 통합/E2E 6스펙 — 총 232개
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** RightPanel 탭바 아래 Relation 타이틀 중첩(미관), ChatPanel provider 감지 1회 조회(탭 재진입 시 회복), 통합 테스트 afterAll close 미await, 응답 코드 블록 구문 강조는 후속.
+
+### 🔜 다음 단계
+
 **Plan 9 (내장 터미널)** — 다음 순서 확정 (2026-07-17): xterm.js + node-pty 하단 터미널, Claude Code CLI/codex 실행 목적. 로그인 셸 스폰(PATH), ABI 관리 목록에 node-pty 추가 필요.
 **Plan 10 후보 (에이전트 패널)** — Claude Agent SDK 기반, 사용자 결정 대기.
 
