@@ -29,9 +29,10 @@ export function FileTabs() {
   }, [listOpen]);
 
   const onMenuKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault();
-      const delta = e.key === 'ArrowDown' ? 1 : -1;
+      // ←/→도 이동 — 탭이 가로 배열이라 좌우 키로 앞/뒤 파일을 오가는 게 자연스럽다
+      const delta = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
       const next = (focusIdx + delta + tabs.length) % tabs.length;
       setFocusIdx(next);
       menuRef.current

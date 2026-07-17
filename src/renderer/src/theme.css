@@ -84,6 +84,7 @@ body {
 /* 스크롤은 tab-strip이 담당 — .tabs가 클리핑하면 열린 파일 드롭다운이 잘린다 */
 .tabs { flex: none; position: relative; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
 .tab-strip { flex: 1; min-width: 0; display: flex; overflow-x: auto; }
+.tab-strip::-webkit-scrollbar { display: none; } /* 가로 스크롤바 숨김 — 휠/트랙패드 스크롤과 '…' 목록으로 접근 */
 .tabs-actions { flex: none; display: flex; align-items: center; padding: 0 4px; border-left: 1px solid var(--border); }
 .open-editors-backdrop { position: fixed; inset: 0; z-index: 40; }
 .open-editors-menu {
