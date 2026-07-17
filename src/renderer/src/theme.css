@@ -109,8 +109,9 @@ body {
 .tab {
   display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer;
   border-right: 1px solid var(--border); white-space: nowrap; color: var(--fg-dim);
+  border-top: 2px solid transparent; /* active의 상단 액센트 바와 높이 맞춤 */
 }
-.tab.active { background: var(--bg); color: var(--fg); }
+.tab.active { background: var(--bg); color: var(--fg); border-top-color: var(--accent); }
 .tab:hover { background: var(--bg-hover); }
 .dirty-dot { color: var(--accent); }
 .disk-changed { color: var(--warn); }
