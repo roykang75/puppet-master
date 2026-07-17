@@ -138,9 +138,25 @@
 - **로컬 LLM 지원**: 별도 어댑터 없이 OpenAI 어댑터의 `baseURL`로 Ollama/LM Studio/llama.cpp 지원(상위 스펙 §7).
 - **provider `none`(기본) 완전 비활성**: 미설정 시 고스트 텍스트/네트워크 호출이 발생하지 않아 오프라인·무비용 — 기존 인덱싱/분석 경로에 영향 없음.
 
+## ✅ Plan 6: LSP 보강 (v2 1탄) — 완료 (main 병합 4a093f9)
+
+- [x] 경량 LSP 클라이언트 직접 구현 (vscode-jsonrpc stdio, monaco-languageclient 미사용)
+- [x] TypeScript/JS: **TS7 내장 네이티브 LSP** (`@typescript/…/lib/tsc --lsp --stdio`, typescript-go) / Python: pyright — 둘 다 앱 번들 (사용자 설치 불요)
+- [x] 기능 4종: 완성 드롭다운(LSP 언어만 자동), 호버, 정의 이동(LSP 우선 1.5초 → 인덱서 폴백), 진단 마커(push+pull 자동선택)
+- [x] 수명 관리: 지연 기동, 크래시 3연속 한도(60초 안정 시 리셋), 문서 재전송, 프로젝트 전환 종료
+- [x] 패키징: asarUnpack + asar→unpacked spawn 치환 + tsgo lib.d.ts extraResources 복원 — 패키지 앱 LSP 실증 완료
+- [x] 테스트: 단위(client/manager/convert/sync) + 실서버 통합 9개 + E2E(완성 드롭다운·정의 이동) — 총 195개
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):**
+- 프로젝트 전환 시 didClose가 새 LspManager에 서버를 불필요 스폰 (교차 언어 전환 시 유휴 프로세스 1개; 경량 수정: didClose는 기존 엔트리 조회만)
+- initialize 실패(프로세스 생존+핸드셰이크 실패) 시 자동 재시도 없음 — 프로젝트 재열기로 리셋
+- F12 물리 키 실동작 미실증 (Playwright 합성 키 한계 — Ctrl/Cmd+클릭 동일 경로는 E2E 실증됨) → **사용자 수동 확인 권장**
+- 통합 테스트 파일이 선언 순서 의존 (vitest shuffle 켜면 취약)
+- AI 고스트 텍스트 ↔ LSP 드롭다운 공존 정책은 실사용 피드백 후 조정 가능 (스펙 §2)
+
 ### 🔜 다음 단계
 
-**v2 착수는 사용자 결정 필요** — 아래 백로그 항목은 범위/우선순위 합의 후 개별 계획 문서를 작성하고 시작한다.
+**Plan 7 (TextMate 문법+테마+스니펫) → Plan 8 (AI 채팅)** — 사용자 합의된 순서 (2026-07-17).
 
 ### v2 이후 (백로그)
-- [ ] LSP 보강(정밀 모드), 심볼 자동완성(비-AI), 스니펫/Clip Window, Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 채팅, AI 완성 스트리밍
+- [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
