@@ -83,8 +83,11 @@ export function ChatPanel() {
   };
 
   const cancel = () => {
-    if (useAppStore.getState().agentMode) void window.si.agentCancel();
-    else void window.si.chatCancel();
+    // 클릭 시점의 agentMode가 아니라 "실제로 진행 중인" 스트림을 멈춰야 한다 —
+    // 스트리밍 중 에이전트 토글을 바꾸면 시작 당시 모드와 클릭 시점 모드가 달라질 수 있다.
+    // 두 cancel() 모두 진행 중이 아니면 무해한 no-op이므로 둘 다 호출한다.
+    void window.si.agentCancel();
+    void window.si.chatCancel();
     const st = useAppStore.getState();
     st.appendChatChunk('\n(중단됨)');
   };
