@@ -215,6 +215,10 @@ function registerIpc(): void {
     },
   );
   ipcMain.handle('completion:request', (_e, ctx: CompletionContext) => completionService.request(ctx));
+  ipcMain.handle('tm:onigWasm', () => {
+    const dir = path.dirname(require.resolve('vscode-oniguruma'));
+    return fs.readFileSync(path.join(dir, 'onig.wasm')); // Buffer → 렌더러에서 ArrayBuffer
+  });
   ipcMain.handle('snippets:read', (_e, lang: string) => {
     if (!/^[a-z]+$/.test(lang)) return null; // 경로 주입 방어
     const p = path.join(app.getPath('userData'), 'snippets', `${lang}.json`);

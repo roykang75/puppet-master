@@ -51,6 +51,10 @@ const api = {
   requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
     ipcRenderer.invoke('completion:request', ctx),
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
+  onigWasm: async (): Promise<ArrayBuffer> => {
+    const buf: Uint8Array = await ipcRenderer.invoke('tm:onigWasm');
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+  },
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
   saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
