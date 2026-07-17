@@ -22,6 +22,8 @@ export interface LspManagerDeps {
   onDiagnostics(relPath: string, diagnostics: LspDiagnosticN[]): void;
   onStatus(status: LspStatusN): void;
   spawnFn?: (spec: LspSpawnSpec) => ChildLike;
+  /** 서버가 이 기간(ms) 동안 안정적으로 실행되면 crashes를 0으로 리셋. 기본 60_000 */
+  crashResetMs?: number;
 }
 
 interface OpenDoc { text: string; version: number; languageId: string }
@@ -34,9 +36,11 @@ interface Entry {
   openDocs: Map<string, OpenDoc>;
   pullTimers: Map<string, ReturnType<typeof setTimeout>>;
   shuttingDown: boolean;
+  stableTimer?: ReturnType<typeof setTimeout>;
 }
 
 const MAX_CRASHES = 3;
+const DEFAULT_CRASH_RESET_MS = 60_000;
 const PULL_DEBOUNCE_MS = 300;
 const TIMEOUT_MS: Record<LspRequestKind, number> = { completion: 5_000, hover: 5_000, definition: 1_500 };
 const LSP_METHOD: Record<LspRequestKind, string> = {
@@ -109,12 +113,21 @@ export class LspManager {
       shuttingDown: false,
       ready: client
         .initialize()
-        .then(() => this.deps.onStatus({ lang, state: 'running' }))
+        .then(() => {
+          this.deps.onStatus({ lang, state: 'running' });
+          // 안정 타이머: 이 기간 동안 크래시 없이 실행되면 카운터 리셋 ("연속 N회" 의미 구현)
+          entry.stableTimer = setTimeout(() => {
+            entry.crashes = 0;
+          }, this.deps.crashResetMs ?? DEFAULT_CRASH_RESET_MS);
+        })
         .catch(() => this.deps.onStatus({ lang, state: 'stopped' })),
     };
     proc.on('exit', () => {
+      if (entry.stableTimer) clearTimeout(entry.stableTimer);
       if (entry.shuttingDown || this.disposed) return;
       entry.client.dispose();
+      for (const t of entry.pullTimers.values()) clearTimeout(t);
+      entry.pullTimers.clear();
       const nextCrashes = entry.crashes + 1;
       this.entries.delete(lang);
       if (nextCrashes >= MAX_CRASHES) {
@@ -171,6 +184,11 @@ export class LspManager {
         this.schedulePull(entry, params.path);
       } else if (kind === 'didClose') {
         entry.openDocs.delete(params.path);
+        const pullTimer = entry.pullTimers.get(params.path);
+        if (pullTimer) {
+          clearTimeout(pullTimer);
+          entry.pullTimers.delete(params.path);
+        }
         entry.client.didClose(uri);
       } else {
         entry.client.didSave(uri);
@@ -201,6 +219,7 @@ export class LspManager {
     this.disposed = true;
     for (const entry of this.entries.values()) {
       entry.shuttingDown = true;
+      if (entry.stableTimer) clearTimeout(entry.stableTimer);
       for (const t of entry.pullTimers.values()) clearTimeout(t);
       entry.client.dispose();
       try {

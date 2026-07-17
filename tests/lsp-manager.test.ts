@@ -125,4 +125,96 @@ describe('LspManager', () => {
     await wait(80);
     expect(spawned).toHaveLength(1);
   });
+
+  it('안정 실행이 crashResetMs를 넘기면 크래시 카운터가 리셋되어 3회 미달 시 계속 재기동된다', async () => {
+    const resetMgr = new LspManager({
+      root: '/root',
+      onDiagnostics: (path, d) => diags.push({ path, count: d.length }),
+      onStatus: (s) => statuses.push(s),
+      crashResetMs: 100,
+      spawnFn: (spec) => {
+        spawned.push(spec);
+        const s = makeFakeServer({ completionProvider: true, hoverProvider: true, definitionProvider: true });
+        servers.push(s);
+        return s.child;
+      },
+    });
+
+    resetMgr.notify('didOpen', { path: 'a.ts', text: 'keep' });
+    await wait(80); // 스폰 #1 running
+    servers[0].emitExit(1); // 크래시 1회 (누적 1)
+    await wait(80); // 재기동(#2) running
+    await wait(150); // crashResetMs(100ms) 경과 → 카운터 0으로 리셋
+    servers[1].emitExit(1); // 크래시 2회째 (리셋 후이므로 누적 1)
+    await wait(80); // 재기동(#3) running
+    servers[2].emitExit(1); // 크래시 3회째 (리셋 후 누적 2, 3회 연속 미달)
+    await wait(80); // 재기동(#4) running
+
+    expect(spawned).toHaveLength(4); // 리셋 덕에 매번 재기동
+    expect(statuses.at(-1)).toEqual({ lang: 'ts', state: 'running' });
+  });
+});
+
+describe('LspManager pull diagnostics', () => {
+  let pullServers: FakeServer[];
+  let pullSpawned: LspSpawnSpec[];
+  let pullDiags: { path: string; diagnostics: any[] }[];
+  let diagnosticRequestCount: number;
+  let pullMgr: LspManager;
+
+  beforeEach(() => {
+    pullServers = [];
+    pullSpawned = [];
+    pullDiags = [];
+    diagnosticRequestCount = 0;
+    pullMgr = new LspManager({
+      root: '/root',
+      onDiagnostics: (path, d) => pullDiags.push({ path, diagnostics: d }),
+      onStatus: () => {},
+      spawnFn: (spec) => {
+        pullSpawned.push(spec);
+        const s = makeFakeServer({
+          completionProvider: true,
+          hoverProvider: true,
+          definitionProvider: true,
+          diagnosticProvider: {},
+        });
+        s.conn.onRequest('textDocument/diagnostic', () => {
+          diagnosticRequestCount += 1;
+          return {
+            kind: 'full',
+            items: [
+              {
+                message: 'pull-err',
+                severity: 1,
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+              },
+            ],
+          };
+        });
+        pullServers.push(s);
+        return s.child;
+      },
+    });
+  });
+
+  it('pull 진단 경로가 onDiagnostics를 호출한다', async () => {
+    pullMgr.notify('didOpen', { path: 'a.ts', text: 'x' });
+    await wait(400);
+    expect(diagnosticRequestCount).toBeGreaterThan(0);
+    const hit = pullDiags.find((d) => d.diagnostics.some((x: any) => x.message === 'pull-err'));
+    expect(hit).toBeTruthy();
+  });
+
+  it('연속 didChange는 pull 요청을 디바운스로 병합한다', async () => {
+    pullMgr.notify('didOpen', { path: 'a.ts', text: 'x' });
+    await wait(80); // 스폰 + didOpen 정착
+    pullMgr.notify('didChange', { path: 'a.ts', text: 'x1' });
+    await wait(30);
+    pullMgr.notify('didChange', { path: 'a.ts', text: 'x2' });
+    await wait(30);
+    pullMgr.notify('didChange', { path: 'a.ts', text: 'x3' });
+    await wait(400);
+    expect(diagnosticRequestCount).toBeLessThanOrEqual(2); // didOpen분 포함 병합 확인
+  });
 });
