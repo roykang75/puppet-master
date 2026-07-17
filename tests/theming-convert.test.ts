@@ -43,8 +43,8 @@ describe('convertTheme', () => {
 
   it('스크롤바 슬라이더 폴백 — 테마 정의가 없으면 톤다운 블랙, 있으면 테마 값 우선', () => {
     const t = convertTheme(sample)!;
-    expect(t.monacoTheme.colors['scrollbarSlider.background']).toBe('#3f3f3f');
-    expect(t.monacoTheme.colors['scrollbarSlider.hoverBackground']).toBe('#4f4f4f');
+    expect(t.monacoTheme.colors['scrollbarSlider.background']).toBe('#3f3f3f99');
+    expect(t.monacoTheme.colors['scrollbarSlider.hoverBackground']).toBe('#4f4f4fb3');
     const withOwn = convertTheme({
       ...sample,
       colors: { ...sample.colors, 'scrollbarSlider.background': '#12345678' },

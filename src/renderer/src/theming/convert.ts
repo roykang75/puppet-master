@@ -61,10 +61,11 @@ export function convertTheme(raw: unknown): ConvertedTheme | null {
   }
 
   // 스크롤바 슬라이더 폴백 — 테마가 정의하지 않으면 전역 CSS(theme.css)와 같은 톤다운 블랙으로 통일
+  // 반투명 — 슬라이더가 오버뷰 룰러(diff/검색 마크) 위에 겹쳐 그려지므로 마크가 비쳐 보여야 한다
   const monacoColors: Record<string, string> = {
-    'scrollbarSlider.background': '#3f3f3f',
-    'scrollbarSlider.hoverBackground': '#4f4f4f',
-    'scrollbarSlider.activeBackground': '#5f5f5f',
+    'scrollbarSlider.background': '#3f3f3f99',
+    'scrollbarSlider.hoverBackground': '#4f4f4fb3',
+    'scrollbarSlider.activeBackground': '#5f5f5fcc',
     ...colors,
   };
 
