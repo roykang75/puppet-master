@@ -144,8 +144,10 @@ body {
 .editor-split-row { flex: 1; min-height: 0; display: flex; }
 .editor-split-row .editor-host { flex: 1; min-width: 0; }
 .split-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
-/* 분할 창 상단 — VS Code처럼 탭 형태 (활성 탭과 동일한 상단 액센트 바) */
-.split-header { flex: none; display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+/* 분할 영역 탭 바 — 파일 탭 바와 같은 줄에서 분할 경계로 나뉜다 (VS Code 에디터 그룹) */
+.tab-row { flex: none; display: flex; }
+.tab-row > .tabs { flex: 1; min-width: 0; }
+.split-tabbar { border-left: 1px solid var(--border); }
 .split-tab {
   display: flex; align-items: center; gap: 6px; padding: 5px 10px; max-width: 100%;
   border-right: 1px solid var(--border); border-top: 2px solid var(--accent);

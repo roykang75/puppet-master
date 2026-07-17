@@ -9,6 +9,7 @@ export function FileTabs() {
   const activePath = useAppStore((s) => s.activePath);
   const setActive = useAppStore((s) => s.setActive);
   const closeTab = useAppStore((s) => s.closeTab);
+  const split = useAppStore((s) => s.split);
   const [listOpen, setListOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(0); // 키보드 하이라이트 위치
   const menuRef = useRef<HTMLDivElement>(null);
@@ -56,7 +57,9 @@ export function FileTabs() {
     }
   };
 
+  const splitName = split?.path.split('/').pop() ?? '';
   return (
+    <div className="tab-row">
     <div className="tabs">
       <div className="nav-buttons">
         <span className="nav-btn" title="이전 파일" onClick={() => switchTab(-1)}><VscArrowLeft /></span>
@@ -143,6 +146,21 @@ export function FileTabs() {
           </div>
         </>
       )}
+    </div>
+    {split && (
+      /* 분할 영역 위 탭 바 — 아래 분할 창(flex 1:1)과 경계가 맞도록 같은 줄에서 나뉜다 (VS Code 에디터 그룹) */
+      <div className="tabs split-tabbar">
+        <div className="split-tab">
+          {split.kind === 'preview' ? (
+            <span className="split-tab-icon"><VscOpenPreview /></span>
+          ) : (
+            <img className="file-icon tab-file-icon" src={fileIconUrl(splitName)} alt="" />
+          )}
+          <span className="split-title">{split.kind === 'preview' ? `미리보기 ${splitName}` : splitName}</span>
+          <span className="tab-close" title="분할 닫기" onClick={() => useAppStore.getState().setSplit(null)}><VscClose /></span>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
