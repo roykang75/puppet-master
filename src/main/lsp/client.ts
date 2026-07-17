@@ -76,13 +76,18 @@ export class LspClient {
   // 타임아웃/오류 시 null — 기능별 조용한 실패 (스펙 §6)
   async request(method: string, params: unknown, timeoutMs: number): Promise<unknown> {
     if (this.disposed) return null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([
         this.conn.sendRequest(method, params),
-        new Promise<null>((res) => setTimeout(() => res(null), timeoutMs)),
+        new Promise<null>((res) => {
+          timer = setTimeout(() => res(null), timeoutMs);
+        }),
       ]);
     } catch {
       return null;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
