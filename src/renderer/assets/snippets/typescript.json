@@ -1,0 +1,7 @@
+{
+  "Console log": { "prefix": "log", "body": ["console.log($1);$0"], "description": "console.log" },
+  "Arrow function": { "prefix": "fn", "body": ["const ${1:name} = (${2:args}) => {", "\t$0", "};"], "description": "화살표 함수" },
+  "If": { "prefix": "if", "body": ["if (${1:condition}) {", "\t$0", "}"] },
+  "For of": { "prefix": "forof", "body": ["for (const ${1:item} of ${2:items}) {", "\t$0", "}"] },
+  "Try/catch": { "prefix": "try", "body": ["try {", "\t$1", "} catch (e) {", "\t$0", "}"] }
+}

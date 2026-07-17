@@ -12,6 +12,7 @@ export interface StoredCompletionSettings {
 
 interface SettingsFile {
   completion: StoredCompletionSettings;
+  appearance?: { theme: string };
 }
 
 const DEFAULT_COMPLETION: StoredCompletionSettings = { provider: 'none', model: '' };
@@ -65,7 +66,16 @@ export class SettingsStore {
       }
     }
     if (next.apiKey === undefined) delete next.apiKey;
-    this.write({ completion: next });
+    this.write({ ...file, completion: next });
+  }
+
+  getAppearance(): { theme: string } {
+    return this.read().appearance ?? { theme: 'dark-plus' };
+  }
+
+  setAppearance(a: { theme: string }): void {
+    const file = this.read();
+    this.write({ ...file, appearance: { theme: a.theme } });
   }
 
   getApiKey(): string | null {
