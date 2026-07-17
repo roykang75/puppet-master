@@ -73,6 +73,9 @@ describe('AgentService 루프', () => {
     await new Promise((r) => setTimeout(r, 20));
     const awaiting = events.find((e) => e.type === 'tool' && e.state === 'awaiting') as any;
     expect(awaiting.detail).toContain('+ print(1)');
+    // 에디터 diff 뷰용 원문 — 새 파일이라 before '', after는 제안 내용
+    expect(awaiting.before).toBe('');
+    expect(awaiting.after).toBe('print(1)');
     svc.approve('c1', true);
     await p;
   });

@@ -35,8 +35,12 @@ interface AppState {
   terminals: { id: number; title: string; exited: boolean }[];
   activeTerminalId: number | null;
   bottomTab: 'context' | 'terminal';
-  split: { kind: 'editor' | 'preview'; path: string } | null; // 에디터 세로 분할 / 마크다운 미리보기
-  setSplit(split: { kind: 'editor' | 'preview'; path: string } | null): void;
+  // 에디터 세로 분할 / 마크다운 미리보기 / 에이전트 diff 뷰(원본 vs 제안)
+  split:
+    | { kind: 'editor' | 'preview'; path: string }
+    | { kind: 'diff'; path: string; before: string; after: string }
+    | null;
+  setSplit(split: AppState['split']): void;
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;

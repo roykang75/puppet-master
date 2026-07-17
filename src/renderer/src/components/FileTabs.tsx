@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
+import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscGitCompare, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
 import { disposeModel } from './EditorPane';
@@ -154,10 +154,14 @@ export function FileTabs() {
         <div className="split-tab">
           {split.kind === 'preview' ? (
             <span className="split-tab-icon"><VscOpenPreview /></span>
+          ) : split.kind === 'diff' ? (
+            <span className="split-tab-icon"><VscGitCompare /></span>
           ) : (
             <img className="file-icon tab-file-icon" src={fileIconUrl(splitName)} alt="" />
           )}
-          <span className="split-title">{split.kind === 'preview' ? `미리보기 ${splitName}` : splitName}</span>
+          <span className="split-title">
+            {split.kind === 'preview' ? `미리보기 ${splitName}` : split.kind === 'diff' ? `변경 제안 ${splitName}` : splitName}
+          </span>
           <span className="tab-close" title="분할 닫기" onClick={() => useAppStore.getState().setSplit(null)}><VscClose /></span>
         </div>
       </div>

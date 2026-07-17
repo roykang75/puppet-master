@@ -207,8 +207,12 @@ export function App() {
       const st = useAppStore.getState();
       if (ev.type === 'chunk') st.appendChatChunk(ev.text);
       else if (ev.type === 'tool') {
-        st.upsertChatTool({ id: ev.id, name: ev.name, summary: ev.summary, state: ev.state, detail: ev.detail, path: ev.path });
-        if (ev.name === 'write_file' && ev.state === 'done') st.bumpTreeRefresh();
+        st.upsertChatTool({ id: ev.id, name: ev.name, summary: ev.summary, state: ev.state, detail: ev.detail, path: ev.path, before: ev.before, after: ev.after });
+        if (ev.name === 'write_file' && ev.state === 'done') {
+          st.bumpTreeRefresh();
+          // 승인 대기 중 열어둔 diff 뷰는 실행 완료 시 자동으로 닫는다 (내용이 stale)
+          if (st.split?.kind === 'diff' && st.split.path === ev.path) st.setSplit(null);
+        }
       } else if (ev.type === 'done') st.setChatStreaming(false);
       else {
         st.setChatError(CHAT_ERROR_TEXT[ev.kind] ?? CHAT_ERROR_TEXT.other);

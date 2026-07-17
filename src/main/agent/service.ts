@@ -1,6 +1,6 @@
 // src/main/agent/service.ts — 에이전트 tool-use 루프. electron 임포트 금지, 동시 1개.
 import { AnthropicAgentAdapter, OpenAIAgentAdapter, type AgentAdapter, type AgentMsg } from './adapters';
-import { AGENT_TOOLS, buildWriteDiff, executeTool, toolSummary, type AgentToolDeps } from './tools';
+import { AGENT_TOOLS, buildWriteDiff, DIFF_SOURCE_CAP, executeTool, readCurrentContent, toolSummary, type AgentToolDeps } from './tools';
 import { buildAgentSystemPrompt } from './prompt';
 import { classifyError } from '../completion/errors';
 import type { AgentEvent, ChatContext, ChatMessage } from '../../shared/protocol';
@@ -106,9 +106,20 @@ export class AgentService {
           const diff = isWrite
             ? buildWriteDiff(toolDeps, String(call.args.path ?? ''), String(call.args.content ?? ''))
             : undefined;
+          // 에디터 diff 뷰용 원문 — 상한 초과/읽기 불가면 생략 (뷰 버튼 미표시)
+          let before: string | undefined;
+          let after: string | undefined;
+          if (isWrite) {
+            const cur = readCurrentContent(toolDeps, String(call.args.path ?? ''));
+            const proposed = String(call.args.content ?? '');
+            if (cur !== null && proposed.length <= DIFF_SOURCE_CAP) {
+              before = cur;
+              after = proposed;
+            }
+          }
           let result: string;
           if (!autoApprove && APPROVAL_REQUIRED.has(call.name)) {
-            onEvent({ type: 'tool', id: call.id, name: call.name, summary, state: 'awaiting', path, detail: diff });
+            onEvent({ type: 'tool', id: call.id, name: call.name, summary, state: 'awaiting', path, detail: diff, before, after });
             const ok = await this.waitApproval(call.id, controller.signal);
             if (controller.signal.aborted) break;
             if (!ok) {
@@ -129,6 +140,8 @@ export class AgentService {
             state: failed ? 'error' : 'done',
             detail: call.name === 'run_command' || failed ? result : diff,
             path,
+            before,
+            after,
           });
           msgs.push({ role: 'tool', toolCallId: call.id, name: call.name, content: result });
         }

@@ -91,6 +91,19 @@ export function resolveToolPath(deps: AgentToolDeps, p: string): string {
 }
 
 const DIFF_CAP = 8 * 1024; // write_file diff 미리보기 절단
+export const DIFF_SOURCE_CAP = 100 * 1024; // 에디터 diff 뷰용 원문 상한 — 초과 시 뷰 생략
+
+/** write_file 대상의 현재 내용 — 에디터 diff 뷰용. 허용 경로 밖/미존재/상한 초과면 null */
+export function readCurrentContent(deps: AgentToolDeps, rel: string): string | null {
+  try {
+    const abs = resolveToolPath(deps, rel);
+    if (!fs.existsSync(abs)) return '';
+    const text = fs.readFileSync(abs, 'utf8');
+    return text.length > DIFF_SOURCE_CAP ? null : text;
+  } catch {
+    return null;
+  }
+}
 
 /** write_file 승인/기록용 diff — 실패해도 안내 텍스트 반환 (throw 금지, 카드 detail용) */
 export function buildWriteDiff(deps: AgentToolDeps, rel: string, content: string): string {

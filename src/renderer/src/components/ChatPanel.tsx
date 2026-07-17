@@ -183,6 +183,26 @@ export function ChatPanel() {
                       <span className="tool-actions">
                         <button className="rename-btn primary" onClick={(e) => { e.stopPropagation(); void window.si.agentApprove(t.id, true); }}>실행</button>
                         <button className="rename-btn" onClick={(e) => { e.stopPropagation(); void window.si.agentApprove(t.id, false); }}>건너뛰기</button>
+                        {t.path && t.after !== undefined && (
+                          <button
+                            className="rename-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              useAppStore.getState().setSplit({ kind: 'diff', path: t.path!, before: t.before ?? '', after: t.after! });
+                            }}
+                          >에디터에서 diff</button>
+                        )}
+                      </span>
+                    )}
+                    {t.state === 'done' && t.path && t.after !== undefined && (
+                      <span className="tool-actions">
+                        <button
+                          className="rename-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            useAppStore.getState().setSplit({ kind: 'diff', path: t.path!, before: t.before ?? '', after: t.after! });
+                          }}
+                        >에디터에서 diff</button>
                       </span>
                     )}
                     {t.detail && (

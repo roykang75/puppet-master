@@ -136,8 +136,10 @@ export interface AgentToolUi {
   name: string;
   summary: string;
   state: 'awaiting' | 'running' | 'done' | 'error';
-  detail?: string; // run_command 출력(절단) 등
+  detail?: string; // run_command 출력(절단) / write_file unified diff 등
   path?: string; // write_file 대상 — 카드 클릭 시 열기
+  before?: string; // write_file 이전 내용 — 에디터 diff 뷰용 (100KB 초과 시 생략)
+  after?: string; // write_file 제안 내용 — 에디터 diff 뷰용 (100KB 초과 시 생략)
 }
 export type AgentEvent =
   | { type: 'chunk'; text: string }
