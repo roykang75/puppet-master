@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { VscChevronDown, VscChevronRight, VscFile } from 'react-icons/vsc';
+import { VscChevronDown, VscChevronRight } from 'react-icons/vsc';
 import { useAppStore } from '../store';
+import { fileIconUrl, folderIconUrl } from '../file-icons';
 
 interface DirEntry {
   name: string;
@@ -40,8 +41,13 @@ export function ProjectWindow() {
             onClick={() => (e.isDir ? toggle(childRel) : openTab(childRel))}
           >
             <span className="tree-icon">
-              {e.isDir ? (expanded.has(childRel) ? <VscChevronDown /> : <VscChevronRight />) : <VscFile />}
+              {e.isDir && (expanded.has(childRel) ? <VscChevronDown /> : <VscChevronRight />)}
             </span>
+            <img
+              className="file-icon"
+              src={e.isDir ? folderIconUrl(e.name, expanded.has(childRel)) : fileIconUrl(e.name)}
+              alt=""
+            />
             {e.name}
           </div>
           {e.isDir && expanded.has(childRel) && renderDir(childRel, depth + 1)}

@@ -59,6 +59,7 @@ body {
 .chat-send svg { display: block; }
 .icon-btn { display: inline-flex; align-items: center; gap: 5px; }
 .tree-icon svg { margin-right: 2px; }
+.file-icon { width: 16px; height: 16px; vertical-align: -3px; margin-right: 5px; }
 
 .symbol-item { padding: 2px 8px; cursor: pointer; white-space: nowrap; }
 .symbol-item:hover { background: var(--bg-hover); }

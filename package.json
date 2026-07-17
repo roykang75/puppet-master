@@ -46,6 +46,7 @@
     "better-sqlite3": "^12.11.1",
     "chokidar": "^4.0.3",
     "ignore": "^7.0.6",
+    "material-icon-theme": "^5.36.1",
     "node-pty": "^1.1.0",
     "openai": "^6.47.0",
     "pyright": "^1.1.411",
