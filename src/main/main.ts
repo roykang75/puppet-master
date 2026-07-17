@@ -6,10 +6,11 @@ import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
 import { SettingsStore } from './settings';
 import { CompletionService } from './completion/service';
+import { ChatService } from './chat/service';
 import { LspManager } from './lsp/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, LspCallParams } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, LspCallParams, ChatMessage, ChatContext } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -34,6 +35,7 @@ let quitting = false;
 let persistence: Persistence;
 let settingsStore: SettingsStore;
 let completionService: CompletionService;
+let chatService: ChatService;
 
 const sendMenu = (action: MenuAction) => win?.webContents.send('menu', action);
 const sendIndexerEvent = (event: string, payload: unknown) => {
@@ -215,6 +217,11 @@ function registerIpc(): void {
     },
   );
   ipcMain.handle('completion:request', (_e, ctx: CompletionContext) => completionService.request(ctx));
+  ipcMain.handle('chat:send', (_e, messages: ChatMessage[], context: ChatContext | null) => {
+    // fire-and-forget — 이벤트는 chat:event push로 전달 (스트리밍 동안 invoke를 붙잡지 않음)
+    void chatService.send(messages, context, (event) => win?.webContents.send('chat:event', event));
+  });
+  ipcMain.handle('chat:cancel', () => chatService.cancel());
   ipcMain.handle('tm:onigWasm', () => {
     const dir = path.dirname(require.resolve('vscode-oniguruma'));
     return fs.readFileSync(path.join(dir, 'onig.wasm')); // Buffer → 렌더러에서 ArrayBuffer
@@ -306,6 +313,10 @@ app.whenReady().then(() => {
       if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
       return indexer.rpc.request('getFileOutline', { path: p }, { timeoutMs: 5_000 }) as Promise<SymbolHit[]>;
     },
+  });
+  chatService = new ChatService({
+    getSettings: () => settingsStore.getCompletion(),
+    getApiKey: () => settingsStore.getApiKey(),
   });
   createWindow();
   buildMenu(persistence.loadRecent(), sendMenu);

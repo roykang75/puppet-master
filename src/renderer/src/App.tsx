@@ -4,13 +4,14 @@ import { useAppStore } from './store';
 import { initLayouts, layoutStorage, scheduleSave } from './persistence-bridge';
 import { EmptyState } from './components/EmptyState';
 import { StatusBar } from './components/StatusBar';
-import { RelationPanel } from './components/RelationPanel';
+import { RightPanel } from './components/RightPanel';
 import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
 import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { CHAT_ERROR_TEXT } from './components/ChatPanel';
 import { SearchOverlay } from './components/SearchOverlay';
 import { RenameOverlay } from './components/RenameOverlay';
 import { SettingsOverlay } from './components/SettingsOverlay';
@@ -34,6 +35,7 @@ async function openProject(root: string): Promise<void> {
   const st = useAppStore.getState();
   try {
     const res = await window.si.openProject(root);
+    void window.si.chatCancel(); // 프로젝트 전환 시 진행 중 채팅 스트림 중단 (store 리셋은 setProject 담당)
     initLayouts(res.uiState?.panelLayouts);
     // 프로젝트 전환 시 이전 프로젝트의 모델 전부 폐기 — URI가 root 무관이라 재사용 오염 방지
     disposeAllModels();
@@ -153,7 +155,7 @@ function Workspace() {
           <Separator className="resize-handle resize-handle-h" />
           <Panel id="editor" minSize="30"><EditorArea /></Panel>
           <Separator className="resize-handle resize-handle-h" />
-          <Panel id="relation" defaultSize="18" minSize="10" collapsible><RelationPanel /></Panel>
+          <Panel id="relation" defaultSize="18" minSize="10" collapsible><RightPanel /></Panel>
         </Group>
       </Panel>
       <Separator className="resize-handle resize-handle-v" />
@@ -181,8 +183,22 @@ export function App() {
       if (action.type === 'open-recent') void openProject(action.root);
       if (action.type === 'save') window.dispatchEvent(new CustomEvent('si:save'));
     });
+    // 채팅 스트림 이벤트 구독 — App은 항상 마운트 상태이므로 RightPanel의 탭 전환으로
+    // ChatPanel이 언마운트돼도 이벤트가 유실되지 않는다 (P1 수정).
+    const offChat = window.si.onChatEvent((e) => {
+      const st = useAppStore.getState();
+      if (e.type === 'chunk') st.appendChatChunk(e.text);
+      else if (e.type === 'done') st.setChatStreaming(false);
+      else {
+        st.setChatError(CHAT_ERROR_TEXT[e.kind] ?? CHAT_ERROR_TEXT.other);
+        st.setChatStreaming(false);
+      }
+    });
     const unsub = useAppStore.subscribe(scheduleSave);
-    return unsub;
+    return () => {
+      offChat();
+      unsub();
+    };
   }, []);
 
   useEffect(() => {

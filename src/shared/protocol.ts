@@ -94,6 +94,21 @@ export const LSP_EXT_TO_LANGUAGE: Record<string, string> = {
   '.py': 'python',
 };
 
+// ── AI 채팅 (Plan 8) ──
+export interface ChatMessage { role: 'user' | 'assistant'; content: string }
+export interface ChatContext {
+  path: string;
+  languageId: string;
+  code: string;
+  isSelection: boolean;
+  startLine: number; // 1-기반 (표시용)
+  signatures: string[];
+}
+export type ChatEvent =
+  | { type: 'chunk'; text: string }
+  | { type: 'done' }
+  | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)

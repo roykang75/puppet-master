@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -50,6 +50,14 @@ const api = {
   ): Promise<void> => ipcRenderer.invoke('settings:completion:set', s, apiKey),
   requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
     ipcRenderer.invoke('completion:request', ctx),
+  chatSend: (messages: ChatMessage[], context: ChatContext | null): Promise<void> =>
+    ipcRenderer.invoke('chat:send', messages, context),
+  chatCancel: (): Promise<void> => ipcRenderer.invoke('chat:cancel'),
+  onChatEvent: (cb: (e: ChatEvent) => void): (() => void) => {
+    const h = (_e: Electron.IpcRendererEvent, data: ChatEvent) => cb(data);
+    ipcRenderer.on('chat:event', h);
+    return () => ipcRenderer.removeListener('chat:event', h);
+  },
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
   getAppearance: (): Promise<{ theme: string }> => ipcRenderer.invoke('settings:appearance:get'),
   setAppearance: (a: { theme: string }): Promise<void> => ipcRenderer.invoke('settings:appearance:set', a),
