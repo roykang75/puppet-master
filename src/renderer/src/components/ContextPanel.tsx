@@ -18,7 +18,6 @@ export function ContextPanel() {
 
   useEffect(() => {
     editorRef.current = monaco.editor.create(hostRef.current!, {
-      theme: 'vs-dark',
       readOnly: true,
       automaticLayout: true,
       minimap: { enabled: false },

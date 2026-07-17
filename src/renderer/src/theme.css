@@ -8,6 +8,13 @@
   --fg-dim: #8a8f98;
   --accent: #4a9eff;
   --warn: #e8a33d;
+  /* 시맨틱 토큰 색 — 다크 기본값(기존 색 유지). data-theme-kind='light'에서 오버라이드된다. */
+  --sem-func: #dcdcaa; --sem-type: #4ec9b0; --sem-macro: #c586c0;
+  --sem-ns: #4ec9b0; --sem-member: #9cdcfe; --sem-global: #9cdcfe;
+}
+:root[data-theme-kind='light'] {
+  --sem-func: #795e26; --sem-type: #267f99; --sem-macro: #811f3f;
+  --sem-ns: #267f99; --sem-member: #001080; --sem-global: #001080;
 }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
@@ -47,8 +54,8 @@ body {
    .monaco-editor 선행자로 특이도 상승(0,2,0): Monaco가 데코 span에 토큰 클래스(.mtkN)를
    함께 붙이고, 그 테마 규칙(.mtkN, 특이도 0,1,0)을 theme.css보다 나중에 document.head에
    주입한다. 동일 특이도면 나중 규칙이 이기므로 특이도를 올려야 색이 보인다(!important 불필요). */
-.monaco-editor .sem-func { color: #dcdcaa; } .monaco-editor .sem-type { color: #4ec9b0; } .monaco-editor .sem-macro { color: #c586c0; }
-.monaco-editor .sem-ns { color: #4ec9b0; } .monaco-editor .sem-member { color: #9cdcfe; } .monaco-editor .sem-global { color: #9cdcfe; font-weight: 600; }
+.monaco-editor .sem-func { color: var(--sem-func); } .monaco-editor .sem-type { color: var(--sem-type); } .monaco-editor .sem-macro { color: var(--sem-macro); }
+.monaco-editor .sem-ns { color: var(--sem-ns); } .monaco-editor .sem-member { color: var(--sem-member); } .monaco-editor .sem-global { color: var(--sem-global); font-weight: 600; }
 
 .context-header { margin-left: 10px; color: var(--accent); cursor: pointer; text-transform: none; letter-spacing: 0; }
 .context-header:hover { text-decoration: underline; }

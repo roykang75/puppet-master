@@ -5,6 +5,8 @@ import { jumpTo, setCurrentLocProvider, type Loc } from '../navigation';
 import { buildTokenDecorations } from '../semantic-tokens';
 import { registerCompletionProvider } from '../completion-provider';
 import { registerLspFeatures, tryLspDefinition } from '../lsp-features';
+import { registerSnippetProviders } from '../snippets';
+import { ensureLanguageRegistered } from '../textmate/registry';
 import { lspSync, isLspPath } from '../lsp-sync';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
@@ -140,7 +142,6 @@ export function EditorPane() {
 
   useEffect(() => {
     editorInstance = monaco.editor.create(hostRef.current!, {
-      theme: 'vs-dark',
       automaticLayout: true,
       minimap: { enabled: true },
       inlineSuggest: { enabled: true }, // AI 고스트 텍스트 활성화
@@ -152,6 +153,7 @@ export function EditorPane() {
     });
     registerCompletionProvider(monaco); // 앱 수명 1회 (내부 플래그로 재마운트 이중 등록 방지)
     registerLspFeatures(monaco); // 앱 수명 1회 (내부 플래그)
+    registerSnippetProviders(monaco); // 앱 수명 1회 (내부 플래그) — 스니펫 완성 제공자
     editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
       window.dispatchEvent(new CustomEvent('si:save')),
     );
@@ -252,6 +254,8 @@ export function EditorPane() {
       .then((content) => {
         if (cancelled) return;
         const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel(content, undefined, uri);
+        // TextMate 문법 지연 등록 (비동기 — 실패해도 monarch 유지, await 불요)
+        void ensureLanguageRegistered(monaco, model.getLanguageId());
         lspSync.lspOpen(activePath, model.getValue());
         // LSP 언어만 자동 제안 활성 — 그 외 언어는 AI 고스트 주 UX 유지 (스펙 §5)
         const lspLang = isLspPath(activePath);

@@ -15,6 +15,8 @@ import { SearchOverlay } from './components/SearchOverlay';
 import { RenameOverlay } from './components/RenameOverlay';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { goBack, goForward, navHistory } from './navigation';
+import { monaco } from './monaco-setup';
+import { applyThemeById } from './theming/apply';
 import { lspSync } from './lsp-sync';
 import { computeAnchor } from './bookmarks';
 import type { Bookmark } from './bookmarks';
@@ -162,6 +164,11 @@ function Workspace() {
 
 export function App() {
   const root = useAppStore((s) => s.root);
+
+  // 시작 시 저장된 외관 테마 적용 (EditorPane 마운트 전이어도 defineTheme/setTheme는 전역 유효)
+  useEffect(() => {
+    void window.si.getAppearance().then((a) => applyThemeById(monaco, a.theme));
+  }, []);
 
   useEffect(() => {
     window.si.onIndexerEvent(handleIndexerEvent);
