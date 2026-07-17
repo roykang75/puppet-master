@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { JSX } from 'react';
 import { VscAdd, VscArrowUp, VscCheck, VscCopy, VscDebugStop } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { buildChatContext } from '../chat-context';
-import { parseMarkdown, type InlineSpan } from '../chat-markdown';
+import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
 import { getChatEditorState } from './EditorPane';
 import type { ChatContext, CompletionProfilePublic } from '../../../shared/protocol';
@@ -13,42 +12,6 @@ export const CHAT_ERROR_TEXT: Record<string, string> = {
   transient: '일시적 오류 — 잠시 후 다시 시도하세요',
   other: '오류가 발생했습니다',
 };
-
-function renderSpans(spans: InlineSpan[]): JSX.Element[] {
-  return spans.map((s, i) =>
-    s.kind === 'code' ? (
-      <code key={i} className="chat-inline-code">{s.text}</code>
-    ) : s.kind === 'bold' ? (
-      <strong key={i}>{s.text}</strong>
-    ) : s.kind === 'italic' ? (
-      <em key={i}>{s.text}</em>
-    ) : (
-      <span key={i}>{s.text}</span>
-    ),
-  );
-}
-
-/** 어시스턴트 응답을 마크다운 블록으로 렌더 (chat-markdown 파서, HTML 미생성) */
-function renderMarkdown(content: string): JSX.Element[] {
-  return parseMarkdown(content).map((b, i) => {
-    switch (b.kind) {
-      case 'heading':
-        return <div key={i} className={`chat-h chat-h${b.level}`}>{renderSpans(b.spans)}</div>;
-      case 'code':
-        return <pre key={i} className="chat-code">{b.text}</pre>;
-      case 'hr':
-        return <div key={i} className="chat-hr" />;
-      case 'list': {
-        const items = b.items.map((it, j) => (
-          <li key={j} style={it.depth ? { marginLeft: it.depth * 16 } : undefined}>{renderSpans(it.spans)}</li>
-        ));
-        return b.ordered ? <ol key={i} className="chat-list">{items}</ol> : <ul key={i} className="chat-list">{items}</ul>;
-      }
-      default:
-        return <p key={i} className="chat-p">{renderSpans(b.spans)}</p>;
-    }
-  });
-}
 
 function formatTime(ts?: number): string {
   if (!ts) return '';

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscWarning } from 'react-icons/vsc';
+import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
 import { disposeModel } from './EditorPane';
@@ -82,6 +82,28 @@ export function FileTabs() {
         ))}
       </div>
       <div className="tabs-actions">
+        {activePath?.toLowerCase().endsWith('.md') && (
+          <span
+            className="nav-btn"
+            title="마크다운 미리보기 (분할)"
+            onClick={() => {
+              const st = useAppStore.getState();
+              const cur = st.split;
+              st.setSplit(cur?.kind === 'preview' && cur.path === activePath ? null : { kind: 'preview', path: activePath });
+            }}
+          ><VscOpenPreview /></span>
+        )}
+        {activePath && (
+          <span
+            className="nav-btn"
+            title="세로 분할"
+            onClick={() => {
+              const st = useAppStore.getState();
+              const cur = st.split;
+              st.setSplit(cur?.kind === 'editor' && cur.path === activePath ? null : { kind: 'editor', path: activePath });
+            }}
+          ><VscSplitHorizontal /></span>
+        )}
         <span className="nav-btn tabs-more" title="열린 파일 목록" onClick={() => setListOpen((o) => !o)}><VscEllipsis /></span>
       </div>
       {listOpen && (

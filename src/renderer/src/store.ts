@@ -31,6 +31,8 @@ interface AppState {
   terminals: { id: number; title: string; exited: boolean }[];
   activeTerminalId: number | null;
   bottomTab: 'context' | 'terminal';
+  split: { kind: 'editor' | 'preview'; path: string } | null; // 에디터 세로 분할 / 마크다운 미리보기
+  setSplit(split: { kind: 'editor' | 'preview'; path: string } | null): void;
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -87,8 +89,10 @@ export const useAppStore = create<AppState>((set) => ({
   terminals: [],
   activeTerminalId: null,
   bottomTab: 'context',
+  split: null,
+  setSplit: (split) => set({ split }),
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, terminals: [], activeTerminalId: null }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, terminals: [], activeTerminalId: null, split: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -102,7 +106,9 @@ export const useAppStore = create<AppState>((set) => ({
     set((s) => {
       const tabs = s.tabs.filter((t) => t.path !== path);
       const activePath = s.activePath === path ? (tabs[tabs.length - 1]?.path ?? null) : s.activePath;
-      return { tabs, activePath };
+      // 분할 창이 보던 파일이 닫히면(모델 폐기) 분할도 닫는다
+      const split = s.split?.path === path ? null : s.split;
+      return { tabs, activePath, split };
     }),
   setActive: (path) => set({ activePath: path }),
   setDirty: (path, dirty) =>

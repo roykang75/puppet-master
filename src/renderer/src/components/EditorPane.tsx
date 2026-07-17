@@ -8,10 +8,12 @@ import { registerLspFeatures, tryLspDefinition } from '../lsp-features';
 import { registerSnippetProviders } from '../snippets';
 import { ensureLanguageRegistered } from '../textmate/registry';
 import { lspSync, isLspPath } from '../lsp-sync';
+import { SplitPane } from './SplitPane';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
 const uriOf = (relPath: string) => monaco.Uri.file('/' + relPath);
+export const editorUriOf = uriOf; // SplitPane 등 외부에서 모델 조회용
 
 export function revealLine(line: number): void {
   editorInstance?.revealLineInCenter(line);
@@ -340,5 +342,10 @@ export function EditorPane() {
     applyPendingJump();
   }, [pendingJump, activePath]);
 
-  return <div ref={hostRef} className="editor-host" />;
+  return (
+    <div className="editor-split-row">
+      <div ref={hostRef} className="editor-host" />
+      <SplitPane />
+    </div>
+  );
 }
