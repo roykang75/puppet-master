@@ -62,9 +62,9 @@ export function convertTheme(raw: unknown): ConvertedTheme | null {
 
   // 스크롤바 슬라이더 폴백 — 테마가 정의하지 않으면 전역 CSS(theme.css)와 같은 톤다운 블랙으로 통일
   const monacoColors: Record<string, string> = {
-    'scrollbarSlider.background': '#00000066',
-    'scrollbarSlider.hoverBackground': '#00000099',
-    'scrollbarSlider.activeBackground': '#000000aa',
+    'scrollbarSlider.background': '#3f3f3f',
+    'scrollbarSlider.hoverBackground': '#4f4f4f',
+    'scrollbarSlider.activeBackground': '#5f5f5f',
     ...colors,
   };
 

@@ -23,8 +23,8 @@ html, body, #root { height: 100%; margin: 0; }
    Monaco는 자체 슬라이더라 defineTheme scrollbarSlider 폴백으로 통일 (theming/convert.ts) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.6); }
+::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
 ::-webkit-scrollbar-corner { background: transparent; }
 body {
   background: var(--bg);
