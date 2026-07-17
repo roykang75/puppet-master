@@ -313,6 +313,10 @@ function createWindow(): void {
     width: 1400,
     height: 900,
     backgroundColor: '#1e1f22',
+    // 네이티브 타이틀바는 앱 테마를 따르지 못한다 — 숨기고 렌더러가 캡션바(.caption-bar)를 그린다.
+    // 신호등 버튼은 남으므로 위치만 36px 바에 맞춰 조정.
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 14, y: 11 },
     webPreferences: { preload: path.join(__dirname, '..', 'preload', 'preload.js') },
   });
   const devUrl = process.env.VITE_DEV_SERVER_URL;

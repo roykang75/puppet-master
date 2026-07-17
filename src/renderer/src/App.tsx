@@ -165,6 +165,13 @@ function Workspace() {
   );
 }
 
+/** 커스텀 캡션바 — 네이티브 타이틀바 대신 테마 색을 따르는 드래그 영역 (main: titleBarStyle hiddenInset) */
+function CaptionBar() {
+  const root = useAppStore((s) => s.root);
+  const name = root?.split('/').pop();
+  return <div className="caption-bar">{name ? `${name} — SourceInSight` : 'SourceInSight'}</div>;
+}
+
 export function App() {
   const root = useAppStore((s) => s.root);
 
@@ -301,10 +308,19 @@ export function App() {
     };
   }, []);
 
-  if (!root) return <EmptyState onOpen={(r) => void openProject(r)} />;
+  if (!root)
+    return (
+      <div className="app">
+        <CaptionBar />
+        <div className="app-main">
+          <EmptyState onOpen={(r) => void openProject(r)} />
+        </div>
+      </div>
+    );
 
   return (
     <div className="app">
+      <CaptionBar />
       <div className="app-main">
         <Workspace key={root} />
       </div>
