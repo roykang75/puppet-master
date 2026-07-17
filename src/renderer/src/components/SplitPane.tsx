@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscClose } from 'react-icons/vsc';
+import { VscClose, VscOpenPreview } from 'react-icons/vsc';
 import { monaco } from '../monaco-setup';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
@@ -53,9 +53,15 @@ export function SplitPane() {
   return (
     <div className="split-pane">
       <div className="split-header">
-        <img className="file-icon tab-file-icon" src={fileIconUrl(name)} alt="" />
-        <span className="split-title">{name}{split.kind === 'preview' ? ' (미리보기)' : ''}</span>
-        <button className="panel-action" title="분할 닫기" onClick={() => setSplit(null)}><VscClose /></button>
+        <div className="split-tab">
+          {split.kind === 'preview' ? (
+            <span className="split-tab-icon"><VscOpenPreview /></span>
+          ) : (
+            <img className="file-icon tab-file-icon" src={fileIconUrl(name)} alt="" />
+          )}
+          <span className="split-title">{split.kind === 'preview' ? `미리보기 ${name}` : name}</span>
+          <span className="tab-close" title="분할 닫기" onClick={() => setSplit(null)}><VscClose /></span>
+        </div>
       </div>
       {split.kind === 'editor' ? (
         <div ref={hostRef} className="split-body" />
