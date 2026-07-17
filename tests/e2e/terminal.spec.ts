@@ -24,7 +24,10 @@ test('내장 터미널: echo 출력 + 두 번째 터미널 탭', async () => {
 
     // 셸 프롬프트 대기 후 echo (마커로 확인 — DOM 렌더러라 텍스트 어서션 가능)
     await page.locator('.terminal-host >> visible=true').click();
-    await page.waitForTimeout(1500); // 로그인 셸 초기화
+    // 로그인 셸 프롬프트 출현 대기 (임의 sleep 대신 폴링 — 하니스 규칙)
+    await expect
+      .poll(async () => (await page.locator('.xterm').innerText()).trim().length, { timeout: 15_000 })
+      .toBeGreaterThan(0);
     await page.keyboard.type('echo SI_E2E_$((2+3))');
     await page.keyboard.press('Enter');
     await expect(page.locator('.xterm')).toContainText('SI_E2E_5', { timeout: 15_000 });
