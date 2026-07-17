@@ -2,18 +2,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { CompletionSettings } from '../shared/protocol';
 
-// safeStorage 주입 인터페이스 — vitest에는 electron이 없으므로 SettingsStore는 이 추상화에만 의존한다.
-export interface SettingsCrypto {
-  isAvailable(): boolean;
-  encrypt(plain: string): Buffer;
-  decrypt(enc: Buffer): string;
-}
-
 export interface StoredCompletionSettings {
   provider: 'none' | 'anthropic' | 'openai';
   model: string;
   baseURL?: string;
-  apiKeyEnc?: string; // base64(safeStorage.encryptString)
+  apiKey?: string; // 평문 저장 (사용자 결정 — dev 환경에서 safeStorage 키체인 접근이 프로세스마다 달라 복호화가 깨지는 문제로 전환)
+  apiKeyEnc?: string; // 구버전(safeStorage 암호화) 잔재 — 더 이상 읽지 않음
 }
 
 interface SettingsFile {
@@ -23,10 +17,7 @@ interface SettingsFile {
 const DEFAULT_COMPLETION: StoredCompletionSettings = { provider: 'none', model: '' };
 
 export class SettingsStore {
-  constructor(
-    private baseDir: string,
-    private crypto: SettingsCrypto,
-  ) {}
+  constructor(private baseDir: string) {}
 
   private filePath(): string {
     return path.join(this.baseDir, 'settings.json');
@@ -44,15 +35,16 @@ export class SettingsStore {
 
   private write(file: SettingsFile): void {
     fs.mkdirSync(this.baseDir, { recursive: true });
-    fs.writeFileSync(this.filePath(), JSON.stringify(file, null, 2));
+    // 평문 키 포함 — 소유자 외 읽기 차단
+    fs.writeFileSync(this.filePath(), JSON.stringify(file, null, 2), { mode: 0o600 });
+    fs.chmodSync(this.filePath(), 0o600); // 기존 파일에 덮어쓸 때도 권한 보장
   }
 
   getCompletion(): StoredCompletionSettings {
     return this.read().completion;
   }
 
-  // apiKey가 주어졌을 때만 암호화 갱신(빈 문자열은 키 삭제, undefined는 기존 키 유지).
-  // crypto.isAvailable()이 false인데 비어있지 않은 apiKey 저장을 시도하면 throw.
+  // apiKey가 주어졌을 때만 갱신(빈 문자열은 키 삭제, undefined는 기존 키 유지).
   setCompletion(
     s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string },
     apiKey?: string,
@@ -61,29 +53,23 @@ export class SettingsStore {
     const next: StoredCompletionSettings = {
       provider: s.provider,
       model: s.model,
-      apiKeyEnc: file.completion.apiKeyEnc,
+      apiKey: file.completion.apiKey,
     };
     if (s.baseURL) next.baseURL = s.baseURL;
 
     if (apiKey !== undefined) {
       if (apiKey === '') {
-        delete next.apiKeyEnc; // 빈 문자열 = 삭제
+        delete next.apiKey; // 빈 문자열 = 삭제
       } else {
-        if (!this.crypto.isAvailable()) throw new Error('이 시스템에서는 안전한 키 저장(safeStorage)을 사용할 수 없습니다.');
-        next.apiKeyEnc = this.crypto.encrypt(apiKey).toString('base64');
+        next.apiKey = apiKey;
       }
     }
+    if (next.apiKey === undefined) delete next.apiKey;
     this.write({ completion: next });
   }
 
   getApiKey(): string | null {
-    const enc = this.read().completion.apiKeyEnc;
-    if (!enc) return null;
-    try {
-      return this.crypto.decrypt(Buffer.from(enc, 'base64'));
-    } catch {
-      return null; // decrypt 실패 → 조용히 강등 (throw 아님)
-    }
+    return this.read().completion.apiKey ?? null;
   }
 
   toPublic(): CompletionSettings {
