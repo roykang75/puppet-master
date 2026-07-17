@@ -159,3 +159,37 @@ body {
 .rel-kind { color: var(--fg-dim); font-size: 11px; }
 .rel-detail { margin-left: auto; color: var(--fg-dim); font-size: 11px; }
 .rel-group { padding: 2px 8px; color: var(--fg-dim); font-size: 11px; background: var(--bg); }
+
+/* ── AI 채팅 (Plan 8) ── */
+.right-tabs { display: flex; gap: 2px; padding: 0; }
+.right-tabs button {
+  flex: 1; padding: 4px 8px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+  background: none; border: none; color: var(--fg-dim); cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.right-tabs button.active { color: var(--fg); border-bottom-color: var(--accent); }
+.chat-panel { display: flex; flex-direction: column; height: 100%; }
+.chat-toolbar {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--border);
+}
+.chat-context-toggle { display: flex; align-items: center; gap: 4px; min-width: 0; cursor: pointer; }
+.chat-context-label {
+  font-size: 11px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-messages { flex: 1; overflow: auto; padding: 8px; user-select: text; }
+.chat-msg { margin-bottom: 8px; padding: 6px 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+.chat-user { background: var(--bg-active); }
+.chat-assistant { background: var(--bg-panel); border: 1px solid var(--border); }
+.chat-code {
+  display: block; margin: 4px 0; padding: 6px; overflow-x: auto;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  font: 12px/1.4 ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.chat-error { margin-top: 4px; color: var(--warn); font-size: 11px; }
+.chat-streaming { color: var(--fg-dim); padding: 2px 8px; }
+.chat-input-row { flex: none; display: flex; gap: 4px; padding: 6px; border-top: 1px solid var(--border); }
+.chat-input-row textarea {
+  flex: 1; resize: none; background: var(--bg); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 3px; padding: 4px 6px; font: inherit;
+}

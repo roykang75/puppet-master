@@ -24,6 +24,10 @@ interface AppState {
   completionStatus: string | null;
   lspStopped: string[]; // 중지된 LSP 언어 목록 (예: ['ts'])
   bookmarks: Bookmark[];
+  chatMessages: { role: 'user' | 'assistant'; content: string; error?: string }[];
+  chatStreaming: boolean;
+  chatContextEnabled: boolean;
+  rightTab: 'relation' | 'chat';
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -42,6 +46,14 @@ interface AppState {
   setCompletionStatus(msg: string | null): void;
   setLspStopped(lang: string, stopped: boolean): void;
   setBookmarks(list: Bookmark[]): void;
+  appendChatUser(content: string): void;
+  appendChatAssistant(): void; // 빈 어시스턴트 자리
+  appendChatChunk(text: string): void; // 마지막 어시스턴트에 append
+  setChatError(error: string): void; // 마지막 어시스턴트에 오류 표기
+  setChatStreaming(v: boolean): void;
+  setChatContextEnabled(v: boolean): void;
+  setRightTab(v: 'relation' | 'chat'): void;
+  clearChat(): void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -60,8 +72,12 @@ export const useAppStore = create<AppState>((set) => ({
   completionStatus: null,
   lspStopped: [],
   bookmarks: [],
+  chatMessages: [],
+  chatStreaming: false,
+  chatContextEnabled: true,
+  rightTab: 'relation',
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [] }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -96,4 +112,24 @@ export const useAppStore = create<AppState>((set) => ({
       lspStopped: stopped ? [...new Set([...s.lspStopped, lang])] : s.lspStopped.filter((l) => l !== lang),
     })),
   setBookmarks: (bookmarks) => set({ bookmarks }),
+  appendChatUser: (content) => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'user', content }] })),
+  appendChatAssistant: () => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'assistant', content: '' }] })),
+  appendChatChunk: (text) =>
+    set((s) => {
+      const msgs = s.chatMessages.slice();
+      const last = msgs.at(-1);
+      if (last?.role === 'assistant') msgs[msgs.length - 1] = { ...last, content: last.content + text };
+      return { chatMessages: msgs };
+    }),
+  setChatError: (error) =>
+    set((s) => {
+      const msgs = s.chatMessages.slice();
+      const last = msgs.at(-1);
+      if (last?.role === 'assistant') msgs[msgs.length - 1] = { ...last, error };
+      return { chatMessages: msgs };
+    }),
+  setChatStreaming: (chatStreaming) => set({ chatStreaming }),
+  setChatContextEnabled: (chatContextEnabled) => set({ chatContextEnabled }),
+  setRightTab: (rightTab) => set({ rightTab }),
+  clearChat: () => set({ chatMessages: [], chatStreaming: false }),
 }));

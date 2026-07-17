@@ -4,7 +4,7 @@ import { useAppStore } from './store';
 import { initLayouts, layoutStorage, scheduleSave } from './persistence-bridge';
 import { EmptyState } from './components/EmptyState';
 import { StatusBar } from './components/StatusBar';
-import { RelationPanel } from './components/RelationPanel';
+import { RightPanel } from './components/RightPanel';
 import { ContextPanel } from './components/ContextPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
@@ -34,6 +34,7 @@ async function openProject(root: string): Promise<void> {
   const st = useAppStore.getState();
   try {
     const res = await window.si.openProject(root);
+    void window.si.chatCancel(); // 프로젝트 전환 시 진행 중 채팅 스트림 중단 (store 리셋은 setProject 담당)
     initLayouts(res.uiState?.panelLayouts);
     // 프로젝트 전환 시 이전 프로젝트의 모델 전부 폐기 — URI가 root 무관이라 재사용 오염 방지
     disposeAllModels();
@@ -153,7 +154,7 @@ function Workspace() {
           <Separator className="resize-handle resize-handle-h" />
           <Panel id="editor" minSize="30"><EditorArea /></Panel>
           <Separator className="resize-handle resize-handle-h" />
-          <Panel id="relation" defaultSize="18" minSize="10" collapsible><RelationPanel /></Panel>
+          <Panel id="relation" defaultSize="18" minSize="10" collapsible><RightPanel /></Panel>
         </Group>
       </Panel>
       <Separator className="resize-handle resize-handle-v" />
