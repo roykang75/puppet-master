@@ -14,9 +14,10 @@
 - **승인 UX**: 기본 전부 자동 실행. 패널의 "자동 승인" 토글(기본 켬)을 끄면 `write_file`/`run_command`는 실행 전 [실행]/[건너뛰기] 승인 대기 (읽기 도구는 항상 자동). 셸도 토글을 따른다
 - **UI**: 기존 AI 채팅 패널에 "에이전트" 모드 토글. 도구 호출은 응답 중간 인라인 카드(도구명+대상+상태), write_file 카드 클릭 → 파일 탭 열기, run_command 카드는 출력 접기/펼치기
 - **후처리**: write_file 성공 시 프로젝트 트리 새로고침, 열린 탭은 기존 "디스크에서 변경됨" 메커니즘 동작
+- **run_command 쓰기 샌드박스**: macOS `sandbox-exec`로 파일 쓰기(삭제/편집/생성)를 **프로젝트 루트 이하로 OS 수준 강제** — 밖은 "Operation not permitted". 읽기는 자유, `/dev/null`과 `$TMPDIR` 쓰기는 허용(일반 명령 호환). 실측 검증됨: 밖 `rm`/`sed -i` 차단, 안 쓰기·python 실행·밖 읽기 정상
 
 제외 (명시):
-- Claude Agent SDK 통합(Anthropic 전용이라 로컬 모델 패턴과 어긋남 — 기각), 서브에이전트, diff 미리보기 승인, 대화 영구 저장, 셸 디렉터리 샌드박스(OS 수준 불가 — 한계 고지로 대체), 멀티 파일 원자 트랜잭션
+- Claude Agent SDK 통합(Anthropic 전용이라 로컬 모델 패턴과 어긋남 — 기각), 서브에이전트, diff 미리보기 승인, 대화 영구 저장, 셸의 네트워크/프로세스 제한(쓰기만 샌드박스), 멀티 파일 원자 트랜잭션
 
 ## 2. 결정 기록 (사용자 답변)
 
@@ -27,7 +28,8 @@
 | 승인 | 전부 자동 + 자동승인 토글 (c) | 속도 우선, 토글로 세밀 제어. 끄면 쓰기/셸 승인 대기 |
 | UI | 채팅 패널 모드 토글 (a) | 스트리밍/마크다운/프로파일 인프라 재사용 — 구현 최소 |
 | 파일 접근 | 루트 + 추가 허용 목록 (b) | 프로젝트 밖 참조 자료 등 유연성. 경로 탈출 방지는 유지 |
-| 셸 처리 | 자동승인 토글 따름 (b) | 디렉터리 제한 불가 한계를 고지한 상태에서 사용자가 속도 선택 |
+| 셸 처리 | 자동승인 토글 따름 (b) | 속도 선택. 단 쓰기는 아래 샌드박스로 강제 |
+| 셸 쓰기 제한 | sandbox-exec로 프로젝트 이하만 (사용자 추가 요구) | 삭제/편집이 프로젝트 밖을 건드리지 못하게 OS 수준 차단 — 실측 검증 |
 | 도구 미지원 모델 | tools 전달하되 모델이 안 쓰면 일반 채팅 폴백 | gemma 등 — 오류가 아닌 자연 폴백 |
 
 ## 3. 구조
@@ -35,7 +37,8 @@
 ```
 src/main/agent/
   tools.ts     도구 스키마(JSON Schema) + 실행기. 경로 해석: 루트 상대 경로 기본,
-               절대 경로는 allowedDirs 안일 때만 허용. run_command: /bin/zsh -c,
+               절대 경로는 allowedDirs 안일 때만 허용. run_command: sandbox-exec -p <프로파일>
+               /bin/zsh -c <cmd> — 쓰기는 (subpath 프로젝트루트)+(/dev/null)+($TMPDIR)만 허용,
                cwd=프로젝트 루트, 30초 타임아웃, 출력 20KB 절단
   adapters.ts  AnthropicAgent / OpenAIAgent — 스트리밍 + tool call 파싱 (주입 가능한 클라이언트)
   service.ts   AgentService — 루프: 모델 호출 → text 청크 push → tool call 실행(승인 대기 포함)
@@ -66,5 +69,6 @@ src/renderer/src/
 
 - **단위(TDD)**: tools — 경로 탈출 거부/allowedDirs 허용/write 중간 폴더/run_command 출력 절단·타임아웃. service — fake 어댑터로 도구 호출→실행→재호출→종료, 한도, 취소, 승인 대기/거부
 - **어댑터**: fake 클라이언트로 Anthropic/OpenAI 각각 tool call 파싱·tool result 왕복
-- **통합**: OpenAI 어댑터를 fake HTTP tool calling 서버로 실왕복
+- **통합**: OpenAI 어댑터를 fake HTTP tool calling 서버로 실왕복. run_command 샌드박스 —
+  프로젝트 밖 rm/sed -i 차단(파일 보존)·안 쓰기/밖 읽기/python 실행 정상 (실제 sandbox-exec)
 - **E2E**: fake 서버 + 설정 심은 SI_USER_DATA → 에이전트 모드 → "파일 만들어줘" → 실제 디스크 파일 생성 + 도구 카드 표시 + 트리 반영 확인
