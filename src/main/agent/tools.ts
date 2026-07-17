@@ -58,12 +58,33 @@ export const AGENT_TOOLS: ToolSpec[] = [
   },
 ];
 
-/** 상대 경로는 루트 기준, 절대 경로는 루트/allowedDirs 안만 허용. 탈출은 throw. */
+/** 존재하는 가장 가까운 조상 경로를 realpath로 해석한다 (심링크 해소, 신규 파일은 조상까지만). */
+function realpathOfClosestAncestor(p: string): string {
+  let cur = p;
+  for (;;) {
+    try {
+      return fs.realpathSync(cur);
+    } catch {
+      const parent = path.dirname(cur);
+      if (parent === cur) return cur; // 파일시스템 루트 — 더 못 올라감
+      cur = parent;
+    }
+  }
+}
+
+/**
+ * 상대 경로는 루트 기준, 절대 경로는 루트/allowedDirs 안만 허용. 탈출은 throw.
+ * 심링크로 허용 영역 밖을 가리키는 것도 막기 위해, 대상의 실경로(존재하는 가장 가까운 조상 기준)를
+ * realpath로 정규화한 허용 루트들과 비교한다 (macOS /tmp→/private/tmp 등 시스템 심링크 대응 포함).
+ */
 export function resolveToolPath(deps: AgentToolDeps, p: string): string {
-  const roots = [path.resolve(deps.projectRoot), ...deps.allowedDirs.map((d) => path.resolve(d))];
+  const roots = [path.resolve(deps.projectRoot), ...deps.allowedDirs.map((d) => path.resolve(d))].map(
+    (r) => realpathOfClosestAncestor(r),
+  );
   const abs = path.isAbsolute(p) ? path.resolve(p) : path.resolve(deps.projectRoot, p);
+  const real = realpathOfClosestAncestor(abs);
   for (const r of roots) {
-    if (abs === r || abs.startsWith(r + path.sep)) return abs;
+    if (real === r || real.startsWith(r + path.sep)) return abs;
   }
   throw new Error(`허용된 디렉터리 밖 경로: ${p}`);
 }

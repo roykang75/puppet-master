@@ -44,6 +44,22 @@ describe('resolveToolPath', () => {
     expect(resolveToolPath(deps(), path.join(extra, 'doc.md'))).toBe(path.join(extra, 'doc.md'));
     expect(() => resolveToolPath(deps(), '/etc/passwd')).toThrow('허용된 디렉터리 밖');
   });
+  it('허용 디렉터리 안 심링크가 밖(os.tmpdir() 바로 아래)을 가리키면 거부', () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'si-agent-outside-'));
+    try {
+      fs.writeFileSync(path.join(outside, 'secret.txt'), 'top-secret');
+      const link = path.join(root, 'escape-link');
+      fs.symlinkSync(outside, link, 'dir');
+      expect(() => resolveToolPath(deps(), 'escape-link/secret.txt')).toThrow('허용된 디렉터리 밖');
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+  it('심링크 없는 정상 경로는 여전히 통과', () => {
+    fs.mkdirSync(path.join(root, 'src'));
+    fs.writeFileSync(path.join(root, 'src', 'a.py'), 'x');
+    expect(resolveToolPath(deps(), 'src/a.py')).toBe(path.join(root, 'src/a.py'));
+  });
 });
 
 describe('executeTool', () => {
@@ -74,6 +90,17 @@ describe('executeTool', () => {
   it('read_file: 없는 파일은 오류 텍스트 (throw 아님)', async () => {
     const r = await executeTool('read_file', { path: 'none.txt' }, deps());
     expect(r).toContain('오류');
+  });
+  it('read_file: 허용 디렉터리 안 심링크가 밖을 가리키면 오류 (OS 수준 탈출 차단)', async () => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'si-agent-outside-'));
+    try {
+      fs.writeFileSync(path.join(outside, 'secret.txt'), 'top-secret');
+      fs.symlinkSync(outside, path.join(root, 'escape-link'), 'dir');
+      const r = await executeTool('read_file', { path: 'escape-link/secret.txt' }, deps());
+      expect(r).toContain('허용된 디렉터리 밖');
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
   });
   it('알 수 없는 도구 이름은 오류 텍스트', async () => {
     const r = await executeTool('nope', {}, deps());
