@@ -10,6 +10,19 @@ function renderSpans(spans: InlineSpan[]): JSX.Element[] {
       <strong key={i}>{s.text}</strong>
     ) : s.kind === 'italic' ? (
       <em key={i}>{s.text}</em>
+    ) : s.kind === 'strike' ? (
+      <del key={i}>{s.text}</del>
+    ) : s.kind === 'link' ? (
+      <a
+        key={i}
+        className="chat-link"
+        href={s.href}
+        title={s.href}
+        onClick={(e) => {
+          e.preventDefault(); // 렌더러 내 내비게이션 금지 — 기본 브라우저로
+          void window.si.openExternal(s.href);
+        }}
+      >{s.text}</a>
     ) : (
       <span key={i}>{s.text}</span>
     ),
@@ -25,6 +38,8 @@ export function renderMarkdown(content: string): JSX.Element[] {
         return <pre key={i} className="chat-code">{b.text}</pre>;
       case 'hr':
         return <div key={i} className="chat-hr" />;
+      case 'quote':
+        return <blockquote key={i} className="chat-quote">{renderSpans(b.spans)}</blockquote>;
       case 'table':
         return (
           <div key={i} className="chat-table-wrap">
@@ -50,7 +65,14 @@ export function renderMarkdown(content: string): JSX.Element[] {
         );
       case 'list': {
         const items = b.items.map((it, j) => (
-          <li key={j} style={it.depth ? { marginLeft: it.depth * 16 } : undefined}>{renderSpans(it.spans)}</li>
+          <li
+            key={j}
+            className={it.checked !== undefined ? 'chat-task' : undefined}
+            style={it.depth ? { marginLeft: it.depth * 16 } : undefined}
+          >
+            {it.checked !== undefined && <input type="checkbox" className="chat-checkbox" checked={it.checked} readOnly disabled />}
+            {renderSpans(it.spans)}
+          </li>
         ));
         return b.ordered ? <ol key={i} className="chat-list">{items}</ol> : <ul key={i} className="chat-list">{items}</ul>;
       }

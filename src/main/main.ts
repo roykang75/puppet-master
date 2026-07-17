@@ -140,6 +140,10 @@ function registerIpc(): void {
       return { error: err instanceof Error ? err.message : String(err) };
     }
   });
+  // 마크다운 링크 클릭 — http(s)만 기본 브라우저로
+  ipcMain.handle('shell:open-external', (_e, url: string) => {
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+  });
   ipcMain.handle('file:mkdir', (_e, rel: string) => {
     try {
       requireFiles().createDir(rel);

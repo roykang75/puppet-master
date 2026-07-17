@@ -2,8 +2,10 @@
  * 지원: 제목(#~####), 굵게/기울임/인라인 코드, 코드 펜스, 목록(-,*,•,숫자.) + 들여쓰기, 구분선.
  * HTML을 생성하지 않으므로 sanitize가 필요 없다. */
 
-export type InlineSpan = { kind: 'text' | 'code' | 'bold' | 'italic'; text: string };
-export type ListItem = { depth: number; spans: InlineSpan[] };
+export type InlineSpan =
+  | { kind: 'text' | 'code' | 'bold' | 'italic' | 'strike'; text: string }
+  | { kind: 'link'; text: string; href: string };
+export type ListItem = { depth: number; spans: InlineSpan[]; checked?: boolean };
 export type TableAlign = 'left' | 'center' | 'right';
 export type Block =
   | { kind: 'para'; spans: InlineSpan[] }
@@ -11,6 +13,7 @@ export type Block =
   | { kind: 'code'; lang: string; text: string }
   | { kind: 'list'; ordered: boolean; items: ListItem[] }
   | { kind: 'table'; header: InlineSpan[][]; rows: InlineSpan[][][]; aligns: TableAlign[] }
+  | { kind: 'quote'; spans: InlineSpan[] }
   | { kind: 'hr' };
 
 /** `| a | b |` → 셀 문자열 배열 (양끝 파이프 제거) */
@@ -32,14 +35,21 @@ function parseDelimiter(line: string): TableAlign[] | null {
 
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
-  const re = /(`[^`\n]+`)|(\*\*[^*\n]+?\*\*)|(\*[^*\s][^*\n]*?\*)/g;
+  // 순서: 코드 → 링크 → **굵게 → __굵게 → *기울임 → _기울임 → ~~취소선.
+  // 언더스코어 강조는 단어 경계에서만 (snake_case 식별자 오탐 방지 — GFM 규칙)
+  const re =
+    /(`[^`\n]+`)|\[([^\]\n]+)\]\(([^)\s]+)\)|(\*\*[^*\n]+?\*\*)|(?<!\w)__([^_\n]+?)__(?!\w)|(\*[^*\s][^*\n]*?\*)|(?<!\w)_([^_\n]+?)_(?!\w)|(~~[^~\n]+?~~)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     if (m.index > last) spans.push({ kind: 'text', text: text.slice(last, m.index) });
     if (m[1]) spans.push({ kind: 'code', text: m[1].slice(1, -1) });
-    else if (m[2]) spans.push({ kind: 'bold', text: m[2].slice(2, -2) });
-    else spans.push({ kind: 'italic', text: m[3].slice(1, -1) });
+    else if (m[2] !== undefined) spans.push({ kind: 'link', text: m[2], href: m[3] });
+    else if (m[4]) spans.push({ kind: 'bold', text: m[4].slice(2, -2) });
+    else if (m[5] !== undefined) spans.push({ kind: 'bold', text: m[5] });
+    else if (m[6]) spans.push({ kind: 'italic', text: m[6].slice(1, -1) });
+    else if (m[7] !== undefined) spans.push({ kind: 'italic', text: m[7] });
+    else spans.push({ kind: 'strike', text: m[8].slice(2, -2) });
     last = m.index + m[0].length;
   }
   if (last < text.length) spans.push({ kind: 'text', text: text.slice(last) });
@@ -88,10 +98,24 @@ export function parseMarkdown(src: string): Block[] {
         continue;
       }
     }
-    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
     if (heading) {
       flushPara();
       blocks.push({ kind: 'heading', level: heading[1].length, spans: parseInline(heading[2]) });
+      continue;
+    }
+    // 인용문 — 연속된 > 줄을 하나로 병합
+    const quote = line.match(/^>\s?(.*)$/);
+    if (quote) {
+      flushPara();
+      const qlines = [quote[1]];
+      while (i + 1 < lines.length) {
+        const nm = lines[i + 1].match(/^>\s?(.*)$/);
+        if (!nm) break;
+        qlines.push(nm[1]);
+        i++;
+      }
+      blocks.push({ kind: 'quote', spans: parseInline(qlines.join('\n')) });
       continue;
     }
     if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
@@ -105,7 +129,16 @@ export function parseMarkdown(src: string): Block[] {
       flushPara();
       const m2 = (ul ?? ol)!;
       const ordered = !!ol;
-      const item: ListItem = { depth: Math.min(2, Math.floor(m2[1].length / 2)), spans: parseInline(m2[2]) };
+      // 체크리스트: - [ ] / - [x]
+      let content = m2[2];
+      let checked: boolean | undefined;
+      const task = ul ? content.match(/^\[([ xX])\]\s+(.*)$/) : null;
+      if (task) {
+        checked = task[1] !== ' ';
+        content = task[2];
+      }
+      const item: ListItem = { depth: Math.min(2, Math.floor(m2[1].length / 2)), spans: parseInline(content) };
+      if (checked !== undefined) item.checked = checked;
       const prev = blocks[blocks.length - 1];
       if (prev && prev.kind === 'list' && prev.ordered === ordered) prev.items.push(item);
       else blocks.push({ kind: 'list', ordered, items: [item] });

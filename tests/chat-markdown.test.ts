@@ -21,15 +21,60 @@ describe('parseInline', () => {
   it('bold takes precedence over italic', () => {
     expect(parseInline('**굵게**')).toEqual([{ kind: 'bold', text: '굵게' }]);
   });
+
+  it('parses links as clickable spans', () => {
+    expect(parseInline('자세한 건 [문서](https://a.io/b) 참고')).toEqual([
+      { kind: 'text', text: '자세한 건 ' },
+      { kind: 'link', text: '문서', href: 'https://a.io/b' },
+      { kind: 'text', text: ' 참고' },
+    ]);
+  });
+
+  it('underscore emphasis works at word boundaries but not inside snake_case', () => {
+    expect(parseInline('_기울임_ 그리고 __굵게__')).toEqual([
+      { kind: 'italic', text: '기울임' },
+      { kind: 'text', text: ' 그리고 ' },
+      { kind: 'bold', text: '굵게' },
+    ]);
+    // 식별자 오탐 금지
+    expect(parseInline('const my_var_name = 1')).toEqual([{ kind: 'text', text: 'const my_var_name = 1' }]);
+  });
+
+  it('parses strikethrough', () => {
+    expect(parseInline('~~취소~~ 유지')).toEqual([
+      { kind: 'strike', text: '취소' },
+      { kind: 'text', text: ' 유지' },
+    ]);
+  });
 });
 
 describe('parseMarkdown', () => {
-  it('parses headings level 1-4', () => {
-    const blocks = parseMarkdown('## 후속 처리\n#### Deploy via SSH');
+  it('parses headings level 1-6', () => {
+    const blocks = parseMarkdown('## 후속 처리\n#### Deploy via SSH\n##### 소제목\n###### 미세제목');
     expect(blocks).toEqual([
       { kind: 'heading', level: 2, spans: [{ kind: 'text', text: '후속 처리' }] },
       { kind: 'heading', level: 4, spans: [{ kind: 'text', text: 'Deploy via SSH' }] },
+      { kind: 'heading', level: 5, spans: [{ kind: 'text', text: '소제목' }] },
+      { kind: 'heading', level: 6, spans: [{ kind: 'text', text: '미세제목' }] },
     ]);
+  });
+
+  it('parses blockquotes merging consecutive lines', () => {
+    const blocks = parseMarkdown('> 참고: 중요\n> 두 번째 줄\n\n일반 문단');
+    expect(blocks.map((b) => b.kind)).toEqual(['quote', 'para']);
+    const q = blocks[0];
+    if (q.kind !== 'quote') return;
+    expect(q.spans[0].text).toBe('참고: 중요\n두 번째 줄');
+  });
+
+  it('parses task list checkboxes', () => {
+    const blocks = parseMarkdown('- [ ] 할 일\n- [x] 완료됨');
+    const list = blocks[0];
+    if (list.kind !== 'list') return;
+    expect(list.items[0].checked).toBe(false);
+    expect(list.items[0].spans[0].text).toBe('할 일');
+    expect(list.items[1].checked).toBe(true);
+    expect(list.items[1].spans[0].text).toBe('완료됨');
   });
 
   it('groups consecutive bullets into one list with depth from indent', () => {
