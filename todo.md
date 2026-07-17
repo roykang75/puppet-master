@@ -154,9 +154,22 @@
 - 통합 테스트 파일이 선언 순서 의존 (vitest shuffle 켜면 취약)
 - AI 고스트 텍스트 ↔ LSP 드롭다운 공존 정책은 실사용 피드백 후 조정 가능 (스펙 §2)
 
+## ✅ Plan 7: TextMate 문법 + 테마 + 스니펫 (v2 2탄) — 완료 (main 병합 b8534de)
+
+- [x] TextMate 토크나이저: vscode-textmate + oniguruma(WASM은 main ipc 공급 — asar 투명 읽기), 6언어 문법 벤더링(VS Code 1.101.0, MIT), Monaco 공개 API만 사용, 실패 시 monarch 자연 폴백
+- [x] 테마: 번들 4종(Dark+/Light+/Monokai/One Dark Pro) + VS Code 테마 JSON 임포트 + 앱 UI CSS 변수 연동 + 시맨틱 토큰 다크/라이트 프리셋 2벌. 설정에서 즉시 전환
+- [x] 스니펫: VS Code 포맷(번들 6언어 기본 세트 + userData/snippets 사용자 정의, 사용자 우선), 완성 드롭다운 통합(placeholder Tab 이동), 스니펫 폴더 열기 버튼
+- [x] 검증: 단위/실문법 통합(벤치 590ms/3000줄)/E2E 5스펙/패키지 앱 실증 — 총 213개
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):**
+- 콜드 스타트 시 테마 적용 전 짧은 기본 테마 플래시 가능 (체감 낮음 — index.html 인라인 배경 등으로 후속 보완)
+- `.ref-highlight` 배경 하드코딩 (라이트 테마에서 이질감 — 테마 유도 후속)
+- OneDark-Pro 벤더링이 master 참조 (자산은 커밋돼 런타임 무영향 — SHA 고정 후속)
+- tsx/jsx는 base 문법 적용 (React 전용 문법은 languageId 분리 필요 — 후속)
+
 ### 🔜 다음 단계
 
-**Plan 7 (TextMate 문법+테마+스니펫) → Plan 8 (AI 채팅)** — 사용자 합의된 순서 (2026-07-17).
+**Plan 8 (AI 채팅)** — 사용자 합의된 순서 (2026-07-17). 범위 결정 필요: 단순 채팅 vs Claude Agent SDK 기반 에이전트 패널.
 
 ### v2 이후 (백로그)
 - [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
