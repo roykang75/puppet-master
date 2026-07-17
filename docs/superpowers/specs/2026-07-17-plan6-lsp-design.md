@@ -9,7 +9,7 @@
 
 포함:
 - **경량 LSP 클라이언트 직접 구현** (main): `child_process` stdio + `vscode-jsonrpc`. monaco-languageclient 미사용 (아래 결정 기록)
-- **언어 2종**: TypeScript/JS (`typescript-language-server`) 1차, Python (`pyright`) 2차 — 두 서버 모두 앱 dependencies로 **번들**
+- **언어 2종**: TypeScript/JS 1차 — **TS7 내장 네이티브 LSP** (`typescript@7`의 `@typescript/typescript-<platform>-<arch>/lib/tsc --lsp --stdio`, serverInfo `typescript-go`). Python (`pyright`) 2차. 서버는 앱 dependencies로 **번들** (typescript는 이미 의존성 — devDependencies에서 dependencies로 이동)
 - **기능 4종**: 완성(드롭다운), 호버(신규), 정의 이동(LSP 우선 + 기존 resolveAndJump 폴백), 진단(신규 — 에디터 마커)
 - LSP 언어에서 `quickSuggestions` 재활성 (AI 고스트와 역할 분담)
 - 상태바 LSP 상태 표시 (기동/중지)
@@ -31,7 +31,9 @@
 | 완성 공존 정책 | LSP 언어는 드롭다운 자동 + AI 고스트는 위젯 닫힘 상황 담당 | Monaco가 위젯 열림 중 고스트를 억제하므로 자연 분담. **실사용 후 조정 가능성 명시** (사용자: "실제 구현하고 사용해봐야 안다") |
 | 클라이언트 구현 | 직접 경량 구현 (1안) | monaco-languageclient 최신은 @codingame 포크로 monaco-editor 교체 필요 — 기존 Monaco 직접 통합(시맨틱 토큰/인라인 완성/커스텀 range) 전면 재작업 비용. 4기능만 필요하므로 직접 배선 비용이 작음 |
 | 확장성 완충 장치 | ① 클라이언트 코어(프로토콜/수명) ↔ 기능 배선(Monaco provider) 분리 ② 공식 `vscode-languageserver-protocol` 타입 사용 ③ 서버 정의 선언적 테이블 | 사용자 우려(1안 확장성) 대응 — 기능 추가가 렌더러 배선 증분으로 국한, 플랫폼 전환 시에도 main 수명 관리·서버 정의 생존 |
-| 서버 실행 | `ELECTRON_RUN_AS_NODE=1` + 자체 실행 파일로 스폰 | 사용자 머신에 node 불요. 패키징 시 서버 패키지 asarUnpack |
+| 서버 실행 | pyright: `ELECTRON_RUN_AS_NODE=1` + 자체 실행 파일 / ts: 네이티브 바이너리 직접 스폰 | 사용자 머신에 node 불요. 패키징 시 서버 패키지 asarUnpack |
+| TS 서버 | typescript-language-server 대신 **TS7 내장 LSP** | 프로젝트가 이미 typescript@7 사용, TS7엔 tsserver.js가 없어 typescript-language-server 사용 불가. 스모크 검증 완료: initialize 응답에 completion/hover/definition/diagnostic 모두 지원 (2026-07-17) |
+| 진단 방식 | push+pull 겸용 | tsgo는 pull(`diagnosticProvider` → `textDocument/diagnostic` 요청), pyright는 push(`publishDiagnostics`). 클라이언트가 capabilities 기준 자동 선택 |
 
 ## 3. 프로세스 구조
 
@@ -39,10 +41,10 @@
 ┌─ Electron main ──────────────────────────────────┐
 │  LspManager                                       │
 │   ├─ 서버 정의 테이블 (선언적)                      │
-│   │   ts: typescript-language-server --stdio      │
+│   │   ts: @typescript/…/lib/tsc --lsp --stdio     │
 │   │       파일: .ts .tsx .js .jsx .mjs .cjs        │
-│   │   py: pyright-langserver --stdio              │
-│   │       파일: .py                                │
+│   │   py: pyright/langserver.index.js --stdio     │
+│   │       (ELECTRON_RUN_AS_NODE) 파일: .py         │
 │   ├─ LspClient (언어별 1개, 프로젝트당)             │
 │   │   child_process(stdio) + vscode-jsonrpc       │
 │   └─ 수명: 지연 기동 / 크래시 재시작 / 전환 시 종료  │
@@ -69,7 +71,7 @@
 | 완성 | Monaco `CompletionItemProvider` → `lsp:call(completion)` → itemKind/insertText 변환 | LSP 언어만 `quickSuggestions`/`suggestOnTriggerCharacters` 재활성 — 파일 전환 시 `updateOptions` 분기 |
 | 호버 | `HoverProvider` → `lsp:call(hover)` → markdown | 신규 |
 | 정의 이동 | F12/Ctrl+클릭 → LSP 우선, **1.5초 내 무응답/실패/서버 없음 → resolveAndJump 폴백** | 기존 UX 불변 |
-| 진단 | 서버 push → main 릴레이(`lsp:event`) → `setModelMarkers` | 열린 파일만, 파일당 최대 500개 |
+| 진단 | push(`publishDiagnostics`) 또는 pull(`textDocument/diagnostic`, didChange 후 디바운스 요청) → main 릴레이(`lsp:event`) → `setModelMarkers` | capabilities 기준 자동 선택 (tsgo=pull, pyright=push). 열린 파일만, 파일당 최대 500개 |
 
 - ipc: `lsp:call`은 completion/hover/definition 3종 화이트리스트 (`indexer:call` 패턴 동일). `lsp:event`는 진단 push + 서버 상태.
 
