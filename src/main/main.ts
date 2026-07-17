@@ -279,6 +279,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('settings:appearance:get', () => settingsStore.getAppearance());
   ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
+  ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
+  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs: string[] }) => settingsStore.setAgent(a));
 
   const themesDir = () => path.join(app.getPath('userData'), 'themes');
   ipcMain.handle('theme:list', () => {

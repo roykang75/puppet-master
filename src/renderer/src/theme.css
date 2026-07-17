@@ -256,6 +256,8 @@ body {
   font-size: 14px; padding: 2px 6px; border-radius: 4px;
 }
 .profile-remove:hover { color: var(--fg); background: var(--bg-hover); }
+.allowed-dir-row { display: flex; align-items: center; gap: 6px; }
+.allowed-dir-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg); }
 
 .rel-tabs { flex: none; display: flex; gap: 2px; padding: 2px 6px; border-bottom: 1px solid var(--border); }
 .rel-tab { padding: 2px 8px; font-size: 11px; cursor: pointer; color: var(--fg-dim); border-radius: 3px; }

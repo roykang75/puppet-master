@@ -130,6 +130,21 @@ export type ChatEvent =
   | { type: 'done' }
   | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
 
+// ── 에이전트 모드 (Plan 10) ──
+export interface AgentToolUi {
+  id: string;
+  name: string;
+  summary: string;
+  state: 'awaiting' | 'running' | 'done' | 'error';
+  detail?: string; // run_command 출력(절단) 등
+  path?: string; // write_file 대상 — 카드 클릭 시 열기
+}
+export type AgentEvent =
+  | { type: 'chunk'; text: string }
+  | ({ type: 'tool' } & AgentToolUi)
+  | { type: 'done' }
+  | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)

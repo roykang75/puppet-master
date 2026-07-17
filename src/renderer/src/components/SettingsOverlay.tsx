@@ -34,6 +34,7 @@ export function SettingsOverlay() {
   const [profiles, setProfiles] = useState<EditProfile[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [theme, setTheme] = useState('dark-plus');
+  const [allowedDirs, setAllowedDirs] = useState<string[]>([]);
   const [themeOptions, setThemeOptions] = useState<{ id: string; name: string }[]>(BUNDLED_THEMES);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -70,6 +71,9 @@ export function SettingsOverlay() {
     // 외관: 현재 테마 + 사용자 테마 목록 로드 (번들 + user 합산)
     void window.si.getAppearance().then((a) => {
       if (!cancelled) setTheme(a.theme);
+    });
+    void window.si.getAgentSettings().then((a) => {
+      if (!cancelled) setAllowedDirs(a.allowedDirs);
     });
     void window.si.themeList().then((list) => {
       if (!cancelled) setThemeOptions([...BUNDLED_THEMES, ...list]);
@@ -122,6 +126,7 @@ export function SettingsOverlay() {
         await window.si.setCompletionSettings(inputs, activeIdx);
         void refreshCompletionSettings(); // 설정 캐시 갱신 + auth 비활성 해제
         await window.si.setAppearance({ theme });
+        await window.si.setAgentSettings({ allowedDirs });
         await applyThemeById(monaco, theme); // 즉시 적용
         refreshSnippets(); // 스니펫 재로드 (다음 완성 요청 때 재로드, 스펙 §4)
         close();
@@ -240,6 +245,26 @@ export function SettingsOverlay() {
               ))}
             </select>
           </label>
+
+          <div className="settings-field">
+            <span className="settings-label">에이전트 추가 허용 디렉터리 (파일 도구가 접근 가능한 프로젝트 밖 경로)</span>
+            {allowedDirs.map((d, i) => (
+              <div key={i} className="allowed-dir-row">
+                <span className="allowed-dir-path" title={d}>{d}</span>
+                <button className="profile-remove" title="삭제" onClick={() => setAllowedDirs((prev) => prev.filter((_, j) => j !== i))}><VscTrash /></button>
+              </div>
+            ))}
+            <div>
+              <button
+                className="rename-btn icon-btn"
+                onClick={() => {
+                  void window.si.openFolderDialog().then((dir) => {
+                    if (dir) setAllowedDirs((prev) => (prev.includes(dir) ? prev : [...prev, dir]));
+                  });
+                }}
+              ><VscAdd /> 폴더 추가…</button>
+            </div>
+          </div>
 
           <div className="settings-field">
             <span className="settings-label">테마 / 스니펫</span>
