@@ -256,6 +256,8 @@ body {
   font-size: 14px; padding: 2px 6px; border-radius: 4px;
 }
 .profile-remove:hover { color: var(--fg); background: var(--bg-hover); }
+.allowed-dir-row { display: flex; align-items: center; gap: 6px; }
+.allowed-dir-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg); }
 
 .rel-tabs { flex: none; display: flex; gap: 2px; padding: 2px 6px; border-bottom: 1px solid var(--border); }
 .rel-tab { padding: 2px 8px; font-size: 11px; cursor: pointer; color: var(--fg-dim); border-radius: 3px; }
@@ -334,6 +336,18 @@ body {
 .chat-copy:hover { color: var(--fg); background: var(--bg-hover); }
 .chat-error { margin-top: 4px; color: var(--warn); font-size: 11px; }
 .chat-streaming { color: var(--fg-dim); padding: 2px 8px; }
+.tool-cards { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.tool-card { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; background: var(--bg-panel); }
+.tool-card.clickable { cursor: pointer; }
+.tool-card.clickable:hover { background: var(--bg-hover); }
+.tool-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tool-name { color: var(--accent); font-weight: 600; flex: none; }
+.tool-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, Menlo, monospace; }
+.tool-state { flex: none; color: var(--fg-dim); font-size: 11px; }
+.tool-card.tool-error .tool-state { color: var(--warn); }
+.tool-actions { display: flex; gap: 6px; margin-top: 6px; }
+.tool-detail pre { margin: 4px 0 0; padding: 6px; background: var(--bg); border-radius: 4px; overflow-x: auto; font-size: 11px; max-height: 200px; overflow-y: auto; }
+.tool-detail summary { cursor: pointer; color: var(--fg-dim); font-size: 11px; }
 .chat-input-row {
   flex: none; margin: 8px; padding: 6px 8px;
   background: var(--bg); border: 1px solid var(--border); border-radius: 10px;

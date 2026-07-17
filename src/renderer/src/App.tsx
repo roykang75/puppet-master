@@ -202,6 +202,19 @@ export function App() {
         st.setChatStreaming(false);
       }
     });
+    // 에이전트 이벤트 — 채팅과 동일하게 App에서 구독 (탭 전환 언마운트 유실 방지, Plan 8 P1)
+    window.si.onAgentEvent((ev) => {
+      const st = useAppStore.getState();
+      if (ev.type === 'chunk') st.appendChatChunk(ev.text);
+      else if (ev.type === 'tool') {
+        st.upsertChatTool({ id: ev.id, name: ev.name, summary: ev.summary, state: ev.state, detail: ev.detail, path: ev.path });
+        if (ev.name === 'write_file' && ev.state === 'done') st.bumpTreeRefresh();
+      } else if (ev.type === 'done') st.setChatStreaming(false);
+      else {
+        st.setChatError(CHAT_ERROR_TEXT[ev.kind] ?? CHAT_ERROR_TEXT.other);
+        st.setChatStreaming(false);
+      }
+    });
     const unsub = useAppStore.subscribe(scheduleSave);
     return () => {
       offChat();

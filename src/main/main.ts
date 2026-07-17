@@ -7,11 +7,12 @@ import { Persistence } from './persistence';
 import { SettingsStore } from './settings';
 import { CompletionService } from './completion/service';
 import { ChatService } from './chat/service';
+import { AgentService } from './agent/service';
 import { LspManager } from './lsp/manager';
 import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -38,6 +39,7 @@ let persistence: Persistence;
 let settingsStore: SettingsStore;
 let completionService: CompletionService;
 let chatService: ChatService;
+let agentService: AgentService;
 
 const sendMenu = (action: MenuAction) => win?.webContents.send('menu', action);
 const sendIndexerEvent = (event: string, payload: unknown) => {
@@ -81,6 +83,7 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
       onStatus: (status) => win?.webContents.send('lsp:event', { event: 'status', payload: status }),
     });
     terminals?.killAll();
+    agentService?.cancel(); // 진행 중 에이전트 루프 중단 — 이전 프로젝트에 쓰기 방지
     terminals = new TerminalManager({
       cwd: root,
       onData: (id, data) => win?.webContents.send('terminal:event', { type: 'data', id, data }),
@@ -264,6 +267,11 @@ function registerIpc(): void {
     void chatService.send(messages, context, (event) => win?.webContents.send('chat:event', event));
   });
   ipcMain.handle('chat:cancel', () => chatService.cancel());
+  ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean) => {
+    void agentService.send(messages, context, autoApprove, (event) => win?.webContents.send('agent:event', event));
+  });
+  ipcMain.handle('agent:cancel', () => agentService.cancel());
+  ipcMain.handle('agent:approve', (_e, id: string, ok: boolean) => agentService.approve(id, ok));
   ipcMain.handle('tm:onigWasm', () => {
     const dir = path.dirname(require.resolve('vscode-oniguruma'));
     return fs.readFileSync(path.join(dir, 'onig.wasm')); // Buffer → 렌더러에서 ArrayBuffer
@@ -279,6 +287,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('settings:appearance:get', () => settingsStore.getAppearance());
   ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
+  ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
+  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs: string[] }) => settingsStore.setAgent(a));
 
   const themesDir = () => path.join(app.getPath('userData'), 'themes');
   ipcMain.handle('theme:list', () => {
@@ -364,6 +374,21 @@ app.whenReady().then(() => {
     getSettings: () => settingsStore.getCompletion(),
     getApiKey: () => settingsStore.getApiKey(),
   });
+  agentService = new AgentService({
+    getSettings: () => settingsStore.getCompletion(),
+    getApiKey: () => settingsStore.getApiKey(),
+    getToolDeps: () =>
+      currentRoot
+        ? {
+            projectRoot: currentRoot,
+            allowedDirs: settingsStore.getAgent().allowedDirs,
+            searchText: async (query: string) =>
+              indexer
+                ? ((await indexer.rpc.request('searchText', { query }, { timeoutMs: 30_000 })) as { path: string; snippet: string }[])
+                : [],
+          }
+        : null,
+  });
   createWindow();
   buildMenu(persistence.loadRecent(), sendMenu);
   registerIpc();
@@ -379,4 +404,5 @@ app.on('before-quit', () => {
   indexer?.kill();
   lsp?.shutdownAll();
   terminals?.killAll();
+  agentService?.cancel(); // 진행 중 에이전트 루프 중단 — 이전 프로젝트에 쓰기 방지
 });

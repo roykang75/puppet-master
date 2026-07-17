@@ -22,6 +22,8 @@ export function ChatPanel() {
   const messages = useAppStore((s) => s.chatMessages);
   const streaming = useAppStore((s) => s.chatStreaming);
   const contextEnabled = useAppStore((s) => s.chatContextEnabled);
+  const agentMode = useAppStore((s) => s.agentMode);
+  const autoApprove = useAppStore((s) => s.autoApprove);
   const activePath = useAppStore((s) => s.activePath);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const [input, setInput] = useState('');
@@ -76,10 +78,15 @@ export function ChatPanel() {
       .filter((m) => !m.error)
       .slice(0, -1) // 방금 추가한 빈 어시스턴트 제외
       .map((m) => ({ role: m.role, content: m.content }));
-    void window.si.chatSend(history, context);
+    if (useAppStore.getState().agentMode) void window.si.agentSend(history, context, useAppStore.getState().autoApprove);
+    else void window.si.chatSend(history, context);
   };
 
   const cancel = () => {
+    // 클릭 시점의 agentMode가 아니라 "실제로 진행 중인" 스트림을 멈춰야 한다 —
+    // 스트리밍 중 에이전트 토글을 바꾸면 시작 당시 모드와 클릭 시점 모드가 달라질 수 있다.
+    // 두 cancel() 모두 진행 중이 아니면 무해한 no-op이므로 둘 다 호출한다.
+    void window.si.agentCancel();
     void window.si.chatCancel();
     const st = useAppStore.getState();
     st.appendChatChunk('\n(중단됨)');
@@ -115,12 +122,55 @@ export function ChatPanel() {
           />
           <span className="chat-context-label">{contextLabel}</span>
         </label>
+        <label className="chat-context-toggle" title="AI가 도구로 파일을 직접 생성/수정">
+          <input type="checkbox" checked={agentMode} onChange={(e) => useAppStore.getState().setAgentMode(e.target.checked)} />
+          <span className="chat-context-label">에이전트</span>
+        </label>
+        {agentMode && (
+          <label className="chat-context-toggle" title="끄면 파일 쓰기/셸 실행 전에 승인 버튼이 표시됩니다">
+            <input type="checkbox" checked={autoApprove} onChange={(e) => useAppStore.getState().setAutoApprove(e.target.checked)} />
+            <span className="chat-context-label">자동 승인</span>
+          </label>
+        )}
         <button className="chat-new" title="새 대화" onClick={() => useAppStore.getState().clearChat()}><VscAdd /></button>
       </div>
       <div className="chat-messages" ref={listRef}>
         {messages.length === 0 && <div className="hint">코드에 대해 물어보세요.</div>}
         {messages.map((m, i) => (
           <div key={i} className={`chat-msg chat-${m.role}`}>
+            {m.role === 'assistant' && m.tools && m.tools.length > 0 && (
+              <div className="tool-cards">
+                {m.tools.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`tool-card tool-${t.state}${t.path && t.state === 'done' ? ' clickable' : ''}`}
+                    onClick={() => {
+                      if (t.path && t.state === 'done') useAppStore.getState().openTab(t.path);
+                    }}
+                  >
+                    <span className="tool-card-head">
+                      <span className="tool-name">{t.name}</span>
+                      <span className="tool-summary" title={t.summary}>{t.summary}</span>
+                      <span className="tool-state">
+                        {t.state === 'running' ? '실행 중…' : t.state === 'done' ? '완료' : t.state === 'error' ? '실패' : '승인 대기'}
+                      </span>
+                    </span>
+                    {t.state === 'awaiting' && (
+                      <span className="tool-actions">
+                        <button className="rename-btn primary" onClick={(e) => { e.stopPropagation(); void window.si.agentApprove(t.id, true); }}>실행</button>
+                        <button className="rename-btn" onClick={(e) => { e.stopPropagation(); void window.si.agentApprove(t.id, false); }}>건너뛰기</button>
+                      </span>
+                    )}
+                    {t.detail && t.state !== 'awaiting' && (
+                      <details className="tool-detail" onClick={(e) => e.stopPropagation()}>
+                        <summary>출력 보기</summary>
+                        <pre>{t.detail}</pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {m.role === 'user' ? (
               <div className="chat-content">{m.content}</div>
             ) : (

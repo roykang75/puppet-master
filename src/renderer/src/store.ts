@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { IndexStats } from '../../indexer/pipeline';
+import type { AgentToolUi } from '../../shared/protocol';
 import type { Bookmark } from './bookmarks';
 
 export interface Tab {
@@ -24,9 +25,12 @@ interface AppState {
   completionStatus: string | null;
   lspStopped: string[]; // 중지된 LSP 언어 목록 (예: ['ts'])
   bookmarks: Bookmark[];
-  chatMessages: { role: 'user' | 'assistant'; content: string; error?: string; ts?: number }[];
+  chatMessages: { role: 'user' | 'assistant'; content: string; error?: string; ts?: number; tools?: AgentToolUi[] }[];
   chatStreaming: boolean;
   chatContextEnabled: boolean;
+  agentMode: boolean;
+  autoApprove: boolean;
+  treeRefreshNonce: number;
   rightTab: 'relation' | 'chat';
   terminals: { id: number; title: string; exited: boolean }[];
   activeTerminalId: number | null;
@@ -57,6 +61,10 @@ interface AppState {
   setChatError(error: string): void; // 마지막 어시스턴트에 오류 표기
   setChatStreaming(v: boolean): void;
   setChatContextEnabled(v: boolean): void;
+  setAgentMode(v: boolean): void;
+  setAutoApprove(v: boolean): void;
+  upsertChatTool(tool: AgentToolUi): void;
+  bumpTreeRefresh(): void;
   setRightTab(v: 'relation' | 'chat'): void;
   clearChat(): void;
   addTerminal(id: number, title: string): void;
@@ -85,6 +93,9 @@ export const useAppStore = create<AppState>((set) => ({
   chatMessages: [],
   chatStreaming: false,
   chatContextEnabled: true,
+  agentMode: false,
+  autoApprove: true,
+  treeRefreshNonce: 0,
   rightTab: 'relation',
   terminals: [],
   activeTerminalId: null,
@@ -147,6 +158,21 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   setChatStreaming: (chatStreaming) => set({ chatStreaming }),
   setChatContextEnabled: (chatContextEnabled) => set({ chatContextEnabled }),
+  setAgentMode: (v) => set({ agentMode: v }),
+  setAutoApprove: (v) => set({ autoApprove: v }),
+  bumpTreeRefresh: () => set((s) => ({ treeRefreshNonce: s.treeRefreshNonce + 1 })),
+  upsertChatTool: (tool) =>
+    set((s) => {
+      const msgs = s.chatMessages.slice();
+      const last = msgs[msgs.length - 1];
+      if (!last || last.role !== 'assistant') return {};
+      const tools = (last.tools ?? []).slice();
+      const idx = tools.findIndex((t) => t.id === tool.id);
+      if (idx >= 0) tools[idx] = tool;
+      else tools.push(tool);
+      msgs[msgs.length - 1] = { ...last, tools };
+      return { chatMessages: msgs };
+    }),
   setRightTab: (rightTab) => set({ rightTab }),
   clearChat: () => set({ chatMessages: [], chatStreaming: false }),
   addTerminal: (id, title) =>

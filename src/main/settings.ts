@@ -33,12 +33,14 @@ interface SettingsFile {
   profiles?: CompletionProfile[];
   activeProfileId?: string | null;
   appearance?: { theme: string };
+  agent?: { allowedDirs: string[] };
 }
 
 interface Normalized {
   profiles: CompletionProfile[];
   activeProfileId: string | null;
   appearance?: { theme: string };
+  agent?: { allowedDirs: string[] };
 }
 
 export class SettingsStore {
@@ -82,13 +84,14 @@ export class SettingsStore {
     if (activeProfileId !== null && !profiles.some((p) => p.id === activeProfileId)) {
       activeProfileId = profiles[0]?.id ?? null;
     }
-    return { profiles, activeProfileId, appearance: raw.appearance };
+    return { profiles, activeProfileId, appearance: raw.appearance, agent: raw.agent };
   }
 
   private write(n: Normalized): void {
     fs.mkdirSync(this.baseDir, { recursive: true });
     const file: SettingsFile = { profiles: n.profiles, activeProfileId: n.activeProfileId };
     if (n.appearance) file.appearance = n.appearance;
+    if (n.agent) file.agent = n.agent;
     // 평문 키 포함 — 소유자 외 읽기 차단
     fs.writeFileSync(this.filePath(), JSON.stringify(file, null, 2), { mode: 0o600 });
     fs.chmodSync(this.filePath(), 0o600); // 기존 파일에 덮어쓸 때도 권한 보장
@@ -146,6 +149,15 @@ export class SettingsStore {
   setAppearance(a: { theme: string }): void {
     const prev = this.read();
     this.write({ ...prev, appearance: { theme: a.theme } });
+  }
+
+  getAgent(): { allowedDirs: string[] } {
+    return this.read().agent ?? { allowedDirs: [] };
+  }
+
+  setAgent(a: { allowedDirs: string[] }): void {
+    const prev = this.read();
+    this.write({ ...prev, agent: { allowedDirs: a.allowedDirs.filter((d) => typeof d === 'string' && d) } });
   }
 
   toPublic(): CompletionSettings {

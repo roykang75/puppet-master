@@ -13,6 +13,7 @@ const parentOf = (rel: string) => (rel.includes('/') ? rel.slice(0, rel.lastInde
 export function ProjectWindow() {
   const root = useAppStore((s) => s.root);
   const openTab = useAppStore((s) => s.openTab);
+  const treeRefreshNonce = useAppStore((s) => s.treeRefreshNonce);
   const [dirs, setDirs] = useState<Record<string, DirEntry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<{ rel: string; isDir: boolean } | null>(null);
@@ -64,6 +65,12 @@ export function ProjectWindow() {
     setDirs(next);
     setExpanded(expandedNext);
   };
+
+  // 에이전트가 파일을 쓰면(bumpTreeRefresh) 트리를 외부에서 새로고침
+  useEffect(() => {
+    if (treeRefreshNonce > 0) void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [treeRefreshNonce]);
 
   /** 선택된 폴더(파일이면 그 부모) 안에 이름 입력 행 열기 */
   const startCreate = (kind: 'file' | 'dir') => {

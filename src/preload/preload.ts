@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent, AgentEvent } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -64,6 +64,13 @@ const api = {
     ipcRenderer.on('chat:event', h);
     return () => ipcRenderer.removeListener('chat:event', h);
   },
+  agentSend: (messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean): Promise<void> =>
+    ipcRenderer.invoke('agent:send', messages, context, autoApprove),
+  agentCancel: (): Promise<void> => ipcRenderer.invoke('agent:cancel'),
+  agentApprove: (id: string, ok: boolean): Promise<void> => ipcRenderer.invoke('agent:approve', id, ok),
+  onAgentEvent: (cb: (e: AgentEvent) => void): void => {
+    ipcRenderer.on('agent:event', (_e, ev: AgentEvent) => cb(ev));
+  },
   terminalSpawn: (): Promise<{ id: number } | { error: string }> =>
     ipcRenderer.invoke('terminal:spawn'),
   terminalInput: (id: number, data: string): Promise<void> =>
@@ -84,6 +91,8 @@ const api = {
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
   getAppearance: (): Promise<{ theme: string }> => ipcRenderer.invoke('settings:appearance:get'),
   setAppearance: (a: { theme: string }): Promise<void> => ipcRenderer.invoke('settings:appearance:set', a),
+  getAgentSettings: (): Promise<{ allowedDirs: string[] }> => ipcRenderer.invoke('settings:agent:get'),
+  setAgentSettings: (a: { allowedDirs: string[] }): Promise<void> => ipcRenderer.invoke('settings:agent:set', a),
   themeList: (): Promise<{ id: string; name: string }[]> => ipcRenderer.invoke('theme:list'),
   themeRead: (id: string): Promise<unknown | null> => ipcRenderer.invoke('theme:read', id),
   themeImport: (): Promise<{ id: string; name: string } | { error: string } | null> =>

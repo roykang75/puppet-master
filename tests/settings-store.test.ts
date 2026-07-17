@@ -158,3 +158,15 @@ describe('appearance', () => {
     expect(store2.getAppearance().theme).toBe('monokai');
   });
 });
+
+describe('agent 설정', () => {
+  it('기본 allowedDirs [] , set→get 라운드트립, 프로파일과 독립', () => {
+    const store = new SettingsStore(baseDir);
+    expect(store.getAgent()).toEqual({ allowedDirs: [] });
+    store.setAgent({ allowedDirs: ['/Users/x/docs', '/tmp/ref'] });
+    expect(store.getAgent()).toEqual({ allowedDirs: ['/Users/x/docs', '/tmp/ref'] });
+    store.setProfiles([{ name: 'a', provider: 'openai', model: 'm' }], 0);
+    expect(store.getAgent().allowedDirs).toHaveLength(2); // 프로파일 저장이 agent 보존
+    expect(new SettingsStore(baseDir).getAgent().allowedDirs).toHaveLength(2);
+  });
+});
