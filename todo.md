@@ -181,7 +181,17 @@
 
 ### 🔜 다음 단계
 
-**Plan 9 (내장 터미널)** — 다음 순서 확정 (2026-07-17): xterm.js + node-pty 하단 터미널, Claude Code CLI/codex 실행 목적. 로그인 셸 스폰(PATH), ABI 관리 목록에 node-pty 추가 필요.
+## ✅ Plan 9: 내장 터미널 (v2 4탄) — 완료 (main 병합 82883bd)
+
+- [x] 하단 "Context | Terminal" 탭(`Ctrl+\``로 전환+활성 터미널 포커스) — 전 지점 CSS 숨김(언마운트 금지, xterm 버퍼/TUI 상태 유지)
+- [x] 다중 터미널 탭(+/×/전환), 지연 기동, 셸 종료 "(종료됨)" 표시, 프로젝트 전환 시 전부 kill 후 새 cwd 재스폰
+- [x] main PTY 소유(node-pty, id 전역 카운터) + 로그인 셸(-l) — 패키지 앱에서도 CLI가 PATH에 잡힘 (`which claude` 실증 완료)
+- [x] 테마 연동(xterm 색이 테마 변경에 즉시 반영), node-pty ABI 이중 관리 목록/asarUnpack 추가
+- [x] 검증: 단위(fake pty)/실 PTY 통합/E2E 7스펙/패키지 앱 PATH 실증 — 총 242개
+
+**인계 노트 (백로그, 전부 비차단):** Context 탭 타이틀 이중 렌더(중첩 .panel — Plan 8의 Relation 탭과 동일 계열 미관 부채), 종료된 터미널에 입력이 여전히 IPC로 전송됨(main no-op — 무해), 터미널 분할/검색/프로파일은 후속.
+
+### 다음 후보
 **Plan 10 후보 (에이전트 패널)** — Claude Agent SDK 기반, 사용자 결정 대기.
 
 ### v2 이후 (백로그)
