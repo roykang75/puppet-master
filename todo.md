@@ -191,8 +191,18 @@
 
 **인계 노트 (백로그, 전부 비차단):** Context 탭 타이틀 이중 렌더(중첩 .panel — Plan 8의 Relation 탭과 동일 계열 미관 부채), 종료된 터미널에 입력이 여전히 IPC로 전송됨(main no-op — 무해), 터미널 분할/검색/프로파일은 후속.
 
+## ✅ Plan 10: 에이전트 모드 (v2 5탄) — 완료 (main 병합 18ab398)
+
+- [x] 자체 tool-use 루프(AgentService) — Anthropic tool use + OpenAI 호환 tool calling, 기존 프로파일 그대로 사용 (Agent SDK 기각 — 로컬 모델 지원)
+- [x] 도구 5종: list_dir/read_file/write_file/search_text(인덱서 FTS)/run_command — 파일 도구는 루트+allowedDirs만(심링크 하드닝 포함), run_command 쓰기는 sandbox-exec로 프로젝트 이하 강제
+- [x] 승인 UX: 자동승인 토글(끄면 쓰기·셸에 [실행]/[건너뛰기]), 읽기 도구는 항상 자동, 25회 한도, 취소, 프로젝트 전환 시 루프 취소
+- [x] UI: 채팅 패널 "에이전트" 토글 + 인라인 도구 카드(상태·출력 접기·write_file 클릭 열기), write_file 성공 시 트리 자동 새로고침, 설정에 추가 허용 디렉터리 편집
+- [x] 검증: 도구 15 + 어댑터 3 + 서비스 7 + 통합 1 + E2E 1(실제 파일 생성 실증) — 전체 299/299, 스펙: `docs/superpowers/specs/2026-07-18-plan10-agent-mode-design.md`
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** [P10-2] 절단 캡이 UTF-16 length 기준(바이트 아님, 멀티바이트 경계 mojibake 가능), [P10-3] Anthropic 어댑터 빈 name 필터 비대칭, [P10-4] 연속 tool 결과 병합 다중 케이스 테스트 없음, [P10-5] toolDeps 턴당 1회 조회(전환 시 cancel로 무해화됨), run_command 읽기는 자유라 프롬프트 주입 시 settings.json(평문 키) 읽기 가능(스펙 승인 사항 — 자동승인 끄면 완화).
+
 ### 다음 후보
-**Plan 10 후보 (에이전트 패널)** — Claude Agent SDK 기반, 사용자 결정 대기.
+사용자 결정 대기 — v2 이후 백로그에서 선택.
 
 ### v2 이후 (백로그)
 - [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
