@@ -3,7 +3,6 @@ import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, Vs
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
 import { disposeModel } from './EditorPane';
-import { goBack, goForward } from '../navigation';
 
 export function FileTabs() {
   const tabs = useAppStore((s) => s.tabs);
@@ -17,6 +16,14 @@ export function FileTabs() {
   const close = (path: string) => {
     disposeModel(path);
     closeTab(path);
+  };
+
+  // 열린 파일 간 순환 이동 (히스토리 이동은 Alt+←/→ 단축키가 담당)
+  const switchTab = (delta: number) => {
+    if (tabs.length === 0) return;
+    const idx = tabs.findIndex((t) => t.path === activePath);
+    const next = ((idx < 0 ? 0 : idx + delta) + tabs.length) % tabs.length;
+    setActive(tabs[next].path);
   };
 
   // 메뉴가 열리면 포커스를 가져와 ↑/↓/Enter/Esc를 받는다 (열 때 활성 파일 위치에서 시작)
@@ -52,8 +59,8 @@ export function FileTabs() {
   return (
     <div className="tabs">
       <div className="nav-buttons">
-        <span className="nav-btn" title="뒤로 (Alt+←)" onClick={goBack}><VscArrowLeft /></span>
-        <span className="nav-btn" title="앞으로 (Alt+→)" onClick={goForward}><VscArrowRight /></span>
+        <span className="nav-btn" title="이전 파일" onClick={() => switchTab(-1)}><VscArrowLeft /></span>
+        <span className="nav-btn" title="다음 파일" onClick={() => switchTab(1)}><VscArrowRight /></span>
       </div>
       <div className="tab-strip">
         {tabs.map((t) => (
