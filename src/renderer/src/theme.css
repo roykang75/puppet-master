@@ -106,6 +106,7 @@ body {
 .tab-strip { flex: 1; min-width: 0; display: flex; overflow-x: auto; }
 .tab-strip::-webkit-scrollbar { display: none; } /* 가로 스크롤바 숨김 — 휠/트랙패드 스크롤과 '…' 목록으로 접근 */
 .tabs-actions { flex: none; display: flex; align-items: center; padding: 0 4px; border-left: 1px solid var(--border); }
+.tabs-actions .nav-btn { font-size: 15px; padding: 2px 4px; } /* 프로젝트 창 panel-action과 동일 크기 */
 .open-editors-backdrop { position: fixed; inset: 0; z-index: 40; }
 .open-editors-menu {
   position: absolute; top: 100%; right: 4px; z-index: 41;
