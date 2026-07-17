@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -45,9 +45,11 @@ const api = {
     ipcRenderer.invoke('rename:apply', oldName, newName, targets),
   getCompletionSettings: (): Promise<CompletionSettings> => ipcRenderer.invoke('settings:completion:get'),
   setCompletionSettings: (
-    s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string },
-    apiKey?: string,
-  ): Promise<void> => ipcRenderer.invoke('settings:completion:set', s, apiKey),
+    profiles: CompletionProfileInput[],
+    activeIndex: number | null,
+  ): Promise<void> => ipcRenderer.invoke('settings:completion:set', profiles, activeIndex),
+  setActiveCompletionProfile: (id: string | null): Promise<void> =>
+    ipcRenderer.invoke('settings:completion:set-active', id),
   requestCompletion: (ctx: CompletionContext): Promise<CompletionResult> =>
     ipcRenderer.invoke('completion:request', ctx),
   chatSend: (messages: ChatMessage[], context: ChatContext | null): Promise<void> =>

@@ -11,7 +11,7 @@ import { LspManager } from './lsp/manager';
 import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, LspCallParams, ChatMessage, ChatContext } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -226,12 +226,16 @@ function registerIpc(): void {
   ipcMain.handle('settings:completion:get', () => settingsStore.toPublic());
   ipcMain.handle(
     'settings:completion:set',
-    (_e, s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string }, apiKey?: string) => {
+    (_e, profiles: CompletionProfileInput[], activeIndex: number | null) => {
       // throw는 그대로 렌더러로 전파 — 오버레이가 오류를 표시한다 (파일 쓰기 실패 등)
-      settingsStore.setCompletion(s, apiKey);
+      settingsStore.setProfiles(profiles, activeIndex);
       completionService.invalidateAdapter(); // 설정/키 변경 반영 — 다음 요청이 새 어댑터 생성
     },
   );
+  ipcMain.handle('settings:completion:set-active', (_e, id: string | null) => {
+    settingsStore.setActiveProfile(id);
+    completionService.invalidateAdapter(); // 완성도 같은 활성 프로파일을 따른다
+  });
   ipcMain.handle('completion:request', (_e, ctx: CompletionContext) => completionService.request(ctx));
   ipcMain.handle('chat:send', (_e, messages: ChatMessage[], context: ChatContext | null) => {
     // fire-and-forget — 이벤트는 chat:event push로 전달 (스트리밍 동안 invoke를 붙잡지 않음)

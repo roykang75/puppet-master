@@ -1,21 +1,45 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { CompletionSettings } from '../shared/protocol';
+import { randomUUID } from 'crypto';
+import type { CompletionProfileInput, CompletionSettings } from '../shared/protocol';
 
+// 서비스(completion/chat)가 소비하는 활성 프로파일 뷰 — 기존 형태 유지
 export interface StoredCompletionSettings {
   provider: 'none' | 'anthropic' | 'openai';
   model: string;
   baseURL?: string;
+}
+
+export interface CompletionProfile {
+  id: string;
+  name: string;
+  provider: 'anthropic' | 'openai';
+  model: string;
+  baseURL?: string;
   apiKey?: string; // 평문 저장 (사용자 결정 — dev 환경에서 safeStorage 키체인 접근이 프로세스마다 달라 복호화가 깨지는 문제로 전환)
-  apiKeyEnc?: string; // 구버전(safeStorage 암호화) 잔재 — 더 이상 읽지 않음
+}
+
+// 구버전(단일 설정) 파일 형태 — 읽기 시 프로파일 1개로 마이그레이션
+interface LegacyCompletion {
+  provider: 'none' | 'anthropic' | 'openai';
+  model: string;
+  baseURL?: string;
+  apiKey?: string;
+  apiKeyEnc?: string; // safeStorage 암호화 잔재 — 더 이상 읽지 않음
 }
 
 interface SettingsFile {
-  completion: StoredCompletionSettings;
+  completion?: LegacyCompletion;
+  profiles?: CompletionProfile[];
+  activeProfileId?: string | null;
   appearance?: { theme: string };
 }
 
-const DEFAULT_COMPLETION: StoredCompletionSettings = { provider: 'none', model: '' };
+interface Normalized {
+  profiles: CompletionProfile[];
+  activeProfileId: string | null;
+  appearance?: { theme: string };
+}
 
 export class SettingsStore {
   constructor(private baseDir: string) {}
@@ -24,49 +48,95 @@ export class SettingsStore {
     return path.join(this.baseDir, 'settings.json');
   }
 
-  private read(): SettingsFile {
+  private read(): Normalized {
+    let raw: SettingsFile | null = null;
     try {
-      const raw = JSON.parse(fs.readFileSync(this.filePath(), 'utf8')) as SettingsFile;
-      if (raw && raw.completion && typeof raw.completion.provider === 'string') return raw;
+      raw = JSON.parse(fs.readFileSync(this.filePath(), 'utf8')) as SettingsFile;
     } catch {
       // 파일 없음/손상 → 기본값
     }
-    return { completion: { ...DEFAULT_COMPLETION } };
+    if (!raw || typeof raw !== 'object') return { profiles: [], activeProfileId: null };
+
+    let profiles: CompletionProfile[];
+    let activeProfileId: string | null;
+    if (Array.isArray(raw.profiles)) {
+      profiles = raw.profiles.filter((p) => p && typeof p.id === 'string' && typeof p.model === 'string');
+      activeProfileId = raw.activeProfileId ?? null;
+    } else if (raw.completion && typeof raw.completion.provider === 'string' && raw.completion.provider !== 'none') {
+      // 구버전 단일 설정 → 프로파일 1개 (apiKeyEnc는 복호화 불가 — 버림)
+      const c = raw.completion;
+      const p: CompletionProfile = {
+        id: randomUUID(),
+        name: c.model || c.provider,
+        provider: c.provider as 'anthropic' | 'openai',
+        model: c.model,
+      };
+      if (c.baseURL) p.baseURL = c.baseURL;
+      if (c.apiKey) p.apiKey = c.apiKey;
+      profiles = [p];
+      activeProfileId = p.id;
+    } else {
+      profiles = [];
+      activeProfileId = null;
+    }
+    if (activeProfileId !== null && !profiles.some((p) => p.id === activeProfileId)) {
+      activeProfileId = profiles[0]?.id ?? null;
+    }
+    return { profiles, activeProfileId, appearance: raw.appearance };
   }
 
-  private write(file: SettingsFile): void {
+  private write(n: Normalized): void {
     fs.mkdirSync(this.baseDir, { recursive: true });
+    const file: SettingsFile = { profiles: n.profiles, activeProfileId: n.activeProfileId };
+    if (n.appearance) file.appearance = n.appearance;
     // 평문 키 포함 — 소유자 외 읽기 차단
     fs.writeFileSync(this.filePath(), JSON.stringify(file, null, 2), { mode: 0o600 });
     fs.chmodSync(this.filePath(), 0o600); // 기존 파일에 덮어쓸 때도 권한 보장
   }
 
-  getCompletion(): StoredCompletionSettings {
-    return this.read().completion;
+  private active(): CompletionProfile | null {
+    const n = this.read();
+    return n.profiles.find((p) => p.id === n.activeProfileId) ?? null;
   }
 
-  // apiKey가 주어졌을 때만 갱신(빈 문자열은 키 삭제, undefined는 기존 키 유지).
-  setCompletion(
-    s: { provider: 'none' | 'anthropic' | 'openai'; model: string; baseURL?: string },
-    apiKey?: string,
-  ): void {
-    const file = this.read();
-    const next: StoredCompletionSettings = {
-      provider: s.provider,
-      model: s.model,
-      apiKey: file.completion.apiKey,
-    };
-    if (s.baseURL) next.baseURL = s.baseURL;
+  /** 활성 프로파일 뷰 — completion/chat 서비스가 그대로 소비 */
+  getCompletion(): StoredCompletionSettings {
+    const a = this.active();
+    if (!a) return { provider: 'none', model: '' };
+    return { provider: a.provider, model: a.model, baseURL: a.baseURL };
+  }
 
-    if (apiKey !== undefined) {
-      if (apiKey === '') {
-        delete next.apiKey; // 빈 문자열 = 삭제
-      } else {
-        next.apiKey = apiKey;
-      }
-    }
-    if (next.apiKey === undefined) delete next.apiKey;
-    this.write({ ...file, completion: next });
+  getApiKey(): string | null {
+    return this.active()?.apiKey ?? null;
+  }
+
+  /** 전체 교체 저장. apiKey undefined = 같은 id의 기존 키 유지, '' = 삭제.
+   *  activeIndex는 profiles 배열 인덱스 (null = 사용 안 함) — 새 프로파일은 저장 시 id가 생기므로 인덱스로 지정한다. */
+  setProfiles(inputs: CompletionProfileInput[], activeIndex: number | null): void {
+    const prev = this.read();
+    const profiles = inputs.map((input) => {
+      const existing = input.id ? prev.profiles.find((p) => p.id === input.id) : undefined;
+      const p: CompletionProfile = {
+        id: existing?.id ?? randomUUID(),
+        name: input.name || input.model,
+        provider: input.provider,
+        model: input.model,
+      };
+      if (input.baseURL) p.baseURL = input.baseURL;
+      const key = input.apiKey === undefined ? existing?.apiKey : input.apiKey === '' ? undefined : input.apiKey;
+      if (key) p.apiKey = key;
+      return p;
+    });
+    const activeProfileId =
+      activeIndex !== null && activeIndex >= 0 && activeIndex < profiles.length ? profiles[activeIndex].id : null;
+    this.write({ ...prev, profiles, activeProfileId });
+  }
+
+  /** 활성 프로파일 전환 (채팅 모델 드롭다운) — null = 사용 안 함 */
+  setActiveProfile(id: string | null): void {
+    const prev = this.read();
+    const activeProfileId = id !== null && prev.profiles.some((p) => p.id === id) ? id : null;
+    this.write({ ...prev, activeProfileId });
   }
 
   getAppearance(): { theme: string } {
@@ -74,21 +144,27 @@ export class SettingsStore {
   }
 
   setAppearance(a: { theme: string }): void {
-    const file = this.read();
-    this.write({ ...file, appearance: { theme: a.theme } });
-  }
-
-  getApiKey(): string | null {
-    return this.read().completion.apiKey ?? null;
+    const prev = this.read();
+    this.write({ ...prev, appearance: { theme: a.theme } });
   }
 
   toPublic(): CompletionSettings {
-    const c = this.read().completion;
+    const n = this.read();
+    const a = n.profiles.find((p) => p.id === n.activeProfileId) ?? null;
     return {
-      provider: c.provider,
-      model: c.model,
-      baseURL: c.baseURL,
-      hasApiKey: this.getApiKey() !== null,
+      provider: a?.provider ?? 'none',
+      model: a?.model ?? '',
+      baseURL: a?.baseURL,
+      hasApiKey: !!a?.apiKey,
+      profiles: n.profiles.map((p) => ({
+        id: p.id,
+        name: p.name,
+        provider: p.provider,
+        model: p.model,
+        baseURL: p.baseURL,
+        hasApiKey: !!p.apiKey,
+      })),
+      activeId: n.activeProfileId,
     };
   }
 }

@@ -47,13 +47,34 @@ export interface FileIndexedPayload {
   source?: 'buffer' | 'disk'; // 생략 시 'disk'
 }
 
-// ── AI 코드 자동완성 설정 (main safeStorage ↔ 렌더러) ──
+// ── AI 설정 (main ↔ 렌더러) ──
 // API 키는 절대 렌더러로 전달하지 않는다 — hasApiKey 불리언만 노출.
+// 프로파일 = provider+모델+서버+키 세트. 활성 프로파일 하나를 완성/채팅이 공유한다.
+export interface CompletionProfilePublic {
+  id: string;
+  name: string;
+  provider: 'anthropic' | 'openai';
+  model: string;
+  baseURL?: string;
+  hasApiKey: boolean;
+}
+// 저장 요청용 — apiKey undefined면 같은 id의 기존 키 유지, id 없으면 새 프로파일.
+export interface CompletionProfileInput {
+  id?: string;
+  name: string;
+  provider: 'anthropic' | 'openai';
+  model: string;
+  baseURL?: string;
+  apiKey?: string;
+}
 export interface CompletionSettings {
+  // 아래 4개는 활성 프로파일의 값 (없으면 provider 'none') — 기존 소비자 호환 유지
   provider: 'none' | 'anthropic' | 'openai';
   model: string;
   baseURL?: string;
   hasApiKey: boolean;
+  profiles: CompletionProfilePublic[];
+  activeId: string | null;
 }
 
 // ── AI 코드 자동완성 요청/응답 (커서 컨텍스트 → 완성 텍스트) ──

@@ -3,8 +3,9 @@ import type { JSX } from 'react';
 import { useAppStore } from '../store';
 import { buildChatContext } from '../chat-context';
 import { parseMarkdown, type InlineSpan } from '../chat-markdown';
+import { refreshCompletionSettings } from '../completion-provider';
 import { getChatEditorState } from './EditorPane';
-import type { ChatContext } from '../../../shared/protocol';
+import type { ChatContext, CompletionProfilePublic } from '../../../shared/protocol';
 
 export const CHAT_ERROR_TEXT: Record<string, string> = {
   auth: '인증 오류 — Cmd+,에서 설정을 확인하세요',
@@ -58,19 +59,26 @@ export function ChatPanel() {
   const streaming = useAppStore((s) => s.chatStreaming);
   const contextEnabled = useAppStore((s) => s.chatContextEnabled);
   const activePath = useAppStore((s) => s.activePath);
+  const settingsOpen = useAppStore((s) => s.settingsOpen);
   const [input, setInput] = useState('');
-  const [provider, setProvider] = useState<string>('none');
-  const [model, setModel] = useState<string>('');
+  const [profiles, setProfiles] = useState<CompletionProfilePublic[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // provider 미설정 감지 (전송 전 단락 — 스펙 §4)
+  // provider 미설정 감지 (전송 전 단락 — 스펙 §4) + 설정 오버레이 닫힐 때 재로드
   useEffect(() => {
+    if (settingsOpen) return;
     void window.si.getCompletionSettings().then((s) => {
-      setProvider(s.provider);
-      setModel(s.model);
+      setProfiles(s.profiles);
+      setActiveId(s.activeId);
     }).catch(() => {});
-  }, []);
+  }, [settingsOpen]);
+
+  const switchProfile = (id: string) => {
+    setActiveId(id);
+    void window.si.setActiveCompletionProfile(id).then(() => refreshCompletionSettings());
+  };
 
   // 이벤트 구독은 App.tsx로 이동 — RightPanel이 탭 전환 시 ChatPanel을 언마운트하므로
   // 여기 두면 스트리밍 중 탭 전환 시 리스너가 사라져 이벤트가 유실된다.
@@ -126,8 +134,8 @@ export function ChatPanel() {
       ? `컨텍스트: ${activePath}`
       : '컨텍스트 없음';
 
-  if (provider === 'none') {
-    return <div className="hint">AI provider가 설정되지 않았습니다. Cmd+,에서 설정하세요.</div>;
+  if (!activeId || profiles.length === 0) {
+    return <div className="hint">AI 모델이 설정되지 않았습니다. Cmd+,에서 프로파일을 등록하세요.</div>;
   }
 
   const lastIdx = messages.length - 1;
@@ -182,7 +190,17 @@ export function ChatPanel() {
           }}
         />
         <div className="chat-input-footer">
-          <span className="chat-model" title={model}>{model || provider}</span>
+          <select
+            className="chat-model"
+            title="모델 선택"
+            value={activeId}
+            disabled={streaming}
+            onChange={(e) => switchProfile(e.target.value)}
+          >
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
           {streaming ? (
             <button className="chat-send chat-stop" title="중단" onClick={cancel}>■</button>
           ) : (
