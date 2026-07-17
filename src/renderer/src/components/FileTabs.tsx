@@ -3,6 +3,7 @@ import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, Vs
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
 import { disposeModel } from './EditorPane';
+import { isImagePath } from './ImageView';
 
 export function FileTabs() {
   const tabs = useAppStore((s) => s.tabs);
@@ -96,7 +97,7 @@ export function FileTabs() {
             }}
           ><VscOpenPreview /></span>
         )}
-        {activePath && (
+        {activePath && !isImagePath(activePath) && (
           <span
             className="nav-btn"
             title="세로 분할"

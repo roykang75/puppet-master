@@ -41,6 +41,11 @@ export class ProjectFiles {
     return fs.readFileSync(this.absOf(rel), 'utf8');
   }
 
+  /** 바이너리 파일(이미지 등)을 base64로 — 렌더러 data URL용 */
+  readBinary(rel: string): string {
+    return fs.readFileSync(this.absOf(rel)).toString('base64');
+  }
+
   saveFile(rel: string, content: string): void {
     fs.writeFileSync(this.absOf(rel), content, 'utf8');
   }

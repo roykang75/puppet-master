@@ -148,6 +148,11 @@ body {
 .editor-split-row { flex: 1; min-height: 0; display: flex; }
 .editor-split-row .editor-host { flex: 1; min-width: 0; }
 .split-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+.image-view {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+  overflow: auto; background: var(--bg);
+}
+.image-view img { max-width: 92%; max-height: 92%; object-fit: contain; }
 /* 분할 영역 탭 바 — 파일 탭 바와 같은 줄에서 분할 경계로 나뉜다 (VS Code 에디터 그룹) */
 .tab-row { flex: none; display: flex; }
 .tab-row > .tabs { flex: 1; min-width: 0; }

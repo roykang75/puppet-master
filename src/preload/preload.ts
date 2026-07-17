@@ -19,6 +19,7 @@ const api = {
   createFile: (rel: string): Promise<{ error: string } | null> => ipcRenderer.invoke('file:create', rel),
   createDir: (rel: string): Promise<{ error: string } | null> => ipcRenderer.invoke('file:mkdir', rel),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+  readFileBinary: (rel: string): Promise<string> => ipcRenderer.invoke('file:read-binary', rel),
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),

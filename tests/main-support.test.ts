@@ -67,6 +67,14 @@ describe('ProjectFiles', () => {
     expect(() => f.createFile('deep/nested/new.ts')).toThrow('이미 존재');
     expect(() => f.createFile('../evil.ts')).toThrow('escapes');
   });
+  it('readBinary: 바이트 → base64 라운드트립 + 루트 탈출 거부', () => {
+    const f = new ProjectFiles(proj);
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff]);
+    fs.writeFileSync(path.join(proj, 'img.png'), bytes);
+    expect(Buffer.from(f.readBinary('img.png'), 'base64')).toEqual(bytes);
+    expect(() => f.readBinary('../evil.png')).toThrow('escapes');
+  });
+
   it('createDir: 재귀 생성, 기존 폴더는 거부', () => {
     const f = new ProjectFiles(proj);
     f.createDir('newdir/sub');

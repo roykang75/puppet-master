@@ -9,6 +9,7 @@ import { registerSnippetProviders } from '../snippets';
 import { ensureLanguageRegistered } from '../textmate/registry';
 import { lspSync, isLspPath } from '../lsp-sync';
 import { SplitPane } from './SplitPane';
+import { ImageView, isImagePath } from './ImageView';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -259,6 +260,11 @@ export function EditorPane() {
       editorInstance?.setModel(null);
       return;
     }
+    // 이미지 파일 — 텍스트 모델을 만들지 않는다 (ImageView가 표시, Monaco는 CSS 숨김)
+    if (isImagePath(activePath)) {
+      editorInstance?.setModel(null);
+      return;
+    }
     const uri = uriOf(activePath);
     const existing = monaco.editor.getModel(uri);
     if (existing) {
@@ -304,7 +310,7 @@ export function EditorPane() {
   // 시맨틱 토큰 색칠 — 심볼 DB 기반. 파일 전환/재인덱싱(outlineVersion) 시 재적용.
   useEffect(() => {
     clearSemanticTokens();
-    if (!activePath || indexing) return; // 인덱싱 중/비활성 → 색칠 없음(무해)
+    if (!activePath || indexing || isImagePath(activePath)) return; // 인덱싱 중/비활성/이미지 → 색칠 없음(무해)
     let cancelled = false;
     const uri = uriOf(activePath);
     const apply = (attempt = 0): void => {
@@ -342,9 +348,11 @@ export function EditorPane() {
     applyPendingJump();
   }, [pendingJump, activePath]);
 
+  const showImage = !!activePath && isImagePath(activePath);
   return (
     <div className="editor-split-row">
-      <div ref={hostRef} className="editor-host" />
+      <div ref={hostRef} className="editor-host" style={showImage ? { display: 'none' } : undefined} />
+      {showImage && <ImageView path={activePath} />}
       <SplitPane />
     </div>
   );

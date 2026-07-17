@@ -153,6 +153,7 @@ function registerIpc(): void {
     }
   });
   ipcMain.handle('file:read', (_e, rel: string) => requireFiles().readFile(rel));
+  ipcMain.handle('file:read-binary', (_e, rel: string) => requireFiles().readBinary(rel));
   ipcMain.handle('file:save', (_e, rel: string, content: string) => {
     try {
       requireFiles().saveFile(rel, content);
