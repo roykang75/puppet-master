@@ -46,6 +46,24 @@ export function getCursorLocation(): Loc | null {
   return { path: st.activePath, line: pos.lineNumber, col: pos.column };
 }
 
+/** 채팅 컨텍스트용 에디터 상태 (1-기반 줄). 에디터/활성 파일 없으면 null. */
+export function getChatEditorState(): import('../chat-context').ChatEditorState | null {
+  const st = useAppStore.getState();
+  const model = editorInstance?.getModel();
+  const pos = editorInstance?.getPosition();
+  if (!st.activePath || !model || !pos || !editorInstance) return null;
+  const sel = editorInstance.getSelection();
+  const selectionText = sel && !sel.isEmpty() ? model.getValueInRange(sel) : null;
+  return {
+    path: st.activePath,
+    languageId: model.getLanguageId(),
+    selectionText,
+    selectionStartLine: sel && selectionText ? sel.startLineNumber : 0,
+    cursorLine: pos.lineNumber,
+    lines: model.getLinesContent(),
+  };
+}
+
 let refDecorations: import('monaco-editor').editor.IEditorDecorationsCollection | null = null;
 
 /** 파일 내 whole-word 일치를 하이라이트 (스펙 §6 자동 참조 하이라이트의 텍스트 기반 구현). */
