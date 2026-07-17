@@ -44,4 +44,19 @@ export class ProjectFiles {
   saveFile(rel: string, content: string): void {
     fs.writeFileSync(this.absOf(rel), content, 'utf8');
   }
+
+  /** 빈 파일 생성 — 중간 폴더 자동 생성, 이미 있으면 예외 */
+  createFile(rel: string): void {
+    const abs = this.absOf(rel);
+    if (fs.existsSync(abs)) throw new Error(`이미 존재합니다: ${rel}`);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, '', { flag: 'wx' });
+  }
+
+  /** 폴더 생성 (재귀) — 이미 있으면 예외 */
+  createDir(rel: string): void {
+    const abs = this.absOf(rel);
+    if (fs.existsSync(abs)) throw new Error(`이미 존재합니다: ${rel}`);
+    fs.mkdirSync(abs, { recursive: true });
+  }
 }

@@ -47,6 +47,19 @@ body {
   text-transform: uppercase; color: var(--fg-dim); border-bottom: 1px solid var(--border);
 }
 .panel-body { flex: 1; overflow: auto; min-height: 0; }
+.panel-title-row { display: flex; align-items: center; justify-content: space-between; }
+.panel-title-actions { display: flex; gap: 2px; }
+.panel-action {
+  display: inline-flex; align-items: center; background: none; border: none;
+  color: var(--fg-dim); cursor: pointer; padding: 1px 3px; border-radius: 3px; font-size: 13px;
+}
+.panel-action:hover { color: var(--fg); background: var(--bg-hover); }
+.create-row { flex: none; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.create-row input {
+  width: 100%; padding: 3px 6px; font: inherit; font-size: 12px;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--accent); border-radius: 3px; outline: none;
+}
+.create-error { margin-top: 3px; color: var(--warn); font-size: 11px; }
 .hint { padding: 8px; color: var(--fg-dim); }
 
 .resize-handle { background: var(--border); flex: none; }

@@ -16,6 +16,8 @@ const api = {
     ipcRenderer.invoke('project:open', root),
   getRecent: (): Promise<RecentEntry[]> => ipcRenderer.invoke('project:recent'),
   listDir: (relDir: string): Promise<DirEntry[]> => ipcRenderer.invoke('file:list', relDir),
+  createFile: (rel: string): Promise<{ error: string } | null> => ipcRenderer.invoke('file:create', rel),
+  createDir: (rel: string): Promise<{ error: string } | null> => ipcRenderer.invoke('file:mkdir', rel),
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),

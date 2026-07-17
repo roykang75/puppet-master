@@ -131,6 +131,23 @@ function registerIpc(): void {
   });
   ipcMain.handle('project:recent', () => persistence.loadRecent());
   ipcMain.handle('file:list', (_e, relDir: string) => requireFiles().listDir(relDir));
+  // 생성 실패(중복 등)는 {error}로 반환 — 렌더러가 인라인으로 표시
+  ipcMain.handle('file:create', (_e, rel: string) => {
+    try {
+      requireFiles().createFile(rel);
+      return null;
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('file:mkdir', (_e, rel: string) => {
+    try {
+      requireFiles().createDir(rel);
+      return null;
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) };
+    }
+  });
   ipcMain.handle('file:read', (_e, rel: string) => requireFiles().readFile(rel));
   ipcMain.handle('file:save', (_e, rel: string, content: string) => {
     try {

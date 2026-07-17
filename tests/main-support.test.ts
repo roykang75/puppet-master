@@ -60,4 +60,18 @@ describe('ProjectFiles', () => {
     const f = new ProjectFiles(proj);
     expect(() => f.readFile('../outside.txt')).toThrow('escapes');
   });
+  it('createFile: 중간 폴더 자동 생성 + 빈 파일, 기존 파일은 거부', () => {
+    const f = new ProjectFiles(proj);
+    f.createFile('deep/nested/new.ts');
+    expect(f.readFile('deep/nested/new.ts')).toBe('');
+    expect(() => f.createFile('deep/nested/new.ts')).toThrow('이미 존재');
+    expect(() => f.createFile('../evil.ts')).toThrow('escapes');
+  });
+  it('createDir: 재귀 생성, 기존 폴더는 거부', () => {
+    const f = new ProjectFiles(proj);
+    f.createDir('newdir/sub');
+    expect(f.listDir('newdir').map((e) => e.name)).toEqual(['sub']);
+    expect(() => f.createDir('newdir/sub')).toThrow('이미 존재');
+    expect(() => f.createDir('../evil')).toThrow('escapes');
+  });
 });
