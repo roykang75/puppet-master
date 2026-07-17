@@ -5,7 +5,7 @@ import { buildChatContext } from '../chat-context';
 import { getChatEditorState } from './EditorPane';
 import type { ChatContext } from '../../../shared/protocol';
 
-const ERROR_TEXT: Record<string, string> = {
+export const CHAT_ERROR_TEXT: Record<string, string> = {
   auth: '인증 오류 — Cmd+,에서 설정을 확인하세요',
   transient: '일시적 오류 — 잠시 후 다시 시도하세요',
   other: '오류가 발생했습니다',
@@ -37,19 +37,8 @@ export function ChatPanel() {
     void window.si.getCompletionSettings().then((s) => setProvider(s.provider)).catch(() => {});
   }, []);
 
-  // 이벤트 구독 (마운트 1회 — RightPanel이 탭 전환 시에도 유지되도록 store만 갱신)
-  useEffect(() => {
-    const off = window.si.onChatEvent((e) => {
-      const st = useAppStore.getState();
-      if (e.type === 'chunk') st.appendChatChunk(e.text);
-      else if (e.type === 'done') st.setChatStreaming(false);
-      else {
-        st.setChatError(ERROR_TEXT[e.kind] ?? ERROR_TEXT.other);
-        st.setChatStreaming(false);
-      }
-    });
-    return off;
-  }, []);
+  // 이벤트 구독은 App.tsx로 이동 — RightPanel이 탭 전환 시 ChatPanel을 언마운트하므로
+  // 여기 두면 스트리밍 중 탭 전환 시 리스너가 사라져 이벤트가 유실된다.
 
   // 새 메시지에 자동 스크롤
   useEffect(() => {
