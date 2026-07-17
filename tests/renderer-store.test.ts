@@ -47,4 +47,14 @@ describe('useAppStore', () => {
     expect(st.tabs).toEqual([]);
     expect(st.activePath).toBeNull();
   });
+  it('upsertChatTool: 마지막 어시스턴트 메시지에 id로 upsert', () => {
+    const s = useAppStore.getState();
+    s.appendChatUser('만들어');
+    s.appendChatAssistant();
+    s.upsertChatTool({ id: 'c1', name: 'write_file', summary: 'a.py', state: 'running' });
+    s.upsertChatTool({ id: 'c1', name: 'write_file', summary: 'a.py', state: 'done', path: 'a.py' });
+    const last = useAppStore.getState().chatMessages.at(-1)!;
+    expect(last.tools).toHaveLength(1);
+    expect(last.tools![0].state).toBe('done');
+  });
 });
