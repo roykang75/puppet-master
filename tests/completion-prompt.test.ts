@@ -100,8 +100,18 @@ describe('postProcess', () => {
     expect(postProcess(raw, prefixTail)).toBe('compute();');
   });
 
-  it('상수 값', () => {
-    expect(STOP_SEQUENCES).toEqual(['\n\n\n', '```']);
+  it('닫는 펜스 뒤의 설명 텍스트는 잘라낸다', () => {
+    const raw = '```java\nn++;\n```\n이 코드는 카운트를 증가시킵니다.';
+    expect(postProcess(raw, '')).toBe('n++;');
+  });
+
+  it('본문 중간의 펜스에서 절단한다', () => {
+    const raw = 'return n;\n```\n설명';
+    expect(postProcess(raw, '')).toBe('return n;');
+  });
+
+  it('상수 값 — stop에 ```가 없어야 한다 (모델이 펜스로 시작하면 0토큰 절단되는 문제)', () => {
+    expect(STOP_SEQUENCES).toEqual(['\n\n\n']);
     expect(MAX_COMPLETION_TOKENS).toBe(160);
   });
 });

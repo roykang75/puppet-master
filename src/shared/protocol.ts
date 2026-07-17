@@ -65,7 +65,7 @@ export interface CompletionContext {
 }
 export interface CompletionResult {
   text: string | null;
-  error?: { kind: 'auth' | 'transient' | 'other'; message: string };
+  error?: { kind: 'auth' | 'transient' | 'other' | 'unsuitable'; message: string };
 }
 
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──

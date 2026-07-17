@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { AnthropicAdapter, type AnthropicLikeClient } from '../src/main/completion/anthropic-adapter';
 import { OpenAIAdapter, type OpenAILikeClient } from '../src/main/completion/openai-adapter';
-import { classifyError } from '../src/main/completion/errors';
+import { classifyError, UnsuitableModelError } from '../src/main/completion/errors';
 import { MAX_COMPLETION_TOKENS, STOP_SEQUENCES, type BuiltContext } from '../src/main/completion/prompt';
 
 function ctx(over: Partial<BuiltContext> = {}): BuiltContext {
@@ -90,6 +90,32 @@ describe('OpenAIAdapter', () => {
     const adapter = new OpenAIAdapter({ model: 'm' }, fake);
     expect(await adapter.complete(ctx())).toBeNull();
   });
+
+  it('content가 비고 reasoning_content만 있으면 UnsuitableModelError (추론 모델)', async () => {
+    const fake: OpenAILikeClient = {
+      chat: {
+        completions: {
+          create: async () =>
+            ({ choices: [{ message: { content: '', reasoning_content: 'Thinking...' } }] }) as any,
+        },
+      },
+    };
+    const adapter = new OpenAIAdapter({ model: 'gemma-4-e2b' }, fake);
+    await expect(adapter.complete(ctx())).rejects.toBeInstanceOf(UnsuitableModelError);
+  });
+
+  it('reasoning_content가 있어도 content가 있으면 정상 반환', async () => {
+    const fake: OpenAILikeClient = {
+      chat: {
+        completions: {
+          create: async () =>
+            ({ choices: [{ message: { content: 'a + b;', reasoning_content: 'hmm' } }] }) as any,
+        },
+      },
+    };
+    const adapter = new OpenAIAdapter({ model: 'm' }, fake);
+    expect(await adapter.complete(ctx())).toBe('a + b;');
+  });
 });
 
 describe('classifyError', () => {
@@ -113,5 +139,9 @@ describe('classifyError', () => {
   it('OpenAI.APIConnectionError 실인스턴스 → transient', () => {
     const e = new OpenAI.APIConnectionError({ message: 'boom' });
     expect(classifyError(e)).toBe('transient');
+  });
+
+  it('UnsuitableModelError → unsuitable', () => {
+    expect(classifyError(new UnsuitableModelError())).toBe('unsuitable');
   });
 });

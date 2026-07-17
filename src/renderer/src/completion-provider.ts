@@ -17,6 +17,7 @@ let disabledUntil = 0;
 let generation = 0;
 
 let registered = false;
+let monacoRef: typeof Monaco | null = null; // Range 생성용 (registerCompletionProvider에서 설정)
 
 async function loadSettings(): Promise<void> {
   settings = await window.si.getCompletionSettings().catch(() => null);
@@ -85,9 +86,13 @@ async function provideInlineCompletions(
   const store = useAppStore.getState();
 
   if (res.error) {
-    if (res.error.kind === 'auth') {
+    if (res.error.kind === 'auth' || res.error.kind === 'unsuitable') {
       authDisabled = true; // 설정 변경까지 비활성
-      store.setCompletionStatus('AI 완성: 인증 오류 — 설정 확인');
+      store.setCompletionStatus(
+        res.error.kind === 'auth'
+          ? 'AI 완성: 인증 오류 — 설정 확인'
+          : 'AI 완성: 모델이 완성에 부적합(추론 모델) — 설정 확인',
+      );
     } else {
       disabledUntil = Date.now() + 60_000; // transient/other → 60초 백오프
       store.setCompletionStatus('AI 완성: 일시 중지');
@@ -97,13 +102,23 @@ async function provideInlineCompletions(
 
   store.setCompletionStatus(null); // 성공 — 상태 복구
   if (res.text == null) return empty;
-  return { items: [{ insertText: res.text }] };
+  // range를 명시하지 않으면 Monaco가 "현재 단어 전체 교체"로 간주해 insertText가 그 단어로
+  // 시작하지 않는 항목을 걸러낸다 (커서가 식별자 끝일 때 고스트가 안 뜨는 원인).
+  // postProcess가 prefix 중복을 제거하므로 커서 위치의 빈 range로 그대로 삽입한다.
+  const cursorRange = new monacoRef!.Range(
+    position.lineNumber,
+    position.column,
+    position.lineNumber,
+    position.column,
+  );
+  return { items: [{ insertText: res.text, range: cursorRange }] };
 }
 
 /** 앱 수명 1회 등록 (EditorPane mount effect). 재마운트 이중 등록은 모듈 플래그로 방지. */
 export function registerCompletionProvider(monaco: typeof import('monaco-editor')): void {
   if (registered) return;
   registered = true;
+  monacoRef = monaco;
   void loadSettings();
   // '*' — Monaco LanguageSelector 와일드카드(모든 언어). 앱은 파일 유형이 다양하므로 광역 선택자가 최선.
   monaco.languages.registerInlineCompletionsProvider('*', {

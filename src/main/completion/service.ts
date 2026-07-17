@@ -72,6 +72,9 @@ export class CompletionService {
       return { text };
     } catch (e) {
       const kind = classifyError(e);
+      // main 콘솔에만 상세 기록 (IPC 밖 — 키 에코 방어와 무관). 진단용.
+      const err = e as { status?: number; message?: string };
+      console.error(`[completion] provider error kind=${kind} status=${err?.status ?? '-'}: ${err?.message ?? e}`);
       // provider 원문 메시지는 IPC 경계를 넘기지 않음 (키 자료 에코 방어) — kind 기반 고정 문자열만 전달.
       return { text: null, error: { kind, message: kind } };
     }

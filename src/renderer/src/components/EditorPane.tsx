@@ -140,6 +140,10 @@ export function EditorPane() {
       automaticLayout: true,
       minimap: { enabled: true },
       inlineSuggest: { enabled: true }, // AI 고스트 텍스트 활성화
+      // 단어 기반 자동완성 팝업이 열려 있는 동안 Monaco가 고스트 텍스트를 억제하므로
+      // 자동 팝업을 끈다 (Ctrl+Space 수동 호출은 유지) — AI 완성이 주 UX
+      quickSuggestions: false,
+      suggestOnTriggerCharacters: false,
       model: null,
     });
     registerCompletionProvider(monaco); // 앱 수명 1회 (내부 플래그로 재마운트 이중 등록 방지)

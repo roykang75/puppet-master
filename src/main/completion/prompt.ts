@@ -5,7 +5,9 @@ export interface BuiltContext extends CompletionContext {
   symbolSignatures: string[];
 }
 
-export const STOP_SEQUENCES = ['\n\n\n', '```'];
+// '```'를 stop에 넣지 않는다 — 채팅 모델이 응답을 펜스로 시작하면 0토큰에서 잘려 빈 완성이 된다.
+// 펜스 제거/절단은 postProcess가 담당한다.
+export const STOP_SEQUENCES = ['\n\n\n'];
 export const MAX_COMPLETION_TOKENS = 160;
 
 const PREFIX_MAX_LINES = 50;
@@ -33,8 +35,11 @@ export function buildUserPrompt(ctx: BuiltContext): string {
 }
 
 export function postProcess(raw: string, prefixTail: string): string | null {
-  // 1) 마크다운 펜스 제거 (여는 ```lang 줄 + 닫는 ```)
-  let s = raw.replace(/^\s*```[^\n]*\n/, '').replace(/\n?```\s*$/, '');
+  // 1) 마크다운 펜스 제거 — 여는 ```lang 줄 제거 후, 닫는 펜스가 나오면 그 지점에서 절단
+  //    (닫는 펜스 뒤에 모델이 붙이는 설명 텍스트까지 함께 버린다)
+  let s = raw.replace(/^\s*```[^\n]*\n/, '');
+  const fence = s.indexOf('```');
+  if (fence >= 0) s = s.slice(0, fence).replace(/\n$/, '');
 
   // 2) raw 선두가 prefixTail의 접미와 정확히 겹치면 가장 긴 겹침만 제거 (일치할 때만)
   const maxK = Math.min(prefixTail.length, s.length);
