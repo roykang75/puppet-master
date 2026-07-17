@@ -9,16 +9,25 @@ export interface LspServerDef {
   resolveSpawn(): LspSpawnSpec;
 }
 
+// 패키지 앱에선 require.resolve가 app.asar 내부 경로를 돌려주지만, 이 파일들은 asarUnpack으로
+// app.asar.unpacked에 실물 배치돼 있다. 네이티브 바이너리 spawn/RUN_AS_NODE 스폰은 asar를
+// 투명 처리하지 않으므로(디렉터리가 아닌 파일이라 ENOTDIR) 실물 경로로 리디렉트한다. dev에선 무영향.
+function unpacked(p: string): string {
+  const marker = `app.asar${path.sep}`;
+  const unpackedMarker = `app.asar.unpacked${path.sep}`;
+  return p.includes(unpackedMarker) ? p : p.replace(marker, unpackedMarker);
+}
+
 // TS7 네이티브 바이너리 — typescript/lib/getExePath.js(ESM)와 동일 로직의 CJS 구현
 export function tsgoExePath(): string {
   const pkg = `@typescript/typescript-${process.platform}-${process.arch}`;
   const pkgJson = require.resolve(`${pkg}/package.json`);
   const bin = process.platform === 'win32' ? 'tsc.exe' : 'tsc';
-  return path.join(path.dirname(pkgJson), 'lib', bin);
+  return unpacked(path.join(path.dirname(pkgJson), 'lib', bin));
 }
 
 export function pyrightEntryPath(): string {
-  return require.resolve('pyright/langserver.index.js');
+  return unpacked(require.resolve('pyright/langserver.index.js'));
 }
 
 export const LSP_SERVERS: LspServerDef[] = [
