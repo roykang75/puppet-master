@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { AGENT_TOOLS, executeTool, resolveToolPath, toolSummary, sandboxProfile, type AgentToolDeps } from '../src/main/agent/tools';
+import { AGENT_TOOLS, buildWriteDiff, executeTool, resolveToolPath, toolSummary, sandboxProfile, type AgentToolDeps } from '../src/main/agent/tools';
 
 let root: string;
 let extra: string;
@@ -105,6 +105,26 @@ describe('executeTool', () => {
   it('알 수 없는 도구 이름은 오류 텍스트', async () => {
     const r = await executeTool('nope', {}, deps());
     expect(r).toContain('알 수 없는 도구');
+  });
+});
+
+describe('buildWriteDiff', () => {
+  it('새 파일이면 +줄 미리보기', () => {
+    const d = buildWriteDiff(deps(), 'src/new.py', 'print(1)\nprint(2)');
+    expect(d).toContain('새 파일');
+    expect(d).toContain('+ print(1)');
+  });
+  it('기존 파일 수정이면 -이전/+이후 unified diff', () => {
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/a.py'), 'old line\nkeep\n');
+    const d = buildWriteDiff(deps(), 'src/a.py', 'new line\nkeep\n');
+    expect(d).toContain('-old line');
+    expect(d).toContain('+new line');
+  });
+  it('내용 동일이면 변경 없음, 경로 위반이면 안내 텍스트 (throw 아님)', () => {
+    fs.writeFileSync(path.join(root, 'same.txt'), 'x');
+    expect(buildWriteDiff(deps(), 'same.txt', 'x')).toContain('변경 없음');
+    expect(buildWriteDiff(deps(), '../evil.txt', 'x')).toContain('diff 생성 불가');
   });
 });
 

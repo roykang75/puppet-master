@@ -1,6 +1,6 @@
 // src/main/agent/service.ts — 에이전트 tool-use 루프. electron 임포트 금지, 동시 1개.
 import { AnthropicAgentAdapter, OpenAIAgentAdapter, type AgentAdapter, type AgentMsg } from './adapters';
-import { AGENT_TOOLS, executeTool, toolSummary, type AgentToolDeps } from './tools';
+import { AGENT_TOOLS, buildWriteDiff, executeTool, toolSummary, type AgentToolDeps } from './tools';
 import { buildAgentSystemPrompt } from './prompt';
 import { classifyError } from '../completion/errors';
 import type { AgentEvent, ChatContext, ChatMessage } from '../../shared/protocol';
@@ -100,10 +100,15 @@ export class AgentService {
           if (controller.signal.aborted) break;
           toolCount++;
           const summary = toolSummary(call.name, call.args);
-          const path = call.name === 'write_file' ? String(call.args.path ?? '') : undefined;
+          const isWrite = call.name === 'write_file';
+          const path = isWrite ? String(call.args.path ?? '') : undefined;
+          // write_file은 diff를 카드 detail로 — 승인 전 미리보기 + 완료 후 기록 (동일 diff 재사용)
+          const diff = isWrite
+            ? buildWriteDiff(toolDeps, String(call.args.path ?? ''), String(call.args.content ?? ''))
+            : undefined;
           let result: string;
           if (!autoApprove && APPROVAL_REQUIRED.has(call.name)) {
-            onEvent({ type: 'tool', id: call.id, name: call.name, summary, state: 'awaiting', path });
+            onEvent({ type: 'tool', id: call.id, name: call.name, summary, state: 'awaiting', path, detail: diff });
             const ok = await this.waitApproval(call.id, controller.signal);
             if (controller.signal.aborted) break;
             if (!ok) {
@@ -122,7 +127,7 @@ export class AgentService {
             name: call.name,
             summary,
             state: failed ? 'error' : 'done',
-            detail: call.name === 'run_command' || failed ? result : undefined,
+            detail: call.name === 'run_command' || failed ? result : diff,
             path,
           });
           msgs.push({ role: 'tool', toolCallId: call.id, name: call.name, content: result });

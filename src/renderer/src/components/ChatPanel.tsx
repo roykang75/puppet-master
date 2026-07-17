@@ -5,13 +5,37 @@ import { buildChatContext } from '../chat-context';
 import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
 import { getChatEditorState } from './EditorPane';
-import type { ChatContext, CompletionProfilePublic } from '../../../shared/protocol';
+import { fileIconUrl } from '../file-icons';
+import type { AgentToolUi, ChatContext, CompletionProfilePublic } from '../../../shared/protocol';
 
 export const CHAT_ERROR_TEXT: Record<string, string> = {
   auth: '인증 오류 — Cmd+,에서 설정을 확인하세요',
   transient: '일시적 오류 — 잠시 후 다시 시도하세요',
   other: '오류가 발생했습니다',
 };
+
+/** write_file diff를 +/- 색칠해 렌더 */
+function renderDiff(text: string) {
+  return (
+    <pre className="tool-diff">
+      {text.split('\n').map((l, i) => (
+        <span
+          key={i}
+          className={
+            l.startsWith('+') ? 'diff-add' : l.startsWith('-') ? 'diff-del' : l.startsWith('@@') ? 'diff-hunk' : undefined
+          }
+        >
+          {l + '\n'}
+        </span>
+      ))}
+    </pre>
+  );
+}
+
+/** 이 응답에서 write_file로 실제 변경된 파일 목록 (중복 제거) */
+function changedFiles(tools?: AgentToolUi[]): string[] {
+  return [...new Set((tools ?? []).filter((t) => t.name === 'write_file' && t.state === 'done' && t.path).map((t) => t.path!))];
+}
 
 function formatTime(ts?: number): string {
   if (!ts) return '';
@@ -161,13 +185,28 @@ export function ChatPanel() {
                         <button className="rename-btn" onClick={(e) => { e.stopPropagation(); void window.si.agentApprove(t.id, false); }}>건너뛰기</button>
                       </span>
                     )}
-                    {t.detail && t.state !== 'awaiting' && (
-                      <details className="tool-detail" onClick={(e) => e.stopPropagation()}>
-                        <summary>출력 보기</summary>
-                        <pre>{t.detail}</pre>
+                    {t.detail && (
+                      <details
+                        className="tool-detail"
+                        open={t.state === 'awaiting' /* 승인 전에는 변경 내용을 바로 펼쳐 보여준다 */}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <summary>{t.name === 'write_file' ? '변경 내용' : '출력 보기'}</summary>
+                        {t.name === 'write_file' ? renderDiff(t.detail) : <pre>{t.detail}</pre>}
                       </details>
                     )}
                   </div>
+                ))}
+              </div>
+            )}
+            {m.role === 'assistant' && changedFiles(m.tools).length > 0 && (
+              <div className="changed-files">
+                <span className="changed-files-label">변경된 파일</span>
+                {changedFiles(m.tools).map((p) => (
+                  <span key={p} className="changed-file-chip" title={p} onClick={() => useAppStore.getState().openTab(p)}>
+                    <img className="file-icon tab-file-icon" src={fileIconUrl(p.split('/').pop() ?? '')} alt="" />
+                    {p}
+                  </span>
                 ))}
               </div>
             )}

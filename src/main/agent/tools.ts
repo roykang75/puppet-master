@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { createTwoFilesPatch } from 'diff';
 
 export interface ToolSpec {
   name: string;
@@ -87,6 +88,28 @@ export function resolveToolPath(deps: AgentToolDeps, p: string): string {
     if (real === r || real.startsWith(r + path.sep)) return abs;
   }
   throw new Error(`허용된 디렉터리 밖 경로: ${p}`);
+}
+
+const DIFF_CAP = 8 * 1024; // write_file diff 미리보기 절단
+
+/** write_file 승인/기록용 diff — 실패해도 안내 텍스트 반환 (throw 금지, 카드 detail용) */
+export function buildWriteDiff(deps: AgentToolDeps, rel: string, content: string): string {
+  try {
+    const abs = resolveToolPath(deps, rel);
+    if (!fs.existsSync(abs)) {
+      const preview = content.split('\n').map((l) => `+ ${l}`).join('\n');
+      const cut = preview.length > DIFF_CAP ? preview.slice(0, DIFF_CAP) + '\n…(잘림)' : preview;
+      return `새 파일 (+${content.split('\n').length}줄)\n${cut}`;
+    }
+    const before = fs.readFileSync(abs, 'utf8');
+    if (before === content) return '(변경 없음)';
+    // 헤더 4줄(Index/===/---/+++)을 떼고 hunk만 표시
+    let patch = createTwoFilesPatch(rel, rel, before, content).split('\n').slice(4).join('\n').trimEnd();
+    if (patch.length > DIFF_CAP) patch = patch.slice(0, DIFF_CAP) + '\n…(잘림)';
+    return patch;
+  } catch (e) {
+    return `(diff 생성 불가: ${e instanceof Error ? e.message : String(e)})`;
+  }
 }
 
 /** 카드 표시용 대상 요약 */

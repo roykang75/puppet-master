@@ -58,6 +58,23 @@ describe('AgentService 루프', () => {
     const doneTool = events.find((e) => e.type === 'tool' && e.state === 'done') as any;
     expect(doneTool.path).toBe('a.py');
     expect(doneTool.summary).toBe('a.py');
+    // write_file done 카드에는 diff detail이 실린다 (fake root라 '새 파일' 미리보기)
+    expect(doneTool.detail).toContain('새 파일');
+  });
+
+  it('자동승인 꺼짐: write_file awaiting 이벤트에 diff detail 포함 (승인 전 미리보기)', async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'a.py', content: 'print(1)' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    const p = svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    await new Promise((r) => setTimeout(r, 20));
+    const awaiting = events.find((e) => e.type === 'tool' && e.state === 'awaiting') as any;
+    expect(awaiting.detail).toContain('+ print(1)');
+    svc.approve('c1', true);
+    await p;
   });
 
   it('도구 한도 초과 시 한도 안내 후 종료', async () => {
