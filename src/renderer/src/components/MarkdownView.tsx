@@ -25,6 +25,29 @@ export function renderMarkdown(content: string): JSX.Element[] {
         return <pre key={i} className="chat-code">{b.text}</pre>;
       case 'hr':
         return <div key={i} className="chat-hr" />;
+      case 'table':
+        return (
+          <div key={i} className="chat-table-wrap">
+            <table className="chat-table">
+              <thead>
+                <tr>
+                  {b.header.map((cell, j) => (
+                    <th key={j} style={{ textAlign: b.aligns[j] ?? 'left' }}>{renderSpans(cell)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {b.rows.map((row, r) => (
+                  <tr key={r}>
+                    {row.map((cell, j) => (
+                      <td key={j} style={{ textAlign: b.aligns[j] ?? 'left' }}>{renderSpans(cell)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
       case 'list': {
         const items = b.items.map((it, j) => (
           <li key={j} style={it.depth ? { marginLeft: it.depth * 16 } : undefined}>{renderSpans(it.spans)}</li>

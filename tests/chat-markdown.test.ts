@@ -78,4 +78,21 @@ describe('parseMarkdown', () => {
     const blocks = parseMarkdown('- 항목\n---');
     expect(blocks.map((b) => b.kind)).toEqual(['list', 'hr']);
   });
+
+  it('parses a GFM table with alignment and inline formatting', () => {
+    const blocks = parseMarkdown('| 이름 | 값 |\n|:---|---:|\n| **a** | `1` |\n| b | 2 |\n\n뒤 문단');
+    expect(blocks.map((b) => b.kind)).toEqual(['table', 'para']);
+    const t = blocks[0];
+    if (t.kind !== 'table') return;
+    expect(t.aligns).toEqual(['left', 'right']);
+    expect(t.header.map((c) => c[0].text)).toEqual(['이름', '값']);
+    expect(t.rows).toHaveLength(2);
+    expect(t.rows[0][0][0]).toEqual({ kind: 'bold', text: 'a' });
+    expect(t.rows[0][1][0]).toEqual({ kind: 'code', text: '1' });
+  });
+
+  it('a pipe line without a delimiter row stays a paragraph', () => {
+    const blocks = parseMarkdown('a | b\n그냥 텍스트');
+    expect(blocks.map((b) => b.kind)).toEqual(['para']);
+  });
 });

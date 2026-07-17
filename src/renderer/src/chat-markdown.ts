@@ -4,12 +4,31 @@
 
 export type InlineSpan = { kind: 'text' | 'code' | 'bold' | 'italic'; text: string };
 export type ListItem = { depth: number; spans: InlineSpan[] };
+export type TableAlign = 'left' | 'center' | 'right';
 export type Block =
   | { kind: 'para'; spans: InlineSpan[] }
   | { kind: 'heading'; level: number; spans: InlineSpan[] }
   | { kind: 'code'; lang: string; text: string }
   | { kind: 'list'; ordered: boolean; items: ListItem[] }
+  | { kind: 'table'; header: InlineSpan[][]; rows: InlineSpan[][][]; aligns: TableAlign[] }
   | { kind: 'hr' };
+
+/** `| a | b |` → 셀 문자열 배열 (양끝 파이프 제거) */
+function splitRow(line: string): string[] {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+}
+
+/** GFM 구분행(`|:---|---:|`)이면 정렬 배열, 아니면 null */
+function parseDelimiter(line: string): TableAlign[] | null {
+  if (!line.includes('|') || !line.includes('-')) return null;
+  const cells = splitRow(line);
+  const aligns: TableAlign[] = [];
+  for (const c of cells) {
+    if (!/^:?-+:?$/.test(c)) return null;
+    aligns.push(c.startsWith(':') && c.endsWith(':') ? 'center' : c.endsWith(':') ? 'right' : 'left');
+  }
+  return aligns.length > 0 ? aligns : null;
+}
 
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
@@ -51,6 +70,23 @@ export function parseMarkdown(src: string): Block[] {
       }
       blocks.push({ kind: 'code', lang: fence[1], text: body.join('\n') });
       continue;
+    }
+    // GFM 테이블 — 파이프 행 + 다음 줄이 구분행일 때만
+    if (line.includes('|') && i + 1 < lines.length) {
+      const aligns = parseDelimiter(lines[i + 1]);
+      if (aligns) {
+        flushPara();
+        const header = splitRow(line).map(parseInline);
+        const rows: InlineSpan[][][] = [];
+        i += 2;
+        while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+          rows.push(splitRow(lines[i]).map(parseInline));
+          i++;
+        }
+        i--; // for 루프의 i++ 보정
+        blocks.push({ kind: 'table', header, rows, aligns });
+        continue;
+      }
     }
     const heading = line.match(/^(#{1,4})\s+(.*)$/);
     if (heading) {

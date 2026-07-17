@@ -298,6 +298,11 @@ body {
 .chat-list { margin: 6px 0; padding-left: 18px; }
 .chat-list li { margin: 4px 0; }
 .chat-hr { border-top: 1px solid var(--border); margin: 12px 0; }
+.chat-table-wrap { overflow-x: auto; margin: 8px 0; }
+.chat-table { border-collapse: collapse; font-size: 12.5px; }
+.chat-table th, .chat-table td { border: 1px solid var(--border); padding: 4px 10px; }
+.chat-table th { background: var(--bg-active); font-weight: 600; }
+.chat-table tr:nth-child(even) td { background: var(--bg-panel); }
 .chat-code {
   display: block; margin: 8px 0; padding: 8px; overflow-x: auto;
   background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
