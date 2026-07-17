@@ -56,6 +56,7 @@ export function SplitPane() {
       readOnly: true,
       renderSideBySide: true,
       renderSideBySideInlineBreakpoint: 600, // 좁으면 인라인 diff로 자동 전환
+      minimap: { enabled: false }, // diff 위치는 오버뷰 룰러가 담당 — 좁은 분할에서 미니맵은 공간만 차지
       scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
     });
     ed.setModel({ original, modified });
