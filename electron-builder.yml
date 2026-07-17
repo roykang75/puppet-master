@@ -10,6 +10,16 @@ asarUnpack:
   - "**/node_modules/better-sqlite3/**"
   - "**/node_modules/tree-sitter/**"
   - "**/node_modules/tree-sitter-*/**"
+  - "node_modules/@typescript/**"   # tsgo 네이티브 바이너리 — asar 안에서 실행 불가
+  - "node_modules/typescript/**"    # tsgo가 참조할 수 있는 lib 배치 일관성
+  - "node_modules/pyright/**"       # ELECTRON_RUN_AS_NODE 스폰 대상 스크립트
+# electron-builder는 node_modules의 *.d.ts를 기본 제거하지만(excludedExts), tsgo는 tsc
+# 바이너리 옆 lib/*.d.ts(표준 라이브러리)를 런타임에 읽어야 한다 — 없으면 기동 즉시 panic.
+# asar 패킹 이후 복사되는 extraResources로 unpacked lib 디렉터리에 그대로 되살린다.
+extraResources:
+  - from: "node_modules/@typescript"
+    to: "app.asar.unpacked/node_modules/@typescript"
+    filter: ["**/*.d.ts"]
 mac:
   target: [dir, dmg, zip]
   identity: null

@@ -15,6 +15,7 @@ import { SearchOverlay } from './components/SearchOverlay';
 import { RenameOverlay } from './components/RenameOverlay';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { goBack, goForward, navHistory } from './navigation';
+import { lspSync } from './lsp-sync';
 import { computeAnchor } from './bookmarks';
 import type { Bookmark } from './bookmarks';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
@@ -192,6 +193,7 @@ export function App() {
         await window.si.saveFile(st.activePath, content);
         st.setDirty(st.activePath, false);
         st.setError(null);
+        lspSync.lspSave(st.activePath);
       } catch (e) {
         st.setError(`저장 실패: ${e instanceof Error ? e.message : String(e)}`);
       } finally {

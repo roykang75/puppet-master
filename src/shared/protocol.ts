@@ -68,6 +68,32 @@ export interface CompletionResult {
   error?: { kind: 'auth' | 'transient' | 'other' | 'unsuitable'; message: string };
 }
 
+// ── LSP (Plan 6) ── 좌표는 전부 0-기반 줄 / UTF-16 컬럼 (Monaco 경계에서만 +1)
+export type LspLanguage = 'ts' | 'py';
+export type LspServerState = 'starting' | 'running' | 'stopped';
+export interface LspStatusN { lang: LspLanguage; state: LspServerState }
+export interface LspCallParams { path: string; line: number; col: number } // path는 프로젝트 상대
+export interface LspCompletionItemN {
+  label: string;
+  kind: number; // LSP CompletionItemKind (1~25) 그대로 — 렌더러가 Monaco enum으로 매핑
+  insertText: string;
+  isSnippet: boolean;
+  detail?: string;
+  sortText?: string;
+}
+export interface LspHoverN { markdown: string }
+export interface LspLocationN { path: string; line: number; col: number }
+export interface LspDiagnosticN {
+  message: string;
+  severity: 1 | 2 | 3 | 4; // LSP DiagnosticSeverity
+  startLine: number; startCol: number; endLine: number; endCol: number;
+}
+export const LSP_EXT_TO_LANGUAGE: Record<string, string> = {
+  '.ts': 'typescript', '.tsx': 'typescriptreact',
+  '.js': 'javascript', '.jsx': 'javascriptreact', '.mjs': 'javascript', '.cjs': 'javascript',
+  '.py': 'python',
+};
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)

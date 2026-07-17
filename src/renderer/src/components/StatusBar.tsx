@@ -5,6 +5,7 @@ export function StatusBar() {
   const stats = useAppStore((s) => s.stats);
   const error = useAppStore((s) => s.error);
   const completionStatus = useAppStore((s) => s.completionStatus);
+  const lspStopped = useAppStore((s) => s.lspStopped);
   const activePath = useAppStore((s) => s.activePath);
   return (
     <div className="statusbar">
@@ -15,6 +16,7 @@ export function StatusBar() {
           : ''}
       </span>
       {completionStatus && <span className="error">{completionStatus}</span>}
+      {lspStopped.length > 0 && <span className="error">LSP({lspStopped.join(',')}): 중지됨</span>}
       <span>{activePath ?? ''}</span>
     </div>
   );
