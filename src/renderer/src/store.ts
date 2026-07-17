@@ -24,7 +24,7 @@ interface AppState {
   completionStatus: string | null;
   lspStopped: string[]; // 중지된 LSP 언어 목록 (예: ['ts'])
   bookmarks: Bookmark[];
-  chatMessages: { role: 'user' | 'assistant'; content: string; error?: string }[];
+  chatMessages: { role: 'user' | 'assistant'; content: string; error?: string; ts?: number }[];
   chatStreaming: boolean;
   chatContextEnabled: boolean;
   rightTab: 'relation' | 'chat';
@@ -123,8 +123,8 @@ export const useAppStore = create<AppState>((set) => ({
       lspStopped: stopped ? [...new Set([...s.lspStopped, lang])] : s.lspStopped.filter((l) => l !== lang),
     })),
   setBookmarks: (bookmarks) => set({ bookmarks }),
-  appendChatUser: (content) => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'user', content }] })),
-  appendChatAssistant: () => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'assistant', content: '' }] })),
+  appendChatUser: (content) => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'user', content, ts: Date.now() }] })),
+  appendChatAssistant: () => set((s) => ({ chatMessages: [...s.chatMessages, { role: 'assistant', content: '', ts: Date.now() }] })),
   appendChatChunk: (text) =>
     set((s) => {
       const msgs = s.chatMessages.slice();

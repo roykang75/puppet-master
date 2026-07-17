@@ -60,7 +60,7 @@ test('AI 채팅: 질문 → 스트리밍 응답 → 새 대화 리셋', async ()
     await expect(page.locator('.chat-user')).toContainText('x가 뭐야?');
 
     // 새 대화 → 리셋
-    await page.locator('.chat-toolbar button', { hasText: '새 대화' }).click();
+    await page.locator('.chat-toolbar .chat-new').click();
     await expect(page.locator('.chat-msg')).toHaveCount(0);
   } finally {
     await app.close();

@@ -177,22 +177,63 @@ body {
 .chat-context-label {
   font-size: 11px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.chat-messages { flex: 1; overflow: auto; padding: 8px; user-select: text; }
-.chat-msg { margin-bottom: 8px; padding: 6px 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
-.chat-user { background: var(--bg-active); }
-.chat-assistant { background: var(--bg-panel); border: 1px solid var(--border); }
-.chat-code {
-  display: block; margin: 4px 0; padding: 6px; overflow-x: auto;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+.chat-new {
+  flex: none; background: none; border: none; color: var(--fg-dim); cursor: pointer;
+  font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 4px;
+}
+.chat-new:hover { color: var(--fg); background: var(--bg-hover); }
+.chat-messages { flex: 1; overflow: auto; padding: 10px 12px; user-select: text; }
+.chat-msg { margin-bottom: 14px; word-break: break-word; }
+.chat-user .chat-content {
+  background: var(--bg-active); border-radius: 12px; padding: 9px 12px; white-space: pre-wrap;
+}
+.chat-assistant .chat-content { padding: 0 2px; }
+.chat-p { margin: 6px 0; white-space: pre-wrap; }
+.chat-h { font-weight: 700; margin: 14px 0 6px; }
+.chat-h1 { font-size: 15px; }
+.chat-h2 { font-size: 14px; }
+.chat-h3, .chat-h4 { font-size: 13px; }
+.chat-inline-code {
+  background: var(--bg-active); border-radius: 5px; padding: 1px 5px;
   font: 12px/1.4 ui-monospace, 'SF Mono', Menlo, monospace;
 }
+.chat-list { margin: 6px 0; padding-left: 18px; }
+.chat-list li { margin: 4px 0; }
+.chat-hr { border-top: 1px solid var(--border); margin: 12px 0; }
+.chat-code {
+  display: block; margin: 8px 0; padding: 8px; overflow-x: auto;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font: 12px/1.4 ui-monospace, 'SF Mono', Menlo, monospace; white-space: pre;
+}
+.chat-msg-footer { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--fg-dim); font-size: 11px; }
+.chat-copy {
+  background: none; border: none; color: var(--fg-dim); cursor: pointer;
+  font-size: 12px; padding: 1px 4px; border-radius: 4px;
+}
+.chat-copy:hover { color: var(--fg); background: var(--bg-hover); }
 .chat-error { margin-top: 4px; color: var(--warn); font-size: 11px; }
 .chat-streaming { color: var(--fg-dim); padding: 2px 8px; }
-.chat-input-row { flex: none; display: flex; gap: 4px; padding: 6px; border-top: 1px solid var(--border); }
-.chat-input-row textarea {
-  flex: 1; resize: none; background: var(--bg); color: var(--fg);
-  border: 1px solid var(--border); border-radius: 3px; padding: 4px 6px; font: inherit;
+.chat-input-row {
+  flex: none; margin: 8px; padding: 6px 8px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
 }
+.chat-input-row:focus-within { border-color: var(--accent); }
+.chat-input-row textarea {
+  display: block; width: 100%; resize: none; background: none; color: var(--fg);
+  border: none; outline: none; padding: 2px 2px 4px; font: inherit;
+}
+.chat-input-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.chat-model {
+  color: var(--fg-dim); font-size: 11px; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-send {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.chat-send:disabled { background: var(--bg-active); color: var(--fg-dim); cursor: default; }
+.chat-send.chat-stop { background: var(--bg-active); color: var(--fg); font-size: 10px; }
 
 /* ── 내장 터미널 (Plan 9) ── */
 .terminal-panel { display: flex; flex-direction: column; height: 100%; }

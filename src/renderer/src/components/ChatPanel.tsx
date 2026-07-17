@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useAppStore } from '../store';
 import { buildChatContext } from '../chat-context';
+import { parseMarkdown, type InlineSpan } from '../chat-markdown';
 import { getChatEditorState } from './EditorPane';
 import type { ChatContext } from '../../../shared/protocol';
 
@@ -11,16 +12,45 @@ export const CHAT_ERROR_TEXT: Record<string, string> = {
   other: '오류가 발생했습니다',
 };
 
-/** 마크다운 코드 펜스만 분리해 등폭 블록으로 렌더 (구문 강조는 후속) */
-function renderContent(content: string): JSX.Element[] {
-  const parts = content.split(/```[\w]*\n?/);
-  return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <pre key={i} className="chat-code">{part}</pre>
+function renderSpans(spans: InlineSpan[]): JSX.Element[] {
+  return spans.map((s, i) =>
+    s.kind === 'code' ? (
+      <code key={i} className="chat-inline-code">{s.text}</code>
+    ) : s.kind === 'bold' ? (
+      <strong key={i}>{s.text}</strong>
+    ) : s.kind === 'italic' ? (
+      <em key={i}>{s.text}</em>
     ) : (
-      <span key={i}>{part}</span>
+      <span key={i}>{s.text}</span>
     ),
   );
+}
+
+/** 어시스턴트 응답을 마크다운 블록으로 렌더 (chat-markdown 파서, HTML 미생성) */
+function renderMarkdown(content: string): JSX.Element[] {
+  return parseMarkdown(content).map((b, i) => {
+    switch (b.kind) {
+      case 'heading':
+        return <div key={i} className={`chat-h chat-h${b.level}`}>{renderSpans(b.spans)}</div>;
+      case 'code':
+        return <pre key={i} className="chat-code">{b.text}</pre>;
+      case 'hr':
+        return <div key={i} className="chat-hr" />;
+      case 'list': {
+        const items = b.items.map((it, j) => (
+          <li key={j} style={it.depth ? { marginLeft: it.depth * 16 } : undefined}>{renderSpans(it.spans)}</li>
+        ));
+        return b.ordered ? <ol key={i} className="chat-list">{items}</ol> : <ul key={i} className="chat-list">{items}</ul>;
+      }
+      default:
+        return <p key={i} className="chat-p">{renderSpans(b.spans)}</p>;
+    }
+  });
+}
+
+function formatTime(ts?: number): string {
+  if (!ts) return '';
+  return new Date(ts).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
 }
 
 export function ChatPanel() {
@@ -30,11 +60,16 @@ export function ChatPanel() {
   const activePath = useAppStore((s) => s.activePath);
   const [input, setInput] = useState('');
   const [provider, setProvider] = useState<string>('none');
+  const [model, setModel] = useState<string>('');
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // provider 미설정 감지 (전송 전 단락 — 스펙 §4)
   useEffect(() => {
-    void window.si.getCompletionSettings().then((s) => setProvider(s.provider)).catch(() => {});
+    void window.si.getCompletionSettings().then((s) => {
+      setProvider(s.provider);
+      setModel(s.model);
+    }).catch(() => {});
   }, []);
 
   // 이벤트 구독은 App.tsx로 이동 — RightPanel이 탭 전환 시 ChatPanel을 언마운트하므로
@@ -78,6 +113,12 @@ export function ChatPanel() {
     st.appendChatChunk('\n(중단됨)');
   };
 
+  const copy = (idx: number, content: string) => {
+    void navigator.clipboard.writeText(content);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1200);
+  };
+
   const editorState = contextEnabled ? getChatEditorState() : null;
   const contextLabel = editorState
     ? `컨텍스트: ${editorState.path}${editorState.selectionText ? ` (선택 ${editorState.selectionText.split('\n').length}줄)` : ''}`
@@ -88,6 +129,8 @@ export function ChatPanel() {
   if (provider === 'none') {
     return <div className="hint">AI provider가 설정되지 않았습니다. Cmd+,에서 설정하세요.</div>;
   }
+
+  const lastIdx = messages.length - 1;
 
   return (
     <div className="chat-panel">
@@ -100,23 +143,35 @@ export function ChatPanel() {
           />
           <span className="chat-context-label">{contextLabel}</span>
         </label>
-        <button className="rename-btn" onClick={() => useAppStore.getState().clearChat()}>새 대화</button>
+        <button className="chat-new" title="새 대화" onClick={() => useAppStore.getState().clearChat()}>＋</button>
       </div>
       <div className="chat-messages" ref={listRef}>
         {messages.length === 0 && <div className="hint">코드에 대해 물어보세요.</div>}
         {messages.map((m, i) => (
           <div key={i} className={`chat-msg chat-${m.role}`}>
-            <div className="chat-content">{renderContent(m.content)}</div>
+            {m.role === 'user' ? (
+              <div className="chat-content">{m.content}</div>
+            ) : (
+              <div className="chat-content">{renderMarkdown(m.content)}</div>
+            )}
             {m.error && <div className="chat-error">{m.error}</div>}
+            {m.role === 'assistant' && m.content && !(streaming && i === lastIdx) && (
+              <div className="chat-msg-footer">
+                <span className="chat-time">{formatTime(m.ts)}</span>
+                <button className="chat-copy" title="복사" onClick={() => copy(i, m.content)}>
+                  {copiedIdx === i ? '✓' : '⧉'}
+                </button>
+              </div>
+            )}
           </div>
         ))}
         {streaming && <div className="chat-streaming">…</div>}
       </div>
       <div className="chat-input-row">
         <textarea
-          rows={3}
+          rows={2}
           value={input}
-          placeholder="질문 입력 (Enter 전송, Shift+Enter 줄바꿈)"
+          placeholder="무엇이든 물어보세요 (Shift+Enter 줄바꿈)"
           disabled={streaming}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -126,11 +181,14 @@ export function ChatPanel() {
             }
           }}
         />
-        {streaming ? (
-          <button className="rename-btn" onClick={cancel}>중단</button>
-        ) : (
-          <button className="rename-btn primary" onClick={() => void send()} disabled={!input.trim()}>전송</button>
-        )}
+        <div className="chat-input-footer">
+          <span className="chat-model" title={model}>{model || provider}</span>
+          {streaming ? (
+            <button className="chat-send chat-stop" title="중단" onClick={cancel}>■</button>
+          ) : (
+            <button className="chat-send" title="전송 (Enter)" onClick={() => void send()} disabled={!input.trim()}>↑</button>
+          )}
+        </div>
       </div>
     </div>
   );
