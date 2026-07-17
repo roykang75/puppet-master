@@ -20,6 +20,7 @@ import { monaco } from './monaco-setup';
 import { applyThemeById } from './theming/apply';
 import { lspSync } from './lsp-sync';
 import { computeAnchor } from './bookmarks';
+import { getTerminalView } from './terminal-view';
 import type { Bookmark } from './bookmarks';
 import type { UiState, IndexProgressPayload, FileIndexedPayload } from '../../shared/protocol';
 import type { IndexStats } from '../../indexer/pipeline';
@@ -232,7 +233,12 @@ export function App() {
       }
       if (ev.ctrlKey && ev.key === '`') {
         ev.preventDefault();
-        useAppStore.getState().setBottomTab('terminal');
+        const st = useAppStore.getState();
+        st.setBottomTab('terminal');
+        requestAnimationFrame(() => {
+          const id = useAppStore.getState().activeTerminalId;
+          if (id != null) getTerminalView(id)?.focus();
+        });
         return;
       }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === ',') {

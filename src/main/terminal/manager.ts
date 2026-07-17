@@ -49,9 +49,10 @@ function defaultSpawn(spec: SpawnSpec): PtyLike {
   };
 }
 
+let globalNextId = 1; // 매니저 인스턴스 교체(프로젝트 전환)에도 id가 재사용되지 않도록 전역 단조 증가
+
 export class TerminalManager {
   private ptys = new Map<number, PtyLike>();
-  private nextId = 1;
   private readonly spawnFn: (spec: SpawnSpec) => PtyLike;
 
   constructor(private deps: TerminalManagerDeps) {
@@ -65,7 +66,7 @@ export class TerminalManager {
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-    const id = this.nextId++;
+    const id = globalNextId++;
     this.ptys.set(id, proc);
     proc.onData((data) => this.deps.onData(id, data));
     proc.onExit(() => {
