@@ -119,6 +119,20 @@ describe('parseMarkdown', () => {
     expect(blocks).toEqual([{ kind: 'code', lang: '', text: 'still typing' }]);
   });
 
+  it('parses indented fences (목록/설명 아래 들여쓴 펜스) and dedents the body', () => {
+    const blocks = parseMarkdown('실행 방법:\n\n    ```bash\n    python gugudan_app.py\n    ```\n\n끝');
+    expect(blocks.map((b) => b.kind)).toEqual(['para', 'code', 'para']);
+    const code = blocks[1];
+    if (code.kind !== 'code') return;
+    expect(code.lang).toBe('bash');
+    expect(code.text).toBe('python gugudan_app.py');
+  });
+
+  it('accepts non-word chars in fence language (c++, c#, objective-c)', () => {
+    const blocks = parseMarkdown('```c++\nint x;\n```');
+    expect(blocks).toEqual([{ kind: 'code', lang: 'c++', text: 'int x;' }]);
+  });
+
   it('does not confuse hr with a bullet', () => {
     const blocks = parseMarkdown('- 항목\n---');
     expect(blocks.map((b) => b.kind)).toEqual(['list', 'hr']);

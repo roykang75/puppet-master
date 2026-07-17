@@ -68,17 +68,20 @@ export function parseMarkdown(src: string): Block[] {
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const fence = line.match(/^```(\w*)\s*$/);
+    // 들여쓰인 펜스 허용 (모델이 목록/설명 아래에 펜스를 들여써 출력하는 패턴) + c++/c# 등 언어 태그
+    const fence = line.match(/^(\s*)```([\w+#.-]*)\s*$/);
     if (fence) {
       flushPara();
+      const indent = fence[1];
       const body: string[] = [];
       i++;
       // 스트리밍 중 닫는 펜스가 아직 없으면 끝까지 코드로 취급
-      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
-        body.push(lines[i]);
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) {
+        // 여는 펜스와 같은 들여쓰기는 본문에서 제거 (펜스 기준 상대 들여쓰기 유지)
+        body.push(lines[i].startsWith(indent) ? lines[i].slice(indent.length) : lines[i]);
         i++;
       }
-      blocks.push({ kind: 'code', lang: fence[1], text: body.join('\n') });
+      blocks.push({ kind: 'code', lang: fence[2], text: body.join('\n') });
       continue;
     }
     // GFM 테이블 — 파이프 행 + 다음 줄이 구분행일 때만
