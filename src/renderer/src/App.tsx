@@ -5,7 +5,7 @@ import { initLayouts, layoutStorage, scheduleSave } from './persistence-bridge';
 import { EmptyState } from './components/EmptyState';
 import { StatusBar } from './components/StatusBar';
 import { RightPanel } from './components/RightPanel';
-import { ContextPanel } from './components/ContextPanel';
+import { BottomPanel } from './components/BottomPanel';
 import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
@@ -159,7 +159,7 @@ function Workspace() {
         </Group>
       </Panel>
       <Separator className="resize-handle resize-handle-v" />
-      <Panel id="context" defaultSize="22" minSize="8" collapsible><ContextPanel /></Panel>
+      <Panel id="context" defaultSize="22" minSize="8" collapsible><BottomPanel /></Panel>
     </Group>
   );
 }
@@ -228,6 +228,11 @@ export function App() {
       if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && (ev.key === 'f' || ev.key === 'F')) {
         ev.preventDefault();
         useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
+        return;
+      }
+      if (ev.ctrlKey && ev.key === '`') {
+        ev.preventDefault();
+        useAppStore.getState().setBottomTab('terminal');
         return;
       }
       if ((ev.metaKey || ev.ctrlKey) && ev.key === ',') {

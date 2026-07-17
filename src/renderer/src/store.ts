@@ -28,6 +28,9 @@ interface AppState {
   chatStreaming: boolean;
   chatContextEnabled: boolean;
   rightTab: 'relation' | 'chat';
+  terminals: { id: number; title: string; exited: boolean }[];
+  activeTerminalId: number | null;
+  bottomTab: 'context' | 'terminal';
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
@@ -54,6 +57,11 @@ interface AppState {
   setChatContextEnabled(v: boolean): void;
   setRightTab(v: 'relation' | 'chat'): void;
   clearChat(): void;
+  addTerminal(id: number, title: string): void;
+  removeTerminal(id: number): void; // active면 남은 것 중 마지막으로 전환
+  markTerminalExited(id: number): void;
+  setActiveTerminalId(id: number | null): void;
+  setBottomTab(v: 'context' | 'terminal'): void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -76,8 +84,11 @@ export const useAppStore = create<AppState>((set) => ({
   chatStreaming: false,
   chatContextEnabled: true,
   rightTab: 'relation',
+  terminals: [],
+  activeTerminalId: null,
+  bottomTab: 'context',
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, terminals: [], activeTerminalId: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -132,4 +143,17 @@ export const useAppStore = create<AppState>((set) => ({
   setChatContextEnabled: (chatContextEnabled) => set({ chatContextEnabled }),
   setRightTab: (rightTab) => set({ rightTab }),
   clearChat: () => set({ chatMessages: [], chatStreaming: false }),
+  addTerminal: (id, title) =>
+    set((s) => ({ terminals: [...s.terminals, { id, title, exited: false }], activeTerminalId: id })),
+  removeTerminal: (id) =>
+    set((s) => {
+      const terminals = s.terminals.filter((t) => t.id !== id);
+      const activeTerminalId =
+        s.activeTerminalId === id ? (terminals.at(-1)?.id ?? null) : s.activeTerminalId;
+      return { terminals, activeTerminalId };
+    }),
+  markTerminalExited: (id) =>
+    set((s) => ({ terminals: s.terminals.map((t) => (t.id === id ? { ...t, exited: true } : t)) })),
+  setActiveTerminalId: (activeTerminalId) => set({ activeTerminalId }),
+  setBottomTab: (bottomTab) => set({ bottomTab }),
 }));
