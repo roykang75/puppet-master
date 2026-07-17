@@ -1,10 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
 import type { RecentEntry } from '../main/persistence';
 import type { MenuAction } from '../main/menu';
+
+type LspEventPayload =
+  | { event: 'diagnostics'; payload: { path: string; diagnostics: LspDiagnosticN[] } }
+  | { event: 'status'; payload: LspStatusN };
 
 const api = {
   openFolderDialog: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFolder'),
@@ -49,6 +53,15 @@ const api = {
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
   saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
+  lspCall: (method: 'completion' | 'hover' | 'definition', params: LspCallParams): Promise<unknown> =>
+    ipcRenderer.invoke('lsp:call', method, params),
+  lspNotify: (kind: 'didOpen' | 'didChange' | 'didClose' | 'didSave', params: { path: string; text?: string }): Promise<void> =>
+    ipcRenderer.invoke('lsp:notify', kind, params),
+  onLspEvent: (cb: (e: LspEventPayload) => void): (() => void) => {
+    const h = (_e: Electron.IpcRendererEvent, data: LspEventPayload) => cb(data);
+    ipcRenderer.on('lsp:event', h);
+    return () => ipcRenderer.removeListener('lsp:event', h);
+  },
   onIndexerEvent: (cb: (event: string, payload: unknown) => void): void => {
     ipcRenderer.on('indexer:event', (_e, msg: { event: string; payload: unknown }) => cb(msg.event, msg.payload));
   },

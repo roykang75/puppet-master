@@ -5,9 +5,10 @@ import { ProjectFiles } from './files';
 import { Persistence } from './persistence';
 import { SettingsStore } from './settings';
 import { CompletionService } from './completion/service';
+import { LspManager } from './lsp/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, LspCallParams } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -18,10 +19,14 @@ const INDEXER_CALL_ALLOWED = new Set([
   'getFileTokens',
 ]);
 
+const LSP_CALL_ALLOWED = new Set(['completion', 'hover', 'definition']);
+const LSP_NOTIFY_ALLOWED = new Set(['didOpen', 'didChange', 'didClose', 'didSave']);
+
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 let win: BrowserWindow | null = null;
 let indexer: IndexerManager | null = null;
+let lsp: LspManager | null = null;
 let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
 let quitting = false;
@@ -63,6 +68,13 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
     files = new ProjectFiles(root);
     currentRoot = root;
     completionService?.clearOutlineCache(); // 프로젝트 전환 — rel path 충돌 방지
+    lsp?.shutdownAll();
+    lsp = new LspManager({
+      root,
+      onDiagnostics: (path, diagnostics) =>
+        win?.webContents.send('lsp:event', { event: 'diagnostics', payload: { path, diagnostics } }),
+      onStatus: (status) => win?.webContents.send('lsp:event', { event: 'status', payload: status }),
+    });
     persistence.addRecent(root);
     buildMenu(persistence.loadRecent(), sendMenu);
 
@@ -135,6 +147,14 @@ function registerIpc(): void {
     if (!INDEXER_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 메서드: ${method}`);
     if (!indexer) throw new Error('인덱서가 실행 중이 아닙니다');
     return indexer.rpc.request(method, params, { timeoutMs: 180_000 });
+  });
+  ipcMain.handle('lsp:call', (_e, method: string, params: unknown) => {
+    if (!LSP_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 LSP 메서드: ${method}`);
+    return lsp?.request(method as 'completion' | 'hover' | 'definition', params as LspCallParams) ?? null;
+  });
+  ipcMain.handle('lsp:notify', (_e, kind: string, params: unknown) => {
+    if (!LSP_NOTIFY_ALLOWED.has(kind)) throw new Error(`허용되지 않은 LSP 통지: ${kind}`);
+    lsp?.notify(kind as 'didOpen' | 'didChange' | 'didClose' | 'didSave', params as { path: string; text?: string });
   });
   ipcMain.handle(
     'rename:apply',
@@ -235,4 +255,5 @@ app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => {
   quitting = true;
   indexer?.kill();
+  lsp?.shutdownAll();
 });
