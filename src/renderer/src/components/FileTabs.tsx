@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
@@ -11,10 +11,41 @@ export function FileTabs() {
   const setActive = useAppStore((s) => s.setActive);
   const closeTab = useAppStore((s) => s.closeTab);
   const [listOpen, setListOpen] = useState(false);
+  const [focusIdx, setFocusIdx] = useState(0); // 키보드 하이라이트 위치
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const close = (path: string) => {
     disposeModel(path);
     closeTab(path);
+  };
+
+  // 메뉴가 열리면 포커스를 가져와 ↑/↓/Enter/Esc를 받는다 (열 때 활성 파일 위치에서 시작)
+  useEffect(() => {
+    if (!listOpen) return;
+    const idx = tabs.findIndex((t) => t.path === activePath);
+    setFocusIdx(idx >= 0 ? idx : 0);
+    menuRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listOpen]);
+
+  const onMenuKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const delta = e.key === 'ArrowDown' ? 1 : -1;
+      const next = (focusIdx + delta + tabs.length) % tabs.length;
+      setFocusIdx(next);
+      menuRef.current
+        ?.querySelectorAll('.open-editors-item')
+        [next]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const t = tabs[focusIdx];
+      if (t) setActive(t.path);
+      setListOpen(false);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setListOpen(false);
+    }
   };
 
   return (
@@ -48,15 +79,16 @@ export function FileTabs() {
       {listOpen && (
         <>
           <div className="open-editors-backdrop" onMouseDown={() => setListOpen(false)} />
-          <div className="open-editors-menu">
+          <div className="open-editors-menu" ref={menuRef} tabIndex={-1} onKeyDown={onMenuKey}>
             <div className="open-editors-title">열린 파일 {tabs.length}개</div>
-            {tabs.map((t) => {
+            {tabs.map((t, i) => {
               const name = t.path.split('/').pop() ?? t.path;
               const dir = t.path.slice(0, Math.max(0, t.path.length - name.length - 1));
               return (
                 <div
                   key={t.path}
-                  className={`open-editors-item${t.path === activePath ? ' active' : ''}`}
+                  className={`open-editors-item${t.path === activePath ? ' active' : ''}${i === focusIdx ? ' focused' : ''}`}
+                  onMouseMove={() => setFocusIdx(i)}
                   onClick={() => {
                     setActive(t.path);
                     setListOpen(false);

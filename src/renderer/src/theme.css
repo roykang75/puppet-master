@@ -97,7 +97,8 @@ body {
   display: flex; align-items: center; gap: 6px; padding: 4px 8px;
   cursor: pointer; border-radius: 4px; white-space: nowrap;
 }
-.open-editors-item:hover { background: var(--bg-hover); }
+.open-editors-menu { outline: none; }
+.open-editors-item:hover, .open-editors-item.focused { background: var(--bg-hover); }
 .open-editors-item.active { background: var(--bg-active); }
 .open-editors-name { flex: none; }
 .open-editors-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); font-size: 11px; text-align: right; }
