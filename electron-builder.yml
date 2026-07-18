@@ -13,6 +13,8 @@ asarUnpack:
   - "node_modules/@typescript/**"   # tsgo 네이티브 바이너리 — asar 안에서 실행 불가
   - "node_modules/typescript/**"    # tsgo가 참조할 수 있는 lib 배치 일관성
   - "node_modules/pyright/**"       # ELECTRON_RUN_AS_NODE 스폰 대상 스크립트
+  - "node_modules/typescript-language-server/**"  # 정식 tsserver LSP — ELECTRON_RUN_AS_NODE 스폰
+  - "node_modules/typescript-classic/**"          # tsserver.js(클래식 TS) — node로 로드
   - "node_modules/node-pty/**"      # 네이티브 .node + prebuilds/spawn-helper — asar 안에서 실행 불가
 # electron-builder는 node_modules의 *.d.ts를 기본 제거하지만(excludedExts), tsgo는 tsc
 # 바이너리 옆 lib/*.d.ts(표준 라이브러리)를 런타임에 읽어야 한다 — 없으면 기동 즉시 panic.
