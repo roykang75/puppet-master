@@ -75,6 +75,7 @@ export interface CompletionSettings {
   hasApiKey: boolean;
   profiles: CompletionProfilePublic[];
   activeId: string | null;
+  hasContext7Key: boolean;
 }
 
 // ── AI 코드 자동완성 요청/응답 (커서 컨텍스트 → 완성 텍스트) ──
@@ -134,6 +135,7 @@ export interface ChatContext {
   startLine?: number; // 1-기반 (표시용)
   signatures?: string[];
   retrieved?: RetrievedSnippet[]; // 자동 검색으로 찾은 관련 코드
+  stack?: string; // 프로젝트 스택 요약(자동 감지)
 }
 export type ChatEvent =
   | { type: 'chunk'; text: string }
@@ -172,4 +174,10 @@ export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)
   openTabs: string[];
   activeTab: string | null;
+}
+
+// ── 프로젝트 스택 감지 (Plan 12) ──
+export interface ProjectStack {
+  languages: string[];
+  libraries: { name: string; version?: string }[];
 }

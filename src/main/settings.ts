@@ -34,6 +34,7 @@ interface SettingsFile {
   activeProfileId?: string | null;
   appearance?: { theme: string };
   agent?: { allowedDirs: string[] };
+  context7ApiKey?: string;
 }
 
 interface Normalized {
@@ -41,6 +42,7 @@ interface Normalized {
   activeProfileId: string | null;
   appearance?: { theme: string };
   agent?: { allowedDirs: string[] };
+  context7ApiKey?: string;
 }
 
 export class SettingsStore {
@@ -84,7 +86,7 @@ export class SettingsStore {
     if (activeProfileId !== null && !profiles.some((p) => p.id === activeProfileId)) {
       activeProfileId = profiles[0]?.id ?? null;
     }
-    return { profiles, activeProfileId, appearance: raw.appearance, agent: raw.agent };
+    return { profiles, activeProfileId, appearance: raw.appearance, agent: raw.agent, context7ApiKey: raw.context7ApiKey };
   }
 
   private write(n: Normalized): void {
@@ -92,6 +94,7 @@ export class SettingsStore {
     const file: SettingsFile = { profiles: n.profiles, activeProfileId: n.activeProfileId };
     if (n.appearance) file.appearance = n.appearance;
     if (n.agent) file.agent = n.agent;
+    if (n.context7ApiKey) file.context7ApiKey = n.context7ApiKey;
     // 평문 키 포함 — 소유자 외 읽기 차단
     fs.writeFileSync(this.filePath(), JSON.stringify(file, null, 2), { mode: 0o600 });
     fs.chmodSync(this.filePath(), 0o600); // 기존 파일에 덮어쓸 때도 권한 보장
@@ -160,6 +163,16 @@ export class SettingsStore {
     this.write({ ...prev, agent: { allowedDirs: a.allowedDirs.filter((d) => typeof d === 'string' && d) } });
   }
 
+  getContext7Key(): string | null {
+    return this.read().context7ApiKey ?? null;
+  }
+
+  /** '' = 삭제 */
+  setContext7Key(key: string): void {
+    const prev = this.read();
+    this.write({ ...prev, context7ApiKey: key || undefined });
+  }
+
   toPublic(): CompletionSettings {
     const n = this.read();
     const a = n.profiles.find((p) => p.id === n.activeProfileId) ?? null;
@@ -177,6 +190,7 @@ export class SettingsStore {
         hasApiKey: !!p.apiKey,
       })),
       activeId: n.activeProfileId,
+      hasContext7Key: !!n.context7ApiKey,
     };
   }
 }

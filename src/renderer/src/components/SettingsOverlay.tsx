@@ -35,6 +35,8 @@ export function SettingsOverlay() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [theme, setTheme] = useState('dark-plus');
   const [allowedDirs, setAllowedDirs] = useState<string[]>([]);
+  const [context7Key, setContext7Key] = useState('');
+  const [hasContext7Key, setHasContext7Key] = useState(false);
   const [themeOptions, setThemeOptions] = useState<{ id: string; name: string }[]>(BUNDLED_THEMES);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,6 +66,8 @@ export function SettingsOverlay() {
         );
         const idx = s.profiles.findIndex((p) => p.id === s.activeId);
         setActiveIdx(idx >= 0 ? idx : null);
+        setHasContext7Key(s.hasContext7Key);
+        setContext7Key('');
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -125,6 +129,7 @@ export function SettingsOverlay() {
         }));
         await window.si.setCompletionSettings(inputs, activeIdx);
         void refreshCompletionSettings(); // 설정 캐시 갱신 + auth 비활성 해제
+        if (context7Key) await window.si.setContext7Key(context7Key); // 빈 값 = 기존 키 유지
         await window.si.setAppearance({ theme });
         await window.si.setAgentSettings({ allowedDirs });
         await applyThemeById(monaco, theme); // 즉시 적용
@@ -236,6 +241,16 @@ export function SettingsOverlay() {
               </label>
             </div>
           ))}
+
+          <label className="settings-field">
+            <span className="settings-label">Context7 API 키{hasContext7Key ? ' (저장됨)' : ''} (선택 — 문서 조회 rate limit 완화용)</span>
+            <input
+              type="password"
+              value={context7Key}
+              placeholder="변경 시에만 입력 — 저장된 키는 표시되지 않음"
+              onChange={(e) => setContext7Key(e.target.value)}
+            />
+          </label>
 
           <label className="settings-field">
             <span className="settings-label">테마</span>
