@@ -12,6 +12,7 @@ import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
 import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
 import { CHAT_ERROR_TEXT } from './components/ChatPanel';
+import { scheduleChatSave } from './chat-persist';
 import { SearchOverlay } from './components/SearchOverlay';
 import { RenameOverlay } from './components/RenameOverlay';
 import { SettingsOverlay } from './components/SettingsOverlay';
@@ -44,6 +45,14 @@ async function openProject(root: string): Promise<void> {
 
     st.setProject(res.root);
     applyUiState(res.uiState);
+    void window.si.chatThreadsList().then(async (list) => {
+      st.setThreads(list);
+      if (list.length > 0) {
+        const msgs = await window.si.chatThreadLoad(list[0].id);
+        st.setActiveThreadId(list[0].id);
+        st.loadThreadMessages(msgs as typeof st.chatMessages);
+      }
+    });
     void window.si.loadBookmarks().then((l) => st.setBookmarks(l as Bookmark[]));
   } catch (e) {
     st.setError(e instanceof Error ? e.message : String(e));
@@ -196,7 +205,7 @@ export function App() {
     const offChat = window.si.onChatEvent((e) => {
       const st = useAppStore.getState();
       if (e.type === 'chunk') st.appendChatChunk(e.text);
-      else if (e.type === 'done') st.setChatStreaming(false);
+      else if (e.type === 'done') { st.setChatStreaming(false); scheduleChatSave(); }
       else {
         st.setChatError(CHAT_ERROR_TEXT[e.kind] ?? CHAT_ERROR_TEXT.other);
         st.setChatStreaming(false);
@@ -213,7 +222,7 @@ export function App() {
           // 승인 대기 중 열어둔 변경 제안 탭은 실행 완료 시 자동으로 닫는다 (내용이 stale)
           if (st.tabs.some((t) => t.path === `diff://${ev.path}`)) st.closeTab(`diff://${ev.path}`);
         }
-      } else if (ev.type === 'done') st.setChatStreaming(false);
+      } else if (ev.type === 'done') { st.setChatStreaming(false); scheduleChatSave(); }
       else {
         st.setChatError(CHAT_ERROR_TEXT[ev.kind] ?? CHAT_ERROR_TEXT.other);
         st.setChatStreaming(false);
