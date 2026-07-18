@@ -211,8 +211,39 @@
 
 **인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** [P11-1] renameThread가 updated_at 미갱신(이름변경≠새 활동, 방어적), [P11-2] ChatStoredMessage.error 미영속(transient UI 상태 — 의도적), [P11-3] rename Enter+blur 중복(멱등 무해), [P11-5] create/load/rename/delete IPC try/catch 미비(save만 — 드문 DB 실패 시 create throw가 send 거부 가능), [P11-6] 스레드/프로젝트 전환 시 디바운스 타이머 미클리어(sub-300ms 편집 후 즉시 전환 시 마지막 편집 유실 — 크로스 프로젝트 쓰기는 구조적으로 방지됨). Important [I-1] 이름변경 되돌림은 병합 전 해소.
 
+## ✅ Plan 12: 프로젝트 스택 감지 + Context7 온디맨드 문서 (v2 7탄) — 완료 (main 병합 34bf83b)
+
+- [x] 스택 감지(로컬, 열 때만·네트워크X): 매니페스트 파서(package.json·requirements·pyproject+poetry·go.mod·pom·gradle) + 확장자 언어 집계 → `ProjectStack`
+- [x] 스택 요약을 chat/agent 시스템 프롬프트에 상주(`ChatContext.stack`, `buildStackSummary` shared)
+- [x] `library_docs` 에이전트 도구 — Context7 API v2(`libs/search`→`context`) 온디맨드 조회, 읽기전용/에이전트 도구셋 편입, 세션 캐시, 실패 시 안내 문자열(예외 미전파), "Docs" 배지
+- [x] 설정에 Context7 API 키(평문 0600, IPC로 값 미노출·`hasContext7Key`만)
+- [x] 검증: 단위(스택 파서/요약/Context7 클라이언트·서비스/도구 편입/프롬프트) — 전체 356/356, 스펙: `docs/superpowers/specs/2026-07-18-plan12-context7-stack-docs-design.md`
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** [P12-1] parseGoMod 정규식 취약, [P12-2] base() Windows '\' 미처리, [P12-3] parsePomXml이 dependencyManagement도 매치(휴리스틱), [P12-4] parseGradle 테스트 커버리지 없음, [P12-5] **실제 Context7 응답 스키마(results/snippets 키) 통합 시 확인 필요**(방어적 파서라 실패해도 안전), 언어 통계는 루트 표본만(MVP — 인덱서 연동 정밀화 여지), 디스크 캐시·Ruby/Rust/PHP 매니페스트는 v2.
+
+## ✅ Plan 13: TS LSP를 정식 tsserver로 교체 (v2 8탄) — 완료 (main 병합 17b03a8)
+
+- [x] **원인**: 에디터 TS LSP가 tsgo(typescript@7 네이티브 프리뷰)라 `import "./globals.css"` 등 자산 import를 잘못 진단(VS Code/Antigravity는 정상). tsgo엔 `lib/tsserver.js`가 없음
+- [x] `typescript-language-server@5.3` + 클래식 `typescript-classic`(npm:typescript@5.9) 별칭 추가 — tsgo(빌드/타입체크)는 무변경 유지
+- [x] `servers.ts`: TS를 pyright처럼 Electron-as-node로 스폰(cli.mjs --stdio, `ELECTRON_RUN_AS_NODE`), `initializationOptions.tsserver.path`로 클래식 tsserver 지정
+- [x] `LspClient.initialize`에 initializationOptions 배선(client/manager), 패키징 asarUnpack + tsserver `lib/*.d.ts` extraResources 복원(최종 리뷰 C1)
+- [x] 내장 Monaco TS/JS 워커 진단 off 유지(`monaco-setup.ts`) — 진단은 정식 tsserver 담당
+- [x] 검증: 단위 356/356 + **dev 실측 PASS**(`import "./globals.css"`=에러0, 타입오류=에러1 → tsserver Electron-as-node 기동 + 진짜오류 유지). 스펙: `docs/superpowers/specs/2026-07-18-plan13-classic-tsserver-lsp-design.md`
+
+**인계 노트 (백로그, 비차단):** [P13-1] **실제 `npm run package` 스모크 빌드로 C1(.d.ts 복원)과 unpacked ESM 경로 최종 확인**(플랜 범위 밖 — 배포 전 권장). [M2] tsgoExePath()는 이제 빌드 툴체인 가드로 테스트만 참조(의도적, 삭제 금지).
+
+## ✅ 세션 UI/UX 개선 (main 직접 커밋)
+
+- [x] 앱 이름 변경 **SourceInSight → Puppet Master**(식별자 `puppetmaster`, appId `dev.roy.puppetmaster`) + userData 마이그레이션(`f184bf3`)
+- [x] 창 테두리색 `#2B2B2B` + 사이드바 Symbols·Bookmarks 개별 접기/펴기(min=max=24px 잠금으로 독립 동작) (`bffc628`)
+- [x] AI 채팅 하이브리드 자동 컨텍스트(활성파일 + 인덱서 검색 시드) + 질문 모드=읽기전용 에이전트, 컨텍스트 체크박스 제거·상시 실행, 에이전트/질문 모드 선택 UI + 자동승인 배치 (`c572a92`)
+- [x] 도구 카드 아이콘+영문 라벨(`2839b26`) → 배지(pill) 스타일(`f7dd22f`)
+- [x] 에디터 가짜 오류(빨간 줄) 제거 — 내장 TS/JS 워커 진단 off(`64d25ad`), 이후 Plan 13으로 근본 교체
+- [x] AI 설정: 모델 추가/편집을 팝업 모달로, 목록은 컴팩트 행(설정 창이 길어지지 않게) (`aa8d0c9`)
+
 ### 다음 후보
 사용자 결정 대기 — v2 이후 백로그에서 선택.
 
 ### v2 이후 (백로그)
 - [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
+- [ ] [P13-1] 배포 패키지 스모크 빌드(tsserver .d.ts 복원 검증), [P12-5] Context7 실 응답 스키마 확인, 채팅 스레드 FTS 검색
