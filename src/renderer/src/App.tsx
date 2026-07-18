@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
 import { useAppStore } from './store';
 import { initLayouts, layoutStorage, scheduleSave } from './persistence-bridge';
@@ -134,6 +134,11 @@ function Workspace() {
   const rootV = useDefaultLayout({ id: 'root-v', storage: layoutStorage });
   const mainH = useDefaultLayout({ id: 'main-h', storage: layoutStorage });
   const sideV = useDefaultLayout({ id: 'side-v', storage: layoutStorage });
+  // 접힘은 min=max=헤더높이로 패널 크기를 '잠가서' 구현한다. collapse()의 여유공간
+  // 재분배(인접 형제로 흘러 다른 패널이 다시 열리는 문제)를 피하고, 남는 공간은
+  // 잠기지 않은 project로만 흐르므로 두 패널이 완전히 독립적으로 접힌다.
+  const [symbolsCollapsed, setSymbolsCollapsed] = useState(false);
+  const [bookmarksCollapsed, setBookmarksCollapsed] = useState(false);
   return (
     <Group
       orientation="vertical"
@@ -157,9 +162,29 @@ function Workspace() {
             >
               <Panel id="project" defaultSize="45" minSize="15"><ProjectWindow /></Panel>
               <Separator className="resize-handle resize-handle-v" />
-              <Panel id="symbols" defaultSize="30" minSize="15"><SymbolWindow /></Panel>
+              <Panel
+                id="symbols"
+                defaultSize="30"
+                minSize={symbolsCollapsed ? '24px' : '15'}
+                maxSize={symbolsCollapsed ? '24px' : undefined}
+              >
+                <SymbolWindow
+                  collapsed={symbolsCollapsed}
+                  onToggle={() => setSymbolsCollapsed((v) => !v)}
+                />
+              </Panel>
               <Separator className="resize-handle resize-handle-v" />
-              <Panel id="bookmarks" defaultSize="25" minSize="10"><BookmarksSection /></Panel>
+              <Panel
+                id="bookmarks"
+                defaultSize="25"
+                minSize={bookmarksCollapsed ? '24px' : '10'}
+                maxSize={bookmarksCollapsed ? '24px' : undefined}
+              >
+                <BookmarksSection
+                  collapsed={bookmarksCollapsed}
+                  onToggle={() => setBookmarksCollapsed((v) => !v)}
+                />
+              </Panel>
             </Group>
           </Panel>
           <Separator className="resize-handle resize-handle-h" />

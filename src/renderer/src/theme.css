@@ -3,7 +3,7 @@
   --bg-panel: #26282c;
   --bg-hover: #2f3237;
   --bg-active: #383c42;
-  --border: #3a3d42;
+  --border: #2b2b2b;
   --fg: #d4d6da;
   --fg-dim: #8a8f98;
   --accent: #4a9eff;
@@ -51,6 +51,9 @@ body {
   text-transform: uppercase; color: var(--fg-dim); border-bottom: 1px solid var(--border);
 }
 .panel-body { flex: 1; overflow: auto; min-height: 0; }
+.panel-title-collapsible { display: flex; align-items: center; gap: 2px; cursor: pointer; user-select: none; }
+.panel-title-collapsible:hover { color: var(--fg); }
+.panel-chevron { display: inline-flex; align-items: center; font-size: 14px; margin-left: -3px; }
 .panel-title-row { display: flex; align-items: center; justify-content: space-between; }
 .panel-title-actions { display: flex; gap: 2px; }
 .panel-action {
@@ -384,8 +387,17 @@ body {
   border: none; outline: none; padding: 2px 2px 4px; font: inherit;
 }
 .chat-input-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.chat-footer-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.chat-footer-left .chat-context-toggle { flex: none; }
+.chat-footer-left .chat-context-label { overflow: visible; text-overflow: clip; }
+.chat-mode {
+  flex: none; color: var(--fg-dim); font-size: 11px;
+  background: none; border: none; outline: none; cursor: pointer; padding: 0;
+}
+.chat-mode:hover { color: var(--fg); }
+.chat-mode option { background: var(--bg-panel); color: var(--fg); }
 .chat-model {
-  color: var(--fg-dim); font-size: 11px; min-width: 0; max-width: 70%;
+  color: var(--fg-dim); font-size: 11px; min-width: 0; max-width: 100%;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: none; border: none; outline: none; cursor: pointer; padding: 0;
 }

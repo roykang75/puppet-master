@@ -2,9 +2,16 @@ import { VscBookmark, VscClose } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import { resolveBookmarkLine } from '../bookmarks';
+import { CollapsibleTitle } from './CollapsibleTitle';
 import type { Bookmark } from '../bookmarks';
 
-export function BookmarksSection() {
+export function BookmarksSection({
+  collapsed = false,
+  onToggle,
+}: {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) {
   const bookmarks = useAppStore((s) => s.bookmarks);
   const setBookmarks = useAppStore((s) => s.setBookmarks);
 
@@ -20,20 +27,22 @@ export function BookmarksSection() {
 
   return (
     <div className="panel">
-      <div className="panel-title">Bookmarks</div>
-      <div className="panel-body">
-        {bookmarks.length === 0 && <div className="hint">Cmd/Ctrl+F2로 북마크 토글</div>}
-        {bookmarks.map((bm, i) => (
-          <div key={i} className="rel-item" style={{ paddingLeft: 8 }}>
-            <span className="tree-icon"><VscBookmark /></span>
-            <span className="rel-label" onClick={() => void jump(bm)}>
-              {bm.anchorName ? `${bm.anchorName}+${bm.offset}` : `:${bm.line}`} <span className="rel-kind">{bm.text}</span>
-            </span>
-            <span className="rel-detail">{bm.path}</span>
-            <span className="tab-close" onClick={() => remove(bm)}><VscClose /></span>
-          </div>
-        ))}
-      </div>
+      <CollapsibleTitle title="Bookmarks" collapsed={collapsed} onToggle={onToggle ?? (() => {})} />
+      {!collapsed && (
+        <div className="panel-body">
+          {bookmarks.length === 0 && <div className="hint">Cmd/Ctrl+F2로 북마크 토글</div>}
+          {bookmarks.map((bm, i) => (
+            <div key={i} className="rel-item" style={{ paddingLeft: 8 }}>
+              <span className="tree-icon"><VscBookmark /></span>
+              <span className="rel-label" onClick={() => void jump(bm)}>
+                {bm.anchorName ? `${bm.anchorName}+${bm.offset}` : `:${bm.line}`} <span className="rel-kind">{bm.text}</span>
+              </span>
+              <span className="rel-detail">{bm.path}</span>
+              <span className="tab-close" onClick={() => remove(bm)}><VscClose /></span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

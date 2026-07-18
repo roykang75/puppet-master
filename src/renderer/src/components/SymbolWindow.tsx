@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
 import { revealLine } from './EditorPane';
+import { CollapsibleTitle } from './CollapsibleTitle';
 import type { SymbolHit } from '../../../indexer/api';
 
 const KIND_BADGE: Record<string, string> = {
@@ -8,7 +9,13 @@ const KIND_BADGE: Record<string, string> = {
   enum: 'E', type: 'T', variable: 'v', field: '·', macro: '#', namespace: 'N',
 };
 
-export function SymbolWindow() {
+export function SymbolWindow({
+  collapsed = false,
+  onToggle,
+}: {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) {
   const activePath = useAppStore((s) => s.activePath);
   const outlineVersion = useAppStore((s) => s.outlineVersion);
   const indexing = useAppStore((s) => s.indexing);
@@ -36,18 +43,20 @@ export function SymbolWindow() {
 
   return (
     <div className="panel">
-      <div className="panel-title">Symbols</div>
-      <div className="panel-body">
-        {indexing && <div className="hint">인덱싱 중…</div>}
-        {!indexing &&
-          symbols.map((s) => (
-            <div key={s.id} className="symbol-item" onClick={() => revealLine(s.line + 1)}>
-              <span className="symbol-kind">{KIND_BADGE[s.kind] ?? '?'}</span>
-              {s.name}
-              <span className="symbol-line">:{s.line + 1}</span>
-            </div>
-          ))}
-      </div>
+      <CollapsibleTitle title="Symbols" collapsed={collapsed} onToggle={onToggle ?? (() => {})} />
+      {!collapsed && (
+        <div className="panel-body">
+          {indexing && <div className="hint">인덱싱 중…</div>}
+          {!indexing &&
+            symbols.map((s) => (
+              <div key={s.id} className="symbol-item" onClick={() => revealLine(s.line + 1)}>
+                <span className="symbol-kind">{KIND_BADGE[s.kind] ?? '?'}</span>
+                {s.name}
+                <span className="symbol-line">:{s.line + 1}</span>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
