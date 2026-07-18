@@ -1,5 +1,14 @@
 import { useEffect, useRef } from 'react';
+// @ts-expect-error monaco 내부 모듈 — 타입 선언 없음 (경로 변동 시 빌드에서 즉시 실패)
+import { OverviewRulerFeature } from 'monaco-editor/esm/vs/editor/browser/widget/diffEditor/features/overviewRulerFeature.js';
 import { monaco } from '../monaco-setup';
+
+// Monaco diff 오버뷰 룰러 폭은 내부 상수(ONE_OVERVIEW_WIDTH=15 → 30px)일 뿐 강제 값이 아니다.
+// diff 에디터 생성 전(모듈 로드 시) static을 낮춰 예약 레인·스크롤바 위치·룰러 폭을 일관되게
+// 축소한다 — CSS scaleX 없이 스크롤바에 밀착, 갭/여백 없음. static import라 경로 변동 시 빌드에서 즉시 실패.
+const OW = OverviewRulerFeature as unknown as { ONE_OVERVIEW_WIDTH: number; ENTIRE_DIFF_OVERVIEW_WIDTH: number };
+OW.ONE_OVERVIEW_WIDTH = 8;
+OW.ENTIRE_DIFF_OVERVIEW_WIDTH = 16; // 8(삭제) + 8(추가)
 
 /** 에이전트 변경 제안 diff — Monaco DiffEditor (읽기 전용, 임시 인메모리 모델).
  * Monaco DiffEditor는 진짜 미니맵을 강제 비활성하므로 diff 오버뷰 룰러가 그 역할을 한다. */
