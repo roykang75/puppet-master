@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscGitCompare, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
-import { disposeModel } from './EditorPane';
+import { disposeModel, isDiffTabPath } from './EditorPane';
 import { isImagePath } from './ImageView';
 
 export function FileTabs() {
@@ -69,8 +69,12 @@ export function FileTabs() {
       <div className="tab-strip">
         {tabs.map((t) => (
           <div key={t.path} className={`tab${t.path === activePath ? ' active' : ''}`} onClick={() => setActive(t.path)}>
-            <img className="file-icon tab-file-icon" src={fileIconUrl(t.path.split('/').pop() ?? '')} alt="" />
-            <span>{t.path.split('/').pop()}</span>
+            {t.diff ? (
+              <span className="split-tab-icon"><VscGitCompare /></span>
+            ) : (
+              <img className="file-icon tab-file-icon" src={fileIconUrl(t.path.split('/').pop() ?? '')} alt="" />
+            )}
+            <span>{t.diff ? `변경 제안 ${t.diff.path.split('/').pop()}` : t.path.split('/').pop()}</span>
             {t.dirty && <span className="dirty-dot"><VscCircleFilled /></span>}
             {t.diskChanged && <span className="disk-changed" title="디스크에서 변경됨"><VscWarning /></span>}
             <span
@@ -86,7 +90,7 @@ export function FileTabs() {
         ))}
       </div>
       <div className="tabs-actions">
-        {activePath?.toLowerCase().endsWith('.md') && (
+        {activePath?.toLowerCase().endsWith('.md') && !isDiffTabPath(activePath) && (
           <span
             className="nav-btn"
             title="마크다운 미리보기 (분할)"
@@ -97,7 +101,7 @@ export function FileTabs() {
             }}
           ><VscOpenPreview /></span>
         )}
-        {activePath && !isImagePath(activePath) && (
+        {activePath && !isImagePath(activePath) && !isDiffTabPath(activePath) && (
           <span
             className="nav-btn"
             title="세로 분할"
@@ -116,7 +120,7 @@ export function FileTabs() {
           <div className="open-editors-menu" ref={menuRef} tabIndex={-1} onKeyDown={onMenuKey}>
             <div className="open-editors-title">열린 파일 {tabs.length}개</div>
             {tabs.map((t, i) => {
-              const name = t.path.split('/').pop() ?? t.path;
+              const name = t.diff ? `변경 제안 ${t.diff.path.split('/').pop()}` : (t.path.split('/').pop() ?? t.path);
               const dir = t.path.slice(0, Math.max(0, t.path.length - name.length - 1));
               return (
                 <div
@@ -154,14 +158,10 @@ export function FileTabs() {
         <div className="split-tab">
           {split.kind === 'preview' ? (
             <span className="split-tab-icon"><VscOpenPreview /></span>
-          ) : split.kind === 'diff' ? (
-            <span className="split-tab-icon"><VscGitCompare /></span>
           ) : (
             <img className="file-icon tab-file-icon" src={fileIconUrl(splitName)} alt="" />
           )}
-          <span className="split-title">
-            {split.kind === 'preview' ? `미리보기 ${splitName}` : split.kind === 'diff' ? `변경 제안 ${splitName}` : splitName}
-          </span>
+          <span className="split-title">{split.kind === 'preview' ? `미리보기 ${splitName}` : splitName}</span>
           <span className="tab-close" title="분할 닫기" onClick={() => useAppStore.getState().setSplit(null)}><VscClose /></span>
         </div>
       </div>

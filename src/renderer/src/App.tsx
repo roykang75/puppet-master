@@ -210,8 +210,8 @@ export function App() {
         st.upsertChatTool({ id: ev.id, name: ev.name, summary: ev.summary, state: ev.state, detail: ev.detail, path: ev.path, before: ev.before, after: ev.after });
         if (ev.name === 'write_file' && ev.state === 'done') {
           st.bumpTreeRefresh();
-          // 승인 대기 중 열어둔 diff 뷰는 실행 완료 시 자동으로 닫는다 (내용이 stale)
-          if (st.split?.kind === 'diff' && st.split.path === ev.path) st.setSplit(null);
+          // 승인 대기 중 열어둔 변경 제안 탭은 실행 완료 시 자동으로 닫는다 (내용이 stale)
+          if (st.tabs.some((t) => t.path === `diff://${ev.path}`)) st.closeTab(`diff://${ev.path}`);
         }
       } else if (ev.type === 'done') st.setChatStreaming(false);
       else {

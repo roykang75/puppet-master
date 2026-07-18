@@ -4,9 +4,10 @@ import type { AgentToolUi } from '../../shared/protocol';
 import type { Bookmark } from './bookmarks';
 
 export interface Tab {
-  path: string;
+  path: string; // 파일 탭: 실제 경로 / diff 탭: 'diff://<실경로>' (고유 키)
   dirty: boolean;
   diskChanged: boolean;
+  diff?: { path: string; before: string; after: string }; // 있으면 에이전트 변경 제안 diff 탭 (읽기 전용 가상 문서)
 }
 
 interface AppState {
@@ -35,17 +36,15 @@ interface AppState {
   terminals: { id: number; title: string; exited: boolean }[];
   activeTerminalId: number | null;
   bottomTab: 'context' | 'terminal';
-  // 에디터 세로 분할 / 마크다운 미리보기 / 에이전트 diff 뷰(원본 vs 제안)
-  split:
-    | { kind: 'editor' | 'preview'; path: string }
-    | { kind: 'diff'; path: string; before: string; after: string }
-    | null;
+  // 에디터 세로 분할 / 마크다운 미리보기 (에이전트 diff는 일반 탭으로 통합됨)
+  split: { kind: 'editor' | 'preview'; path: string } | null;
   setSplit(split: AppState['split']): void;
   setProject(root: string): void;
   setIndexing(p: { done: number; total: number } | null): void;
   setStats(s: IndexStats): void;
   setError(msg: string | null): void;
   openTab(path: string): void;
+  openDiffTab(path: string, before: string, after: string): void; // 변경 제안 탭 열기/갱신 (키 diff://<path>)
   closeTab(path: string): void;
   setActive(path: string): void;
   setDirty(path: string, dirty: boolean): void;
@@ -117,6 +116,14 @@ export const useAppStore = create<AppState>((set) => ({
         ? { activePath: path }
         : { tabs: [...s.tabs, { path, dirty: false, diskChanged: false }], activePath: path },
     ),
+  openDiffTab: (path, before, after) =>
+    set((s) => {
+      const key = `diff://${path}`;
+      const tab: Tab = { path: key, dirty: false, diskChanged: false, diff: { path, before, after } };
+      const idx = s.tabs.findIndex((t) => t.path === key);
+      const tabs = idx >= 0 ? s.tabs.map((t, i) => (i === idx ? tab : t)) : [...s.tabs, tab];
+      return { tabs, activePath: key };
+    }),
   closeTab: (path) =>
     set((s) => {
       const tabs = s.tabs.filter((t) => t.path !== path);

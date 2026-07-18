@@ -22,7 +22,7 @@ export function scheduleSave(): void {
     if (!s.root) return;
     void window.si.saveUiState({
       panelLayouts,
-      openTabs: s.tabs.map((t) => t.path),
+      openTabs: s.tabs.filter((t) => !t.diff).map((t) => t.path), // 변경 제안(diff) 탭은 세션 한정 — 저장 제외
       activeTab: s.activePath,
     });
   }, 500);

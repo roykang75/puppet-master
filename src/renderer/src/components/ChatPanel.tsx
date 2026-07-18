@@ -188,7 +188,7 @@ export function ChatPanel() {
                             className="rename-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              useAppStore.getState().setSplit({ kind: 'diff', path: t.path!, before: t.before ?? '', after: t.after! });
+                              useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after!);
                             }}
                           >에디터에서 diff</button>
                         )}
@@ -200,7 +200,7 @@ export function ChatPanel() {
                           className="rename-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            useAppStore.getState().setSplit({ kind: 'diff', path: t.path!, before: t.before ?? '', after: t.after! });
+                            useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after!);
                           }}
                         >에디터에서 diff</button>
                       </span>

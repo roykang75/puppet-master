@@ -10,6 +10,10 @@ import { ensureLanguageRegistered } from '../textmate/registry';
 import { lspSync, isLspPath } from '../lsp-sync';
 import { SplitPane } from './SplitPane';
 import { ImageView, isImagePath } from './ImageView';
+import { DiffView } from './DiffView';
+
+/** 에이전트 변경 제안 diff 탭 키 (가상 문서 — 파일 로드/저장/LSP 대상 아님) */
+export const isDiffTabPath = (p: string): boolean => p.startsWith('diff://');
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -260,8 +264,8 @@ export function EditorPane() {
       editorInstance?.setModel(null);
       return;
     }
-    // 이미지 파일 — 텍스트 모델을 만들지 않는다 (ImageView가 표시, Monaco는 CSS 숨김)
-    if (isImagePath(activePath)) {
+    // 이미지/diff 탭 — 텍스트 모델을 만들지 않는다 (전용 뷰가 표시, Monaco는 CSS 숨김)
+    if (isImagePath(activePath) || isDiffTabPath(activePath)) {
       editorInstance?.setModel(null);
       return;
     }
@@ -310,7 +314,7 @@ export function EditorPane() {
   // 시맨틱 토큰 색칠 — 심볼 DB 기반. 파일 전환/재인덱싱(outlineVersion) 시 재적용.
   useEffect(() => {
     clearSemanticTokens();
-    if (!activePath || indexing || isImagePath(activePath)) return; // 인덱싱 중/비활성/이미지 → 색칠 없음(무해)
+    if (!activePath || indexing || isImagePath(activePath) || isDiffTabPath(activePath)) return; // 인덱싱 중/비활성/이미지/diff 탭 → 색칠 없음(무해)
     let cancelled = false;
     const uri = uriOf(activePath);
     const apply = (attempt = 0): void => {
@@ -349,10 +353,12 @@ export function EditorPane() {
   }, [pendingJump, activePath]);
 
   const showImage = !!activePath && isImagePath(activePath);
+  const activeDiff = useAppStore((s) => (s.activePath ? s.tabs.find((t) => t.path === s.activePath)?.diff : undefined));
   return (
     <div className="editor-split-row">
-      <div ref={hostRef} className="editor-host" style={showImage ? { display: 'none' } : undefined} />
+      <div ref={hostRef} className="editor-host" style={showImage || activeDiff ? { display: 'none' } : undefined} />
       {showImage && <ImageView path={activePath} />}
+      {activeDiff && <DiffView path={activeDiff.path} before={activeDiff.before} after={activeDiff.after} />}
       <SplitPane />
     </div>
   );

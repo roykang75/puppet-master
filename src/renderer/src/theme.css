@@ -157,6 +157,7 @@ body {
   overflow: auto; background: var(--bg);
 }
 .image-view img { max-width: 92%; max-height: 92%; object-fit: contain; }
+.diff-tab-host { flex: 1; min-width: 0; }
 /* 분할 영역 탭 바 — 파일 탭 바와 같은 줄에서 분할 경계로 나뉜다 (VS Code 에디터 그룹) */
 .tab-row { flex: none; display: flex; }
 .tab-row > .tabs { flex: 1; min-width: 0; }
