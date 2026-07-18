@@ -2,7 +2,7 @@
 import * as path from 'path';
 import type { LspLanguage } from '../../shared/protocol';
 
-export interface LspSpawnSpec { command: string; args: string[]; env?: NodeJS.ProcessEnv }
+export interface LspSpawnSpec { command: string; args: string[]; env?: NodeJS.ProcessEnv; initializationOptions?: Record<string, unknown> }
 export interface LspServerDef {
   lang: LspLanguage;
   exts: Set<string>;
@@ -30,11 +30,23 @@ export function pyrightEntryPath(): string {
   return unpacked(require.resolve('pyright/langserver.index.js'));
 }
 
+export function tsLangServerEntryPath(): string {
+  return unpacked(require.resolve('typescript-language-server/lib/cli.mjs'));
+}
+export function classicTsserverPath(): string {
+  return unpacked(require.resolve('typescript-classic/lib/tsserver.js'));
+}
+
 export const LSP_SERVERS: LspServerDef[] = [
   {
     lang: 'ts',
     exts: new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']),
-    resolveSpawn: () => ({ command: tsgoExePath(), args: ['--lsp', '--stdio'] }),
+    resolveSpawn: () => ({
+      command: process.execPath, // Electron 바이너리를 node로 — pyright와 동일
+      args: [tsLangServerEntryPath(), '--stdio'],
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      initializationOptions: { tsserver: { path: classicTsserverPath() } },
+    }),
   },
   {
     lang: 'py',

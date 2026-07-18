@@ -9,6 +9,7 @@ import {
 export interface LspClientOpts {
   rootUri: string;
   onDiagnostics(uri: string, diagnostics: unknown[]): void;
+  initializationOptions?: Record<string, unknown>;
 }
 
 export class LspClient {
@@ -33,6 +34,7 @@ export class LspClient {
     const result = (await this.conn.sendRequest('initialize', {
       processId: process.pid,
       rootUri: this.opts.rootUri,
+      initializationOptions: this.opts.initializationOptions,
       workspaceFolders: [{ uri: this.opts.rootUri, name: 'workspace' }],
       capabilities: {
         textDocument: {

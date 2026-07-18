@@ -87,8 +87,9 @@ export class LspManager {
   private spawnEntry(lang: LspLanguage, crashes: number): Entry | null {
     const def = serverForExt(this.extOf(lang))!;
     let proc: ChildLike;
+    let spec: LspSpawnSpec;
     try {
-      const spec = def.resolveSpawn();
+      spec = def.resolveSpawn();
       proc = this.deps.spawnFn
         ? this.deps.spawnFn(spec)
         : (spawn(spec.command, spec.args, { env: spec.env ?? process.env, stdio: ['pipe', 'pipe', 'pipe'] }) as unknown as ChildLike);
@@ -103,6 +104,7 @@ export class LspManager {
         const rel = this.uriToRel(uri);
         if (rel != null) this.deps.onDiagnostics(rel, toDiagnostics(raw));
       },
+      initializationOptions: spec.initializationOptions,
     });
     const entry: Entry = {
       client,
