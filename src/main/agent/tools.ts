@@ -17,6 +17,7 @@ export interface AgentToolDeps {
   allowedDirs: string[];
   searchText(query: string): Promise<{ path: string; snippet: string }[]>;
   commandTimeoutMs?: number; // 기본 30초 — 테스트 주입용
+  libraryDocs?: (library: string, query: string) => Promise<string>;
 }
 
 const OUTPUT_CAP = 20 * 1024; // run_command 출력 절단 (스펙 §3)
@@ -56,6 +57,11 @@ export const AGENT_TOOLS: ToolSpec[] = [
     description:
       '셸 명령을 실행한다 (cwd=프로젝트 루트, 30초 제한). 파일 쓰기/삭제는 프로젝트 안에서만 가능하다.',
     parameters: { type: 'object', properties: { command: { type: 'string', description: '셸 명령' } }, required: ['command'] },
+  },
+  {
+    name: 'library_docs',
+    description: '라이브러리/프레임워크의 최신 문서를 Context7에서 가져온다. library=패키지명(예: react), query=알고 싶은 주제.',
+    parameters: { type: 'object', properties: { library: { type: 'string', description: '패키지/라이브러리 이름' }, query: { type: 'string', description: '알고 싶은 주제/질문' } }, required: ['library', 'query'] },
   },
 ];
 
@@ -134,6 +140,7 @@ export function buildWriteDiff(deps: AgentToolDeps, rel: string, content: string
 export function toolSummary(name: string, args: Record<string, unknown>): string {
   if (name === 'run_command') return String(args.command ?? '');
   if (name === 'search_text') return String(args.query ?? '');
+  if (name === 'library_docs') return String(args.library ?? '');
   return String(args.path ?? '');
 }
 
@@ -226,6 +233,10 @@ export async function executeTool(
       }
       case 'run_command':
         return await runCommand(String(args.command ?? ''), deps);
+      case 'library_docs': {
+        if (!deps.libraryDocs) return '오류: 라이브러리 문서 도구를 사용할 수 없습니다 (Context7 미구성).';
+        return await deps.libraryDocs(String(args.library ?? ''), String(args.query ?? ''));
+      }
       default:
         return `오류: 알 수 없는 도구 '${name}'`;
     }

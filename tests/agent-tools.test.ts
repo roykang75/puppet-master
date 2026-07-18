@@ -24,9 +24,9 @@ afterEach(() => {
 });
 
 describe('AGENT_TOOLS 스키마', () => {
-  it('5종 도구가 이름/설명/파라미터를 갖는다', () => {
+  it('6종 도구가 이름/설명/파라미터를 갖는다', () => {
     expect(AGENT_TOOLS.map((t) => t.name).sort()).toEqual(
-      ['list_dir', 'read_file', 'run_command', 'search_text', 'write_file'],
+      ['library_docs', 'list_dir', 'read_file', 'run_command', 'search_text', 'write_file'],
     );
     for (const t of AGENT_TOOLS) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -106,6 +106,18 @@ describe('executeTool', () => {
     const r = await executeTool('nope', {}, deps());
     expect(r).toContain('알 수 없는 도구');
   });
+  it('library_docs: 도구셋 포함 + deps.libraryDocs 호출', async () => {
+    expect(READONLY_AGENT_TOOLS.map((t) => t.name)).toContain('library_docs');
+    expect(AGENT_TOOLS.map((t) => t.name)).toContain('library_docs');
+    const out = await executeTool('library_docs', { library: 'react', query: 'hooks' }, deps({
+      libraryDocs: async (lib, q) => `DOCS:${lib}:${q}`,
+    }));
+    expect(out).toBe('DOCS:react:hooks');
+  });
+  it('library_docs: 주입 없으면 안내', async () => {
+    const out = await executeTool('library_docs', { library: 'react', query: 'x' }, deps());
+    expect(out).toContain('사용할 수 없');
+  });
 });
 
 describe('buildWriteDiff', () => {
@@ -166,7 +178,7 @@ describe.skipIf(process.platform !== 'darwin')('run_command 샌드박스', () =>
 
   it('읽기 전용 도구셋은 쓰기/실행 도구를 제외한다', () => {
     const names = READONLY_AGENT_TOOLS.map((t) => t.name);
-    expect(names).toEqual(['list_dir', 'read_file', 'search_text']);
+    expect(names).toEqual(['list_dir', 'read_file', 'search_text', 'library_docs']);
     expect(names).not.toContain('write_file');
     expect(names).not.toContain('run_command');
   });

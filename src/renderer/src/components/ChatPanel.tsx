@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop, VscFolderOpened, VscFileCode, VscEdit, VscSearch, VscTerminal, VscTools } from 'react-icons/vsc';
+import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop, VscFolderOpened, VscFileCode, VscEdit, VscSearch, VscTerminal, VscTools, VscBook } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { scheduleChatSave } from '../chat-persist';
 import { deriveTitle } from '../../../shared/chat-title';
@@ -51,6 +51,7 @@ const TOOL_META: Record<string, { icon: ReactNode; label: string }> = {
   write_file: { icon: <VscEdit />, label: 'Write File' },
   search_text: { icon: <VscSearch />, label: 'Search' },
   run_command: { icon: <VscTerminal />, label: 'Run Command' },
+  library_docs: { icon: <VscBook />, label: 'Docs' },
 };
 
 function formatTime(ts?: number): string {
