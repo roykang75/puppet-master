@@ -173,3 +173,9 @@ export interface UiState {
   openTabs: string[];
   activeTab: string | null;
 }
+
+// ── 프로젝트 스택 감지 (Plan 12) ──
+export interface ProjectStack {
+  languages: string[];
+  libraries: { name: string; version?: string }[];
+}
