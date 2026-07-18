@@ -44,6 +44,28 @@ describe('LspClient', () => {
     expect(received.some((r) => r.method === 'initialized')).toBe(true);
   });
 
+  it('initialize 요청에 initializationOptions가 포함된다', async () => {
+    const initOpts = { tsserver: { path: '/x/tsserver.js' } };
+    const c2s = new PassThrough();
+    const s2c = new PassThrough();
+    const srv = createMessageConnection(new StreamMessageReader(c2s), new StreamMessageWriter(s2c));
+    let seen: any;
+    srv.onRequest('initialize', (p) => {
+      seen = p;
+      return { capabilities: {} };
+    });
+    srv.listen();
+    const c = new LspClient(s2c, c2s, {
+      rootUri: 'file:///proj',
+      onDiagnostics: () => {},
+      initializationOptions: initOpts,
+    });
+    await c.initialize();
+    expect(seen.initializationOptions).toEqual(initOpts);
+    c.dispose();
+    srv.dispose();
+  });
+
   it('문서 수명 통지: didOpen(Full)/didChange/didClose/didSave', async () => {
     await client.initialize();
     client.didOpen('file:///proj/a.ts', 'typescript', 'abc', 1);
