@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop } from 'react-icons/vsc';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop, VscFolderOpened, VscFileCode, VscEdit, VscSearch, VscTerminal, VscTools } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { scheduleChatSave } from '../chat-persist';
 import { deriveTitle } from '../../../shared/chat-title';
@@ -43,6 +43,15 @@ function changedFiles(tools?: AgentToolUi[]): AgentToolUi[] {
   }
   return [...byPath.values()];
 }
+
+// 도구 카드 표시 — 원시 이름(read_file) 대신 아이콘 + 영문 라벨 (개발자 가독성)
+const TOOL_META: Record<string, { icon: ReactNode; label: string }> = {
+  list_dir: { icon: <VscFolderOpened />, label: 'List Dir' },
+  read_file: { icon: <VscFileCode />, label: 'Read File' },
+  write_file: { icon: <VscEdit />, label: 'Write File' },
+  search_text: { icon: <VscSearch />, label: 'Search' },
+  run_command: { icon: <VscTerminal />, label: 'Run Command' },
+};
 
 function formatTime(ts?: number): string {
   if (!ts) return '';
@@ -239,7 +248,10 @@ export function ChatPanel() {
                     }}
                   >
                     <span className="tool-card-head">
-                      <span className="tool-name">{t.name}</span>
+                      <span className="tool-name">
+                        <span className="tool-icon">{TOOL_META[t.name]?.icon ?? <VscTools />}</span>
+                        {TOOL_META[t.name]?.label ?? t.name}
+                      </span>
                       <span className="tool-summary" title={t.summary}>{t.summary}</span>
                       <span className="tool-state">
                         {t.state === 'running' ? '실행 중…' : t.state === 'done' ? '완료' : t.state === 'error' ? '실패' : '승인 대기'}
