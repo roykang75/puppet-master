@@ -81,6 +81,25 @@ function parsePyproject(content: string): Lib[] {
       if (m) out.push({ name: m[1], version: m[2] });
     }
   }
+  // [tool.poetry.dependencies] 테이블형: name = "version" 또는 name = { version = "...", ... }
+  let inPoetrySection = false;
+  for (const raw of content.split('\n')) {
+    const line = raw.trim();
+    if (/^\[.*\]$/.test(line)) {
+      inPoetrySection = line === '[tool.poetry.dependencies]';
+      continue;
+    }
+    if (!inPoetrySection || !line || line.startsWith('#')) continue;
+    const m = line.match(/^([A-Za-z0-9._-]+)\s*=\s*(.+)$/);
+    if (!m) continue;
+    const name = m[1];
+    if (name === 'python') continue;
+    const rest = m[2].trim();
+    const simple = rest.match(/^["']([^"']+)["']/);
+    const inline = rest.match(/version\s*=\s*["']([^"']+)["']/);
+    const version = simple?.[1] ?? inline?.[1];
+    out.push({ name, version });
+  }
   return out;
 }
 

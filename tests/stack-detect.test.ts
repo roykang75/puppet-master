@@ -43,6 +43,14 @@ describe('detectStack', () => {
     expect(s.libraries.length).toBeLessThanOrEqual(MAX_LIBRARIES);
   });
 
+  it('pyproject.toml poetry 테이블형 의존성 파싱 (python 제외)', () => {
+    const s = detectStack([{ path: 'pyproject.toml', content: '[tool.poetry.dependencies]\npython = "^3.11"\nflask = "^3.0.0"\nrequests = { version = "2.31.0", optional = true }\n\n[tool.poetry.dev-dependencies]\npytest = "^8.0.0"\n' }]);
+    const names = s.libraries.map((l) => l.name);
+    expect(names).not.toContain('python');
+    expect(s.libraries.find((l) => l.name === 'flask')?.version).toBe('^3.0.0');
+    expect(s.libraries.find((l) => l.name === 'requests')?.version).toBe('2.31.0');
+  });
+
   it('매니페스트 없거나 파싱 실패해도 안전 (부분 결과)', () => {
     expect(detectStack([{ path: 'package.json', content: '{ broken' }])).toEqual({ languages: [], libraries: [] });
     expect(detectStack([])).toEqual({ languages: [], libraries: [] });
