@@ -21,6 +21,10 @@ export class Persistence {
     return path.join(this.baseDir, 'index', `${this.projectHash(root)}.db`);
   }
 
+  chatDbPathFor(root: string): string {
+    return path.join(this.baseDir, 'chat', `${this.projectHash(root)}.db`);
+  }
+
   loadRecent(): RecentEntry[] {
     try {
       return JSON.parse(fs.readFileSync(path.join(this.baseDir, 'recent.json'), 'utf8')) as RecentEntry[];
