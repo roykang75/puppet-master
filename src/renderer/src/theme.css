@@ -150,8 +150,9 @@ body {
 .split-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
 /* diff 에디터(분할 창·일반 탭 공통): diff 룰러(미니맵 역할)는 유지하되 그 위의 뷰포트 핸들은 숨긴다 (스크롤바가 별도로 있음) */
 .monaco-diff-editor .diffViewport { display: none; }
-/* 룰러 폭은 Monaco 상수(30px)라 옵션이 없다 — 오른쪽 기준 가로 1/2 축소 (클릭 점프도 축소 영역 기준으로 정상) */
-.monaco-diff-editor .diffOverview { transform: scaleX(0.5); transform-origin: right center; }
+/* 룰러 폭은 Monaco 상수(30px)라 옵션이 없다 — 왼쪽 기준 1/2 축소해 스크롤바에 붙인다
+   (right 기준이면 예약 레인의 왼쪽 절반이 스크롤바와 룰러 사이 갭으로 남는다) */
+.monaco-diff-editor .diffOverview { transform: scaleX(0.5); transform-origin: left center; }
 .image-view {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
   overflow: auto; background: var(--bg);
