@@ -140,6 +140,7 @@ export function ChatPanel() {
       const { id } = await window.si.chatThreadCreate(deriveTitle(text));
       tid = id;
       useAppStore.getState().setActiveThreadId(id);
+      refreshThreads(); // 새 스레드가 목록에 없으면 헤더 제목이 '새 대화'로 남는다
     }
     st.appendChatUser(text);
     st.appendChatAssistant();
