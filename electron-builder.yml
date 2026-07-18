@@ -19,9 +19,14 @@ asarUnpack:
 # electron-builder는 node_modules의 *.d.ts를 기본 제거하지만(excludedExts), tsgo는 tsc
 # 바이너리 옆 lib/*.d.ts(표준 라이브러리)를 런타임에 읽어야 한다 — 없으면 기동 즉시 panic.
 # asar 패킹 이후 복사되는 extraResources로 unpacked lib 디렉터리에 그대로 되살린다.
+# 클래식 tsserver(typescript-classic)도 동일 — lib/lib.*.d.ts가 없으면 표준 타입을 못 찾아
+# "Cannot find global type" 등으로 전체가 깨진다. asarUnpack만으론 제거 단계 전이라 못 살린다.
 extraResources:
   - from: "node_modules/@typescript"
     to: "app.asar.unpacked/node_modules/@typescript"
+    filter: ["**/*.d.ts"]
+  - from: "node_modules/typescript-classic/lib"
+    to: "app.asar.unpacked/node_modules/typescript-classic/lib"
     filter: ["**/*.d.ts"]
 mac:
   target: [dir, dmg, zip]
