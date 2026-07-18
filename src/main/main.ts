@@ -13,7 +13,10 @@ import { LspManager } from './lsp/manager';
 import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage } from '../shared/protocol';
+import { detectStack } from './stack/detect';
+import { buildStackSummary } from '../shared/stack-summary';
+import { Context7Service } from './context7/service';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage, ProjectStack } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -35,6 +38,7 @@ let lsp: LspManager | null = null;
 let terminals: TerminalManager | null = null;
 let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
+let currentStack: ProjectStack | null = null;
 let quitting = false;
 let persistence: Persistence;
 let settingsStore: SettingsStore;
@@ -76,6 +80,19 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
 
     files = new ProjectFiles(root);
     currentRoot = root;
+    // 스택 감지 (로컬 파싱만 — 네트워크 X, 실패해도 열기 성공)
+    try {
+      const CANDS = ['package.json', 'requirements.txt', 'pyproject.toml', 'go.mod', 'pom.xml', 'build.gradle', 'build.gradle.kts'];
+      const manifest = CANDS
+        .map((n) => ({ p: path.join(root, n), n }))
+        .filter((c) => fs.existsSync(c.p))
+        .map((c) => ({ path: c.n, content: fs.readFileSync(c.p, 'utf8') }));
+      // 언어 감지용 소스 확장자 표본 — 루트 파일 목록만(재귀 없음, 값싸게)
+      const sample = fs.readdirSync(root).map((n) => ({ path: n, content: '' }));
+      currentStack = detectStack([...manifest, ...sample]);
+    } catch {
+      currentStack = null;
+    }
     completionService?.clearOutlineCache(); // 프로젝트 전환 — rel path 충돌 방지
     lsp?.shutdownAll();
     lsp = new LspManager({
@@ -308,6 +325,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
   ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs: string[] }) => settingsStore.setAgent(a));
   ipcMain.handle('settings:context7:set-key', (_e, key: string) => settingsStore.setContext7Key(key));
+  ipcMain.handle('stack:get', () => (currentStack ? buildStackSummary(currentStack) : null));
 
   const themesDir = () => path.join(app.getPath('userData'), 'themes');
   ipcMain.handle('theme:list', () => {
@@ -393,6 +411,7 @@ app.whenReady().then(() => {
     getSettings: () => settingsStore.getCompletion(),
     getApiKey: () => settingsStore.getApiKey(),
   });
+  const context7 = new Context7Service({ getApiKey: () => settingsStore.getContext7Key() });
   agentService = new AgentService({
     getSettings: () => settingsStore.getCompletion(),
     getApiKey: () => settingsStore.getApiKey(),
@@ -405,6 +424,7 @@ app.whenReady().then(() => {
               indexer
                 ? ((await indexer.rpc.request('searchText', { query }, { timeoutMs: 30_000 })) as { path: string; snippet: string }[])
                 : [],
+            libraryDocs: (library: string, query: string) => context7.libraryDocs(library, query),
           }
         : null,
   });

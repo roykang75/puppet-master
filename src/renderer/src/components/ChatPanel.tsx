@@ -143,8 +143,10 @@ export function ChatPanel() {
     }
     const activeCtx = buildChatContext(editorState, signatures);
     const retrieved = await retrieveSnippets(text, editorState?.path).catch(() => []);
+    const stack = await window.si.getProjectStack().catch(() => null);
+    const base = retrieved.length > 0 ? { ...(activeCtx ?? {}), retrieved } : activeCtx;
     const context: ChatContext | null =
-      retrieved.length > 0 ? { ...(activeCtx ?? {}), retrieved } : activeCtx;
+      stack ? { ...(base ?? {}), stack } : base;
     let tid = useAppStore.getState().activeThreadId;
     if (!tid) {
       const { id } = await window.si.chatThreadCreate(deriveTitle(text));
