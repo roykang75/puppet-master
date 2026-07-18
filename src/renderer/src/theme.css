@@ -354,8 +354,12 @@ body {
 .tool-card.clickable { cursor: pointer; }
 .tool-card.clickable:hover { background: var(--bg-hover); }
 .tool-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.tool-name { color: var(--accent); font-weight: 600; flex: none; display: inline-flex; align-items: center; gap: 4px; }
-.tool-icon { display: inline-flex; align-items: center; font-size: 14px; }
+.tool-name {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 8px 1px 6px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-hover); color: var(--accent); font-weight: 600; font-size: 11px;
+}
+.tool-icon { display: inline-flex; align-items: center; font-size: 13px; }
 .tool-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, Menlo, monospace; }
 .tool-state { flex: none; color: var(--fg-dim); font-size: 11px; }
 .tool-card.tool-error .tool-state { color: var(--warn); }
