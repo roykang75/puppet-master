@@ -32,9 +32,13 @@ function renderDiff(text: string) {
   );
 }
 
-/** 이 응답에서 write_file로 실제 변경된 파일 목록 (중복 제거) */
-function changedFiles(tools?: AgentToolUi[]): string[] {
-  return [...new Set((tools ?? []).filter((t) => t.name === 'write_file' && t.state === 'done' && t.path).map((t) => t.path!))];
+/** 이 응답에서 write_file로 실제 변경된 파일 (경로별 최신 도구, 클릭 시 diff 열기용) */
+function changedFiles(tools?: AgentToolUi[]): AgentToolUi[] {
+  const byPath = new Map<string, AgentToolUi>();
+  for (const t of tools ?? []) {
+    if (t.name === 'write_file' && t.state === 'done' && t.path) byPath.set(t.path, t); // 같은 경로 재작성이면 마지막 것
+  }
+  return [...byPath.values()];
 }
 
 function formatTime(ts?: number): string {
@@ -194,17 +198,7 @@ export function ChatPanel() {
                         )}
                       </span>
                     )}
-                    {t.state === 'done' && t.path && t.after !== undefined && (
-                      <span className="tool-actions">
-                        <button
-                          className="rename-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after!);
-                          }}
-                        >에디터에서 diff</button>
-                      </span>
-                    )}
+                    {/* 완료 후 diff는 하단 '변경된 파일' 칩에서 연다 (여러 파일 개별 접근) */}
                     {t.detail && (
                       <details
                         className="tool-detail"
@@ -222,10 +216,19 @@ export function ChatPanel() {
             {m.role === 'assistant' && changedFiles(m.tools).length > 0 && (
               <div className="changed-files">
                 <span className="changed-files-label">변경된 파일</span>
-                {changedFiles(m.tools).map((p) => (
-                  <span key={p} className="changed-file-chip" title={p} onClick={() => useAppStore.getState().openTab(p)}>
-                    <img className="file-icon tab-file-icon" src={fileIconUrl(p.split('/').pop() ?? '')} alt="" />
-                    {p}
+                {changedFiles(m.tools).map((t) => (
+                  <span
+                    key={t.path}
+                    className="changed-file-chip"
+                    title={`${t.path} — 클릭하면 변경 내용(diff)`}
+                    onClick={() => {
+                      // 원문이 있으면 diff 탭으로, 없으면(대용량 등) 파일 자체를 연다
+                      if (t.after !== undefined) useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after);
+                      else useAppStore.getState().openTab(t.path!);
+                    }}
+                  >
+                    <img className="file-icon tab-file-icon" src={fileIconUrl(t.path!.split('/').pop() ?? '')} alt="" />
+                    {t.path}
                   </span>
                 ))}
               </div>
