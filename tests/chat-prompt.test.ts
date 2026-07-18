@@ -45,6 +45,11 @@ describe('buildChatSystemPrompt', () => {
     expect(s).toContain('src/misc.ts: const y = cache.get(k)');
   });
 
+  it('스택 요약 섹션 렌더', () => {
+    const s = buildChatSystemPrompt({ stack: '언어: TypeScript · 라이브러리: react@18.3.1' });
+    expect(s).toContain('이 프로젝트의 스택(참고): 언어: TypeScript');
+  });
+
   it('활성 파일 없이 검색 스니펫만 있어도 렌더', () => {
     const s = buildChatSystemPrompt({ retrieved: [{ path: 'a.ts', snippet: 's' }] });
     expect(s).not.toContain('사용자가 보고 있는 코드');

@@ -20,6 +20,10 @@ export function buildChatSystemPrompt(context: ChatContext | null): string {
       for (const sig of context.signatures) lines.push(`- ${sig}`);
     }
   }
+  if (context?.stack) {
+    lines.push('');
+    lines.push(`이 프로젝트의 스택(참고): ${context.stack}`);
+  }
   if (context?.retrieved && context.retrieved.length > 0) {
     lines.push('');
     lines.push('질문과 관련해 자동 검색으로 찾은 코드 (정확하지 않을 수 있으니 참고만 한다):');

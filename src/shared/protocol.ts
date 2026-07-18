@@ -134,6 +134,7 @@ export interface ChatContext {
   startLine?: number; // 1-기반 (표시용)
   signatures?: string[];
   retrieved?: RetrievedSnippet[]; // 자동 검색으로 찾은 관련 코드
+  stack?: string; // 프로젝트 스택 요약(자동 감지)
 }
 export type ChatEvent =
   | { type: 'chunk'; text: string }
