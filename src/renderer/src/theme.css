@@ -263,6 +263,14 @@ body {
   font-size: 14px; padding: 2px 6px; border-radius: 4px;
 }
 .profile-remove:hover { color: var(--fg); background: var(--bg-hover); }
+/* 컴팩트 프로파일 행 — 상세 폼은 팝업 모달로 (설정 창이 길어지지 않게) */
+.profile-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.profile-row-name { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.profile-row-meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-dim); font-size: 12px; }
+.profile-edit { flex: none; background: none; border: none; color: var(--fg-dim); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+.profile-edit:hover { color: var(--fg); background: var(--bg-hover); }
+.profile-modal-backdrop { z-index: 60; } /* 설정 오버레이(50) 위에 표시 */
+.profile-modal { width: 460px; }
 .allowed-dir-row { display: flex; align-items: center; gap: 6px; }
 .allowed-dir-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg); }
 

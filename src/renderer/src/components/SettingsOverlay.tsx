@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscAdd, VscTrash } from 'react-icons/vsc';
+import { VscAdd, VscTrash, VscEdit } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { refreshCompletionSettings } from '../completion-provider';
 import { monaco } from '../monaco-setup';
@@ -37,6 +37,9 @@ export function SettingsOverlay() {
   const [allowedDirs, setAllowedDirs] = useState<string[]>([]);
   const [context7Key, setContext7Key] = useState('');
   const [hasContext7Key, setHasContext7Key] = useState(false);
+  // 모델 추가/편집 팝업 — index null이면 신규, 아니면 해당 프로파일 편집
+  const [editing, setEditing] = useState<{ index: number | null; draft: EditProfile } | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [themeOptions, setThemeOptions] = useState<{ id: string; name: string }[]>(BUNDLED_THEMES);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,15 +94,32 @@ export function SettingsOverlay() {
 
   const close = () => setOpen(false);
 
-  const update = (i: number, patch: Partial<EditProfile>) =>
-    setProfiles((prev) => prev.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-
-  const addProfile = () => {
-    setProfiles((prev) => [
-      ...prev,
-      { key: crypto.randomUUID(), name: '', provider: 'openai', model: '', baseURL: '', apiKey: '', hasApiKey: false },
-    ]);
-    if (activeIdx === null) setActiveIdx(profiles.length); // 첫 추가면 바로 활성
+  // 팝업 열기 — 신규/편집 모두 드래프트로 편집하고, 확인 시에만 profiles에 반영
+  const openAdd = () => {
+    setModalError(null);
+    setEditing({ index: null, draft: { key: crypto.randomUUID(), name: '', provider: 'openai', model: '', baseURL: '', apiKey: '', hasApiKey: false } });
+  };
+  const openEdit = (i: number) => {
+    setModalError(null);
+    setEditing({ index: i, draft: { ...profiles[i], apiKey: '' } }); // 키는 항상 빈 값으로 시작(저장된 키 미표시)
+  };
+  const updateDraft = (patch: Partial<EditProfile>) =>
+    setEditing((e) => (e ? { ...e, draft: { ...e.draft, ...patch } } : e));
+  const confirmEdit = () => {
+    if (!editing) return;
+    const d = editing.draft;
+    if (!d.model.trim()) {
+      setModalError('모델을 입력하세요.');
+      return;
+    }
+    if (editing.index === null) {
+      setProfiles((prev) => [...prev, d]);
+      if (activeIdx === null) setActiveIdx(profiles.length); // 첫 추가면 바로 활성
+    } else {
+      const idx = editing.index;
+      setProfiles((prev) => prev.map((p, j) => (j === idx ? d : p)));
+    }
+    setEditing(null);
   };
 
   const removeProfile = (i: number) => {
@@ -164,8 +184,9 @@ export function SettingsOverlay() {
   };
 
   return (
-    // click 대신 mousedown + target 검사 — 입력란에서 드래그해 밖에서 떼면 click target이
-    // 공통 조상(backdrop)으로 판정돼 창이 닫히는 문제 방지
+    <>
+    {/* click 대신 mousedown + target 검사 — 입력란에서 드래그해 밖에서 떼면 click target이
+        공통 조상(backdrop)으로 판정돼 창이 닫히는 문제 방지 */}
     <div className="search-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <div className="search-box settings-box" onKeyDown={onKey} ref={boxRef}>
         <div className="settings-header">AI 설정</div>
@@ -173,7 +194,7 @@ export function SettingsOverlay() {
         <div className="settings-body">
           <div className="settings-section-title">
             <span>모델 프로파일 — 활성 1개를 자동완성/채팅이 사용</span>
-            <button className="rename-btn icon-btn" onClick={addProfile}><VscAdd /> 모델 추가</button>
+            <button className="rename-btn icon-btn" onClick={openAdd}><VscAdd /> 모델 추가</button>
           </div>
 
           <label className="settings-field profile-none">
@@ -186,59 +207,24 @@ export function SettingsOverlay() {
             <span>사용 안 함</span>
           </label>
 
+          {profiles.length === 0 && <div className="hint">등록된 모델이 없습니다. "모델 추가"로 등록하세요.</div>}
           {profiles.map((p, i) => (
-            <div key={p.key} className="profile-card">
-              <div className="profile-head">
-                <label className="profile-active">
-                  <input
-                    type="radio"
-                    name="active-profile"
-                    checked={activeIdx === i}
-                    onChange={() => setActiveIdx(i)}
-                  />
-                  <input
-                    className="profile-name"
-                    value={p.name}
-                    placeholder="이름 (비우면 모델명)"
-                    onChange={(e) => update(i, { name: e.target.value })}
-                  />
-                </label>
-                <button className="profile-remove" title="삭제" onClick={() => removeProfile(i)}><VscTrash /></button>
-              </div>
-              <label className="settings-field">
-                <span className="settings-label">제공자</span>
-                <select value={p.provider} onChange={(e) => update(i, { provider: e.target.value as Provider })}>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="openai">OpenAI 호환 (로컬 등)</option>
-                </select>
-              </label>
-              <label className="settings-field">
-                <span className="settings-label">모델</span>
-                <input
-                  value={p.model}
-                  placeholder={MODEL_PLACEHOLDER[p.provider]}
-                  onChange={(e) => update(i, { model: e.target.value })}
-                />
-              </label>
-              {p.provider === 'openai' && (
-                <label className="settings-field">
-                  <span className="settings-label">Base URL</span>
-                  <input
-                    value={p.baseURL}
-                    placeholder="http://localhost:1234/v1"
-                    onChange={(e) => update(i, { baseURL: e.target.value })}
-                  />
-                </label>
-              )}
-              <label className="settings-field">
-                <span className="settings-label">API 키{p.hasApiKey ? ' (저장됨)' : ''}</span>
-                <input
-                  type="password"
-                  value={p.apiKey}
-                  placeholder="변경 시에만 입력 — 저장된 키는 표시되지 않음"
-                  onChange={(e) => update(i, { apiKey: e.target.value })}
-                />
-              </label>
+            <div key={p.key} className="profile-row">
+              <input
+                type="radio"
+                name="active-profile"
+                checked={activeIdx === i}
+                onChange={() => setActiveIdx(i)}
+              />
+              <span className="profile-row-name" title={p.name.trim() || p.model.trim()}>
+                {p.name.trim() || p.model.trim() || '(이름 없음)'}
+              </span>
+              <span className="profile-row-meta">
+                {p.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} · {p.model.trim() || '모델 미설정'}
+                {p.hasApiKey || p.apiKey ? ' · 키✓' : ''}
+              </span>
+              <button className="profile-edit" title="편집" onClick={() => openEdit(i)}><VscEdit /></button>
+              <button className="profile-remove" title="삭제" onClick={() => removeProfile(i)}><VscTrash /></button>
             </div>
           ))}
 
@@ -300,5 +286,70 @@ export function SettingsOverlay() {
         </div>
       </div>
     </div>
+
+    {editing && (
+      <div
+        className="search-backdrop profile-modal-backdrop"
+        onMouseDown={(e) => { if (e.target === e.currentTarget) setEditing(null); }}
+      >
+        <div
+          className="search-box settings-box profile-modal"
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setEditing(null); } }}
+        >
+          <div className="settings-header">{editing.index === null ? '모델 추가' : '모델 편집'}</div>
+          <div className="settings-body">
+            <label className="settings-field">
+              <span className="settings-label">이름 (비우면 모델명)</span>
+              <input
+                autoFocus
+                value={editing.draft.name}
+                placeholder="예: 로컬 Qwen"
+                onChange={(e) => updateDraft({ name: e.target.value })}
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">제공자</span>
+              <select value={editing.draft.provider} onChange={(e) => updateDraft({ provider: e.target.value as Provider })}>
+                <option value="anthropic">Anthropic</option>
+                <option value="openai">OpenAI 호환 (로컬 등)</option>
+              </select>
+            </label>
+            <label className="settings-field">
+              <span className="settings-label">모델</span>
+              <input
+                value={editing.draft.model}
+                placeholder={MODEL_PLACEHOLDER[editing.draft.provider]}
+                onChange={(e) => updateDraft({ model: e.target.value })}
+              />
+            </label>
+            {editing.draft.provider === 'openai' && (
+              <label className="settings-field">
+                <span className="settings-label">Base URL</span>
+                <input
+                  value={editing.draft.baseURL}
+                  placeholder="http://localhost:1234/v1"
+                  onChange={(e) => updateDraft({ baseURL: e.target.value })}
+                />
+              </label>
+            )}
+            <label className="settings-field">
+              <span className="settings-label">API 키{editing.draft.hasApiKey ? ' (저장됨)' : ''}</span>
+              <input
+                type="password"
+                value={editing.draft.apiKey}
+                placeholder="변경 시에만 입력 — 저장된 키는 표시되지 않음"
+                onChange={(e) => updateDraft({ apiKey: e.target.value })}
+              />
+            </label>
+            {modalError && <div className="settings-error">오류: {modalError}</div>}
+          </div>
+          <div className="settings-actions">
+            <button className="rename-btn" onClick={() => setEditing(null)}>취소</button>
+            <button className="rename-btn primary" onClick={confirmEdit}>확인</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
