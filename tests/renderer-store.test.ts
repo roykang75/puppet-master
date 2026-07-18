@@ -47,6 +47,16 @@ describe('useAppStore', () => {
     expect(st.tabs).toEqual([]);
     expect(st.activePath).toBeNull();
   });
+  it('setActiveThreadId / setThreads / loadThreadMessages', () => {
+    const s = useAppStore.getState();
+    s.setThreads([{ id: 't1', title: 'A', updatedAt: 1 }]);
+    s.setActiveThreadId('t1');
+    s.loadThreadMessages([{ role: 'user', content: '복원됨', ts: 5 }]);
+    const st = useAppStore.getState();
+    expect(st.activeThreadId).toBe('t1');
+    expect(st.threads).toHaveLength(1);
+    expect(st.chatMessages).toEqual([{ role: 'user', content: '복원됨', ts: 5 }]);
+  });
   it('upsertChatTool: 마지막 어시스턴트 메시지에 id로 upsert', () => {
     const s = useAppStore.getState();
     s.appendChatUser('만들어');
