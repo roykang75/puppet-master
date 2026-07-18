@@ -1,4 +1,4 @@
-# SourceInSight 단축키
+# Puppet Master 단축키
 
 macOS / Windows(Linux) 기준 단축키 목록. macOS는 `Cmd`, Windows는 `Ctrl`을 사용하며 나머지 키는 동일하다.
 

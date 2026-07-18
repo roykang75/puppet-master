@@ -203,7 +203,7 @@ function Workspace() {
 function CaptionBar() {
   const root = useAppStore((s) => s.root);
   const name = root?.split('/').pop();
-  return <div className="caption-bar">{name ? `${name} — SourceInSight` : 'SourceInSight'}</div>;
+  return <div className="caption-bar">{name ? `${name} — Puppet Master` : 'Puppet Master'}</div>;
 }
 
 export function App() {

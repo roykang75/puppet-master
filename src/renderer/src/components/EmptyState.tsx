@@ -12,7 +12,7 @@ export function EmptyState({ onOpen }: { onOpen: (root: string) => void }) {
   };
   return (
     <div className="empty-state">
-      <h2>SourceInSight</h2>
+      <h2>Puppet Master</h2>
       <button className="icon-btn" onClick={() => void pick()}><VscFolderOpened /> 폴더 열기</button>
       {recent.length > 0 && (
         <div className="recent-list">

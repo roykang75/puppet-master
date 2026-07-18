@@ -1,4 +1,4 @@
-# SourceInSight TODO
+# Puppet Master TODO
 
 > Source Insight 클론 (Electron + React + Monaco / Node 인덱서)
 > 스펙: `docs/superpowers/specs/2026-07-15-sourceinsight-clone-design.md`

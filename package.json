@@ -1,8 +1,8 @@
 {
-  "name": "sourceinsight",
+  "name": "puppetmaster",
   "version": "0.1.0",
   "private": true,
-  "description": "SourceInSight — 로컬 코드 인덱싱/탐색 데스크톱 앱",
+  "description": "Puppet Master — 로컬 코드 인덱싱/탐색 데스크톱 앱",
   "author": "roykang75 <roykang75@gmail.com>",
   "main": "dist/main/main.js",
   "scripts": {
