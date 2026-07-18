@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { IndexStats } from '../../indexer/pipeline';
-import type { AgentToolUi } from '../../shared/protocol';
+import type { AgentToolUi, ThreadMeta } from '../../shared/protocol';
 import type { Bookmark } from './bookmarks';
 
 export interface Tab {
@@ -29,6 +29,8 @@ interface AppState {
   chatMessages: { role: 'user' | 'assistant'; content: string; error?: string; ts?: number; tools?: AgentToolUi[] }[];
   chatStreaming: boolean;
   chatContextEnabled: boolean;
+  activeThreadId: string | null;
+  threads: ThreadMeta[];
   agentMode: boolean;
   autoApprove: boolean;
   treeRefreshNonce: number;
@@ -64,6 +66,9 @@ interface AppState {
   setChatError(error: string): void; // 마지막 어시스턴트에 오류 표기
   setChatStreaming(v: boolean): void;
   setChatContextEnabled(v: boolean): void;
+  setActiveThreadId(id: string | null): void;
+  setThreads(list: ThreadMeta[]): void;
+  loadThreadMessages(msgs: AppState['chatMessages']): void;
   setAgentMode(v: boolean): void;
   setAutoApprove(v: boolean): void;
   upsertChatTool(tool: AgentToolUi): void;
@@ -96,6 +101,8 @@ export const useAppStore = create<AppState>((set) => ({
   chatMessages: [],
   chatStreaming: false,
   chatContextEnabled: true,
+  activeThreadId: null,
+  threads: [],
   agentMode: false,
   autoApprove: true,
   treeRefreshNonce: 0,
@@ -106,7 +113,7 @@ export const useAppStore = create<AppState>((set) => ({
   split: null,
   setSplit: (split) => set({ split }),
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, terminals: [], activeTerminalId: null, split: null }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, activeThreadId: null, threads: [], terminals: [], activeTerminalId: null, split: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -169,6 +176,9 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   setChatStreaming: (chatStreaming) => set({ chatStreaming }),
   setChatContextEnabled: (chatContextEnabled) => set({ chatContextEnabled }),
+  setActiveThreadId: (activeThreadId) => set({ activeThreadId }),
+  setThreads: (threads) => set({ threads }),
+  loadThreadMessages: (chatMessages) => set({ chatMessages, chatStreaming: false }),
   setAgentMode: (v) => set({ agentMode: v }),
   setAutoApprove: (v) => set({ autoApprove: v }),
   bumpTreeRefresh: () => set((s) => ({ treeRefreshNonce: s.treeRefreshNonce + 1 })),
@@ -185,7 +195,7 @@ export const useAppStore = create<AppState>((set) => ({
       return { chatMessages: msgs };
     }),
   setRightTab: (rightTab) => set({ rightTab }),
-  clearChat: () => set({ chatMessages: [], chatStreaming: false }),
+  clearChat: () => set({ chatMessages: [], chatStreaming: false, activeThreadId: null }),
   addTerminal: (id, title) =>
     set((s) => ({ terminals: [...s.terminals, { id, title, exited: false }], activeTerminalId: id })),
   removeTerminal: (id) =>

@@ -8,11 +8,12 @@ import { SettingsStore } from './settings';
 import { CompletionService } from './completion/service';
 import { ChatService } from './chat/service';
 import { AgentService } from './agent/service';
+import { ChatStore } from './chat-store';
 import { LspManager } from './lsp/manager';
 import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent } from '../shared/protocol';
+import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -39,6 +40,7 @@ let persistence: Persistence;
 let settingsStore: SettingsStore;
 let completionService: CompletionService;
 let chatService: ChatService;
+let chatStore: ChatStore | null = null;
 let agentService: AgentService;
 
 const sendMenu = (action: MenuAction) => win?.webContents.send('menu', action);
@@ -84,6 +86,10 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
     });
     terminals?.killAll();
     agentService?.cancel(); // 진행 중 에이전트 루프 중단 — 이전 프로젝트에 쓰기 방지
+    chatStore?.close();
+    const chatDbPath = persistence.chatDbPathFor(root);
+    fs.mkdirSync(path.dirname(chatDbPath), { recursive: true });
+    chatStore = new ChatStore(chatDbPath);
     terminals = new TerminalManager({
       cwd: root,
       onData: (id, data) => win?.webContents.send('terminal:event', { type: 'data', id, data }),
@@ -267,6 +273,18 @@ function registerIpc(): void {
     void chatService.send(messages, context, (event) => win?.webContents.send('chat:event', event));
   });
   ipcMain.handle('chat:cancel', () => chatService.cancel());
+  ipcMain.handle('chat:threads:list', () => chatStore?.listThreads() ?? []);
+  ipcMain.handle('chat:thread:load', (_e, id: string) => chatStore?.loadThread(id) ?? []);
+  ipcMain.handle('chat:thread:create', (_e, title: string) => ({ id: chatStore?.createThread(title) ?? '' }));
+  ipcMain.handle('chat:thread:save', (_e, id: string, title: string, messages: ChatStoredMessage[]) => {
+    try {
+      chatStore?.saveThread(id, title, messages);
+    } catch (e) {
+      console.error('[chat-store] save 실패:', e instanceof Error ? e.message : e); // 채팅 흐름 무영향
+    }
+  });
+  ipcMain.handle('chat:thread:rename', (_e, id: string, title: string) => chatStore?.renameThread(id, title));
+  ipcMain.handle('chat:thread:delete', (_e, id: string) => chatStore?.deleteThread(id));
   ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean) => {
     void agentService.send(messages, context, autoApprove, (event) => win?.webContents.send('agent:event', event));
   });
@@ -405,4 +423,5 @@ app.on('before-quit', () => {
   lsp?.shutdownAll();
   terminals?.killAll();
   agentService?.cancel(); // 진행 중 에이전트 루프 중단 — 이전 프로젝트에 쓰기 방지
+  chatStore?.close();
 });

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscAdd, VscArrowUp, VscCheck, VscCopy, VscDebugStop } from 'react-icons/vsc';
+import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop } from 'react-icons/vsc';
 import { useAppStore } from '../store';
+import { scheduleChatSave } from '../chat-persist';
+import { deriveTitle } from '../../../shared/chat-title';
 import { buildChatContext } from '../chat-context';
 import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
@@ -54,11 +56,46 @@ export function ChatPanel() {
   const autoApprove = useAppStore((s) => s.autoApprove);
   const activePath = useAppStore((s) => s.activePath);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
+  const activeThreadId = useAppStore((s) => s.activeThreadId);
+  const threads = useAppStore((s) => s.threads);
   const [input, setInput] = useState('');
   const [profiles, setProfiles] = useState<CompletionProfilePublic[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const activeTitle = threads.find((t) => t.id === activeThreadId)?.title ?? '새 대화';
+
+  const refreshThreads = () => void window.si.chatThreadsList().then((l) => useAppStore.getState().setThreads(l));
+  const switchThread = async (id: string) => {
+    void window.si.chatCancel();
+    const msgs = await window.si.chatThreadLoad(id);
+    const st = useAppStore.getState();
+    st.setActiveThreadId(id);
+    st.loadThreadMessages(msgs as typeof st.chatMessages);
+    setListOpen(false);
+  };
+  const newThread = () => {
+    void window.si.chatCancel();
+    const st = useAppStore.getState();
+    st.clearChat(); // chatMessages 비움 + activeThreadId null
+    setListOpen(false);
+  };
+  const deleteThread = async (id: string) => {
+    await window.si.chatThreadDelete(id);
+    await window.si.chatThreadsList().then((l) => useAppStore.getState().setThreads(l));
+    if (useAppStore.getState().activeThreadId === id) {
+      const next = useAppStore.getState().threads[0];
+      if (next) void switchThread(next.id);
+      else newThread();
+    }
+  };
+  const renameActive = (title: string) => {
+    if (!activeThreadId || !title.trim()) return;
+    void window.si.chatThreadRename(activeThreadId, title.trim()).then(refreshThreads);
+  };
 
   // provider 미설정 감지 (전송 전 단락 — 스펙 §4) + 설정 오버레이 닫힐 때 재로드
   useEffect(() => {
@@ -98,6 +135,13 @@ export function ChatPanel() {
       }
       context = buildChatContext(editorState, signatures);
     }
+    let tid = useAppStore.getState().activeThreadId;
+    if (!tid) {
+      const { id } = await window.si.chatThreadCreate(deriveTitle(text));
+      tid = id;
+      useAppStore.getState().setActiveThreadId(id);
+      refreshThreads(); // 새 스레드가 목록에 없으면 헤더 제목이 '새 대화'로 남는다
+    }
     st.appendChatUser(text);
     st.appendChatAssistant();
     st.setChatStreaming(true);
@@ -108,6 +152,7 @@ export function ChatPanel() {
       .map((m) => ({ role: m.role, content: m.content }));
     if (useAppStore.getState().agentMode) void window.si.agentSend(history, context, useAppStore.getState().autoApprove);
     else void window.si.chatSend(history, context);
+    scheduleChatSave();
   };
 
   const cancel = () => {
@@ -118,6 +163,7 @@ export function ChatPanel() {
     void window.si.chatCancel();
     const st = useAppStore.getState();
     st.appendChatChunk('\n(중단됨)');
+    scheduleChatSave();
   };
 
   const copy = (idx: number, content: string) => {
@@ -141,6 +187,49 @@ export function ChatPanel() {
 
   return (
     <div className="chat-panel">
+      <div className="chat-thread-header">
+        {renaming ? (
+          <input
+            className="chat-thread-title-input"
+            defaultValue={activeTitle}
+            autoFocus
+            onBlur={(e) => { renameActive(e.target.value); setRenaming(false); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { renameActive((e.target as HTMLInputElement).value); setRenaming(false); } if (e.key === 'Escape') setRenaming(false); }}
+          />
+        ) : (
+          <span className="chat-thread-title" onDoubleClick={() => activeThreadId && setRenaming(true)} title={activeTitle}>{activeTitle}</span>
+        )}
+        <span className="chat-thread-actions">
+          <button className="chat-new" title="새 대화" onClick={newThread}><VscAdd /></button>
+          <button className="chat-new" title="대화 기록" onClick={() => { refreshThreads(); setListOpen((o) => !o); }}><VscHistory /></button>
+          <button className="chat-new" title="현재 대화" onClick={() => setMenuOpen((o) => !o)} disabled={!activeThreadId}><VscEllipsis /></button>
+        </span>
+        {listOpen && (
+          <>
+            <div className="open-editors-backdrop" onMouseDown={() => setListOpen(false)} />
+            <div className="open-editors-menu chat-thread-menu">
+              <div className="open-editors-title">대화 기록 {threads.length}개</div>
+              {threads.length === 0 && <div className="hint">저장된 대화가 없습니다.</div>}
+              {threads.map((t) => (
+                <div key={t.id} className={`open-editors-item${t.id === activeThreadId ? ' active' : ''}`} onClick={() => void switchThread(t.id)}>
+                  <VscHistory />
+                  <span className="open-editors-name">{t.title}</span>
+                  <span className="tab-close" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }}><VscClose /></span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {menuOpen && (
+          <>
+            <div className="open-editors-backdrop" onMouseDown={() => setMenuOpen(false)} />
+            <div className="open-editors-menu chat-thread-menu chat-thread-ctxmenu">
+              <div className="open-editors-item" onClick={() => { setMenuOpen(false); setRenaming(true); }}>이름 변경</div>
+              <div className="open-editors-item" onClick={() => { setMenuOpen(false); if (activeThreadId) void deleteThread(activeThreadId); }}>삭제</div>
+            </div>
+          </>
+        )}
+      </div>
       <div className="chat-toolbar">
         <label className="chat-context-toggle">
           <input
@@ -160,7 +249,6 @@ export function ChatPanel() {
             <span className="chat-context-label">자동 승인</span>
           </label>
         )}
-        <button className="chat-new" title="새 대화" onClick={() => useAppStore.getState().clearChat()}><VscAdd /></button>
       </div>
       <div className="chat-messages" ref={listRef}>
         {messages.length === 0 && <div className="hint">코드에 대해 물어보세요.</div>}

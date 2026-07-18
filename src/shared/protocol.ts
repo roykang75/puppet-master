@@ -147,6 +147,16 @@ export type AgentEvent =
   | { type: 'done' }
   | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
 
+// ── 채팅 스레드 영속화 (Plan 11) ──
+export interface ThreadMeta { id: string; title: string; updatedAt: number }
+export interface ChatStoredMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  ts?: number;
+  error?: string;
+  tools?: unknown[]; // AgentToolUi[] (직렬화)
+}
+
 // ── UI 지속 상태 (main persistence ↔ 렌더러) ──
 export interface UiState {
   panelLayouts: Record<string, string>; // react-resizable-panels 직렬화 값 (불투명)

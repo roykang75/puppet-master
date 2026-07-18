@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent, AgentEvent } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -59,6 +59,13 @@ const api = {
   chatSend: (messages: ChatMessage[], context: ChatContext | null): Promise<void> =>
     ipcRenderer.invoke('chat:send', messages, context),
   chatCancel: (): Promise<void> => ipcRenderer.invoke('chat:cancel'),
+  chatThreadsList: (): Promise<ThreadMeta[]> => ipcRenderer.invoke('chat:threads:list'),
+  chatThreadLoad: (id: string): Promise<ChatStoredMessage[]> => ipcRenderer.invoke('chat:thread:load', id),
+  chatThreadCreate: (title: string): Promise<{ id: string }> => ipcRenderer.invoke('chat:thread:create', title),
+  chatThreadSave: (id: string, title: string, messages: ChatStoredMessage[]): Promise<void> =>
+    ipcRenderer.invoke('chat:thread:save', id, title, messages),
+  chatThreadRename: (id: string, title: string): Promise<void> => ipcRenderer.invoke('chat:thread:rename', id, title),
+  chatThreadDelete: (id: string): Promise<void> => ipcRenderer.invoke('chat:thread:delete', id),
   onChatEvent: (cb: (e: ChatEvent) => void): (() => void) => {
     const h = (_e: Electron.IpcRendererEvent, data: ChatEvent) => cb(data);
     ipcRenderer.on('chat:event', h);
