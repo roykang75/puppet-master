@@ -59,6 +59,11 @@ export const AGENT_TOOLS: ToolSpec[] = [
   },
 ];
 
+/** 읽기 전용 도구셋 — 질문 모드에서 파일 수정 없이 컨텍스트만 탐색할 때 사용 (write_file/run_command 제외). */
+export const READONLY_AGENT_TOOLS: ToolSpec[] = AGENT_TOOLS.filter(
+  (t) => t.name !== 'write_file' && t.name !== 'run_command',
+);
+
 /** 존재하는 가장 가까운 조상 경로를 realpath로 해석한다 (심링크 해소, 신규 파일은 조상까지만). */
 function realpathOfClosestAncestor(p: string): string {
   let cur = p;

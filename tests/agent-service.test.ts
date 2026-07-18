@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { AgentService, MAX_TOOL_CALLS } from '../src/main/agent/service';
+import { AgentService, MAX_TOOL_CALLS, READONLY_MAX_TOOL_CALLS } from '../src/main/agent/service';
 import type { AgentAdapter, AgentMsg, AgentTurnResult } from '../src/main/agent/adapters';
 import type { AgentEvent } from '../src/shared/protocol';
 
@@ -140,6 +140,32 @@ describe('AgentService 루프', () => {
     const { events, on } = collect();
     await svc.send([], null, true, on);
     expect(events[0]).toEqual({ type: 'error', kind: 'other' });
+  });
+
+  it('읽기 전용 모드: 어댑터에 쓰기/실행 도구가 전달되지 않는다', async () => {
+    let toolNames: string[] = [];
+    const adapter: AgentAdapter = {
+      async runTurn(_m, _s, tools, _c, _sig) {
+        toolNames = tools.map((t) => t.name);
+        return { text: '읽기만', toolCalls: [] };
+      },
+    };
+    const svc = new AgentService(baseDeps(adapter));
+    const { on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, false, on, true);
+    expect(toolNames).toEqual(['list_dir', 'read_file', 'search_text']);
+  });
+
+  it('읽기 전용 모드: 도구 한도가 READONLY_MAX_TOOL_CALLS로 낮아진다', async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'c', name: 'list_dir', args: {} }] }, // 매 턴 1회 무한 반복
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, false, on, true);
+    const doneTools = events.filter((e) => e.type === 'tool' && e.state === 'done');
+    expect(doneTools.length).toBe(READONLY_MAX_TOOL_CALLS);
+    expect(READONLY_MAX_TOOL_CALLS).toBeLessThan(MAX_TOOL_CALLS);
   });
 
   it('취소: awaiting 대기 중 cancel → 조용히 done', async () => {

@@ -285,8 +285,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('chat:thread:rename', (_e, id: string, title: string) => chatStore?.renameThread(id, title));
   ipcMain.handle('chat:thread:delete', (_e, id: string) => chatStore?.deleteThread(id));
-  ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean) => {
-    void agentService.send(messages, context, autoApprove, (event) => win?.webContents.send('agent:event', event));
+  ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean, readOnly = false) => {
+    void agentService.send(messages, context, autoApprove, (event) => win?.webContents.send('agent:event', event), readOnly);
   });
   ipcMain.handle('agent:cancel', () => agentService.cancel());
   ipcMain.handle('agent:approve', (_e, id: string, ok: boolean) => agentService.approve(id, ok));

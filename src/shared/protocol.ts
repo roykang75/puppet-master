@@ -117,13 +117,23 @@ export const LSP_EXT_TO_LANGUAGE: Record<string, string> = {
 
 // ── AI 채팅 (Plan 8) ──
 export interface ChatMessage { role: 'user' | 'assistant'; content: string }
-export interface ChatContext {
+/** 자동 검색(인덱서 FTS/심볼)으로 찾은 관련 코드 조각 — 사용자가 파일을 지정하지 않아도 첨부된다. */
+export interface RetrievedSnippet {
   path: string;
-  languageId: string;
-  code: string;
-  isSelection: boolean;
-  startLine: number; // 1-기반 (표시용)
-  signatures: string[];
+  line?: number; // 1-기반 (심볼 정의 위치)
+  signature?: string; // 심볼 시그니처
+  snippet: string; // 코드/텍스트 조각
+}
+
+// 활성 파일 필드는 열린 파일이 없으면 생략된다(검색 결과만 있는 컨텍스트 허용).
+export interface ChatContext {
+  path?: string;
+  languageId?: string;
+  code?: string;
+  isSelection?: boolean;
+  startLine?: number; // 1-기반 (표시용)
+  signatures?: string[];
+  retrieved?: RetrievedSnippet[]; // 자동 검색으로 찾은 관련 코드
 }
 export type ChatEvent =
   | { type: 'chunk'; text: string }

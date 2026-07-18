@@ -1,11 +1,12 @@
 // src/main/agent/service.ts — 에이전트 tool-use 루프. electron 임포트 금지, 동시 1개.
 import { AnthropicAgentAdapter, OpenAIAgentAdapter, type AgentAdapter, type AgentMsg } from './adapters';
-import { AGENT_TOOLS, buildWriteDiff, DIFF_SOURCE_CAP, executeTool, readCurrentContent, toolSummary, type AgentToolDeps } from './tools';
+import { AGENT_TOOLS, READONLY_AGENT_TOOLS, buildWriteDiff, DIFF_SOURCE_CAP, executeTool, readCurrentContent, toolSummary, type AgentToolDeps } from './tools';
 import { buildAgentSystemPrompt } from './prompt';
 import { classifyError } from '../completion/errors';
 import type { AgentEvent, ChatContext, ChatMessage } from '../../shared/protocol';
 
 export const MAX_TOOL_CALLS = 25;
+export const READONLY_MAX_TOOL_CALLS = 12; // 질문 모드 탐색 한도 (에이전트 모드보다 낮게)
 const APPROVAL_REQUIRED = new Set(['write_file', 'run_command']);
 
 // AgentEvent error kind은 'unsuitable'을 갖지 않는다 — 'other'로 접는다.
@@ -69,6 +70,7 @@ export class AgentService {
     context: ChatContext | null,
     autoApprove: boolean,
     onEvent: (e: AgentEvent) => void,
+    readOnly = false,
   ): Promise<void> {
     if (this.controller) {
       onEvent({ type: 'error', kind: 'other' }); // 동시 1개
@@ -89,11 +91,13 @@ export class AgentService {
     this.controller = controller;
     try {
       const adapter = this.factory(settings.provider, { model: settings.model, apiKey, baseURL: settings.baseURL });
-      const system = buildAgentSystemPrompt(context);
+      const system = buildAgentSystemPrompt(context, readOnly);
+      const tools = readOnly ? READONLY_AGENT_TOOLS : AGENT_TOOLS;
+      const maxToolCalls = readOnly ? READONLY_MAX_TOOL_CALLS : MAX_TOOL_CALLS;
       const msgs: AgentMsg[] = messages.map((m) => ({ role: m.role, content: m.content }));
       let toolCount = 0;
       for (;;) {
-        const res = await adapter.runTurn(msgs, system, AGENT_TOOLS, (t) => onEvent({ type: 'chunk', text: t }), controller.signal);
+        const res = await adapter.runTurn(msgs, system, tools, (t) => onEvent({ type: 'chunk', text: t }), controller.signal);
         msgs.push({ role: 'assistant', content: res.text, toolCalls: res.toolCalls.length ? res.toolCalls : undefined });
         if (res.toolCalls.length === 0) break;
         for (const call of res.toolCalls) {
@@ -146,7 +150,7 @@ export class AgentService {
           msgs.push({ role: 'tool', toolCallId: call.id, name: call.name, content: result });
         }
         if (controller.signal.aborted) break;
-        if (toolCount >= MAX_TOOL_CALLS) {
+        if (toolCount >= maxToolCalls) {
           onEvent({ type: 'chunk', text: '\n(도구 호출 한도 도달 — 중단)' });
           break;
         }

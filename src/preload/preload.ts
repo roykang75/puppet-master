@@ -71,8 +71,8 @@ const api = {
     ipcRenderer.on('chat:event', h);
     return () => ipcRenderer.removeListener('chat:event', h);
   },
-  agentSend: (messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean): Promise<void> =>
-    ipcRenderer.invoke('agent:send', messages, context, autoApprove),
+  agentSend: (messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean, readOnly = false): Promise<void> =>
+    ipcRenderer.invoke('agent:send', messages, context, autoApprove, readOnly),
   agentCancel: (): Promise<void> => ipcRenderer.invoke('agent:cancel'),
   agentApprove: (id: string, ok: boolean): Promise<void> => ipcRenderer.invoke('agent:approve', id, ok),
   onAgentEvent: (cb: (e: AgentEvent) => void): void => {

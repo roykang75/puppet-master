@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 import { scheduleChatSave } from '../chat-persist';
 import { deriveTitle } from '../../../shared/chat-title';
 import { buildChatContext } from '../chat-context';
+import { retrieveSnippets } from '../chat-retrieval';
 import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
 import { getChatEditorState } from './EditorPane';
@@ -51,10 +52,8 @@ function formatTime(ts?: number): string {
 export function ChatPanel() {
   const messages = useAppStore((s) => s.chatMessages);
   const streaming = useAppStore((s) => s.chatStreaming);
-  const contextEnabled = useAppStore((s) => s.chatContextEnabled);
   const agentMode = useAppStore((s) => s.agentMode);
   const autoApprove = useAppStore((s) => s.autoApprove);
-  const activePath = useAppStore((s) => s.activePath);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const activeThreadId = useAppStore((s) => s.activeThreadId);
   const threads = useAppStore((s) => s.threads);
@@ -123,18 +122,19 @@ export function ChatPanel() {
     const text = input.trim();
     if (!text || streaming) return;
     const st = useAppStore.getState();
-    let context: ChatContext | null = null;
-    if (contextEnabled) {
-      const editorState = getChatEditorState();
-      let signatures: string[] = [];
-      if (editorState) {
-        signatures = await window.si
-          .getFileOutline(editorState.path)
-          .then((o) => o.map((s) => s.signature).filter(Boolean))
-          .catch(() => []);
-      }
-      context = buildChatContext(editorState, signatures);
+    // 자동 컨텍스트 — 활성 파일(있으면) + 질문 기반 인덱서 검색 시드를 항상 첨부.
+    const editorState = getChatEditorState();
+    let signatures: string[] = [];
+    if (editorState) {
+      signatures = await window.si
+        .getFileOutline(editorState.path)
+        .then((o) => o.map((s) => s.signature).filter(Boolean))
+        .catch(() => []);
     }
+    const activeCtx = buildChatContext(editorState, signatures);
+    const retrieved = await retrieveSnippets(text, editorState?.path).catch(() => []);
+    const context: ChatContext | null =
+      retrieved.length > 0 ? { ...(activeCtx ?? {}), retrieved } : activeCtx;
     let tid = useAppStore.getState().activeThreadId;
     if (!tid) {
       const { id } = await window.si.chatThreadCreate(deriveTitle(text));
@@ -150,8 +150,9 @@ export function ChatPanel() {
       .filter((m) => !m.error)
       .slice(0, -1) // 방금 추가한 빈 어시스턴트 제외
       .map((m) => ({ role: m.role, content: m.content }));
+    // 에이전트 모드: 전체 도구(쓰기/실행) · 질문 모드: 읽기 전용 에이전트(파일 탐색만)
     if (useAppStore.getState().agentMode) void window.si.agentSend(history, context, useAppStore.getState().autoApprove);
-    else void window.si.chatSend(history, context);
+    else void window.si.agentSend(history, context, false, true);
     scheduleChatSave();
   };
 
@@ -171,13 +172,6 @@ export function ChatPanel() {
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1200);
   };
-
-  const editorState = contextEnabled ? getChatEditorState() : null;
-  const contextLabel = editorState
-    ? `컨텍스트: ${editorState.path}${editorState.selectionText ? ` (선택 ${editorState.selectionText.split('\n').length}줄)` : ''}`
-    : activePath && contextEnabled
-      ? `컨텍스트: ${activePath}`
-      : '컨텍스트 없음';
 
   if (!activeId || profiles.length === 0) {
     return <div className="hint">AI 모델이 설정되지 않았습니다. Cmd+,에서 프로파일을 등록하세요.</div>;
@@ -228,26 +222,6 @@ export function ChatPanel() {
               <div className="open-editors-item" onClick={() => { setMenuOpen(false); if (activeThreadId) void deleteThread(activeThreadId); }}>삭제</div>
             </div>
           </>
-        )}
-      </div>
-      <div className="chat-toolbar">
-        <label className="chat-context-toggle">
-          <input
-            type="checkbox"
-            checked={contextEnabled}
-            onChange={(e) => useAppStore.getState().setChatContextEnabled(e.target.checked)}
-          />
-          <span className="chat-context-label">{contextLabel}</span>
-        </label>
-        <label className="chat-context-toggle" title="AI가 도구로 파일을 직접 생성/수정">
-          <input type="checkbox" checked={agentMode} onChange={(e) => useAppStore.getState().setAgentMode(e.target.checked)} />
-          <span className="chat-context-label">에이전트</span>
-        </label>
-        {agentMode && (
-          <label className="chat-context-toggle" title="끄면 파일 쓰기/셸 실행 전에 승인 버튼이 표시됩니다">
-            <input type="checkbox" checked={autoApprove} onChange={(e) => useAppStore.getState().setAutoApprove(e.target.checked)} />
-            <span className="chat-context-label">자동 승인</span>
-          </label>
         )}
       </div>
       <div className="chat-messages" ref={listRef}>
@@ -354,17 +328,40 @@ export function ChatPanel() {
           }}
         />
         <div className="chat-input-footer">
-          <select
-            className="chat-model"
-            title="모델 선택"
-            value={activeId}
-            disabled={streaming}
-            onChange={(e) => switchProfile(e.target.value)}
-          >
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          <div className="chat-footer-left">
+            <select
+              className="chat-mode"
+              title="에이전트: AI가 도구로 파일을 직접 생성/수정 · 질문: 답변만"
+              value={agentMode ? 'agent' : 'ask'}
+              disabled={streaming}
+              onChange={(e) => useAppStore.getState().setAgentMode(e.target.value === 'agent')}
+            >
+              <option value="agent">에이전트</option>
+              <option value="ask">질문</option>
+            </select>
+            {agentMode && (
+              <label className="chat-context-toggle" title="끄면 파일 쓰기/셸 실행 전에 승인 버튼이 표시됩니다">
+                <input
+                  type="checkbox"
+                  checked={autoApprove}
+                  disabled={streaming}
+                  onChange={(e) => useAppStore.getState().setAutoApprove(e.target.checked)}
+                />
+                <span className="chat-context-label">자동 승인</span>
+              </label>
+            )}
+            <select
+              className="chat-model"
+              title="모델 선택"
+              value={activeId}
+              disabled={streaming}
+              onChange={(e) => switchProfile(e.target.value)}
+            >
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
           {streaming ? (
             <button className="chat-send chat-stop" title="중단" onClick={cancel}><VscDebugStop /></button>
           ) : (

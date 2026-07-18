@@ -33,6 +33,24 @@ describe('buildChatSystemPrompt', () => {
     expect(s).not.toContain('심볼 시그니처');
   });
 
+  it('자동 검색 스니펫: 심볼은 위치+시그니처, 텍스트는 위치+조각', () => {
+    const s = buildChatSystemPrompt({
+      retrieved: [
+        { path: 'src/util.ts', line: 12, signature: 'function parse(x)', snippet: 'function parse(x)' },
+        { path: 'src/misc.ts', snippet: 'const y = cache.get(k)' },
+      ],
+    });
+    expect(s).toContain('자동 검색으로 찾은 코드');
+    expect(s).toContain('src/util.ts:12 — function parse(x)');
+    expect(s).toContain('src/misc.ts: const y = cache.get(k)');
+  });
+
+  it('활성 파일 없이 검색 스니펫만 있어도 렌더', () => {
+    const s = buildChatSystemPrompt({ retrieved: [{ path: 'a.ts', snippet: 's' }] });
+    expect(s).not.toContain('사용자가 보고 있는 코드');
+    expect(s).toContain('자동 검색으로 찾은 코드');
+  });
+
   it('상수', () => {
     expect(CHAT_MAX_TOKENS).toBe(2048);
   });

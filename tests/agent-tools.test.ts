@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { AGENT_TOOLS, buildWriteDiff, executeTool, resolveToolPath, toolSummary, sandboxProfile, type AgentToolDeps } from '../src/main/agent/tools';
+import { AGENT_TOOLS, READONLY_AGENT_TOOLS, buildWriteDiff, executeTool, resolveToolPath, toolSummary, sandboxProfile, type AgentToolDeps } from '../src/main/agent/tools';
 
 let root: string;
 let extra: string;
@@ -162,5 +162,12 @@ describe.skipIf(process.platform !== 'darwin')('run_command 샌드박스', () =>
     expect(big).toContain('잘림');
     const to = await executeTool('run_command', { command: 'sleep 5' }, deps({ commandTimeoutMs: 300 }));
     expect(to).toContain('타임아웃');
+  });
+
+  it('읽기 전용 도구셋은 쓰기/실행 도구를 제외한다', () => {
+    const names = READONLY_AGENT_TOOLS.map((t) => t.name);
+    expect(names).toEqual(['list_dir', 'read_file', 'search_text']);
+    expect(names).not.toContain('write_file');
+    expect(names).not.toContain('run_command');
   });
 });

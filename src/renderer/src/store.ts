@@ -28,7 +28,6 @@ interface AppState {
   bookmarks: Bookmark[];
   chatMessages: { role: 'user' | 'assistant'; content: string; error?: string; ts?: number; tools?: AgentToolUi[] }[];
   chatStreaming: boolean;
-  chatContextEnabled: boolean;
   activeThreadId: string | null;
   threads: ThreadMeta[];
   agentMode: boolean;
@@ -65,7 +64,6 @@ interface AppState {
   appendChatChunk(text: string): void; // 마지막 어시스턴트에 append
   setChatError(error: string): void; // 마지막 어시스턴트에 오류 표기
   setChatStreaming(v: boolean): void;
-  setChatContextEnabled(v: boolean): void;
   setActiveThreadId(id: string | null): void;
   setThreads(list: ThreadMeta[]): void;
   loadThreadMessages(msgs: AppState['chatMessages']): void;
@@ -100,7 +98,6 @@ export const useAppStore = create<AppState>((set) => ({
   bookmarks: [],
   chatMessages: [],
   chatStreaming: false,
-  chatContextEnabled: true,
   activeThreadId: null,
   threads: [],
   agentMode: false,
@@ -175,7 +172,6 @@ export const useAppStore = create<AppState>((set) => ({
       return { chatMessages: msgs };
     }),
   setChatStreaming: (chatStreaming) => set({ chatStreaming }),
-  setChatContextEnabled: (chatContextEnabled) => set({ chatContextEnabled }),
   setActiveThreadId: (activeThreadId) => set({ activeThreadId }),
   setThreads: (threads) => set({ threads }),
   loadThreadMessages: (chatMessages) => set({ chatMessages, chatStreaming: false }),
