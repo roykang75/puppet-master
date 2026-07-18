@@ -201,6 +201,16 @@
 
 **인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** [P10-2] 절단 캡이 UTF-16 length 기준(바이트 아님, 멀티바이트 경계 mojibake 가능), [P10-3] Anthropic 어댑터 빈 name 필터 비대칭, [P10-4] 연속 tool 결과 병합 다중 케이스 테스트 없음, [P10-5] toolDeps 턴당 1회 조회(전환 시 cancel로 무해화됨), run_command 읽기는 자유라 프롬프트 주입 시 settings.json(평문 키) 읽기 가능(스펙 승인 사항 — 자동승인 끄면 완화).
 
+## ✅ Plan 11: AI 채팅 스레드 영속화 (v2 6탄) — 완료 (main 병합 25449f7)
+
+- [x] 프로젝트별 SQLite 저장 — `userData/chat/<해시>.db`(인덱서 패턴 대칭), main에서 better-sqlite3 동기 직접 연결(ChatStore), 프로젝트 열 때 open/전환 시 close/종료 시 close
+- [x] 스키마 threads/messages(도구 배열은 tools JSON 컬럼), CRUD IPC 6종, 저장은 done/전송 시 활성 스레드 디바운스 upsert
+- [x] 헤더 3아이콘 UI(＋/히스토리/⋯) — 스레드 목록 드롭다운(전환/×삭제), 제목 더블클릭·메뉴 이름변경, 첫 메시지 자동 제목
+- [x] 복원: 프로젝트 열기 시 마지막(updated_at DESC) 스레드 자동 로드 — 도구 카드·diff before/after 칩까지 복원
+- [x] 검증: 단위(chat-store 6 + chat-title 3 + chat-persist-title 2 + store)/통합 1/E2E 1(재시작 복원 실증) — 전체 317/317, 스펙: `docs/superpowers/specs/2026-07-18-plan11-chat-threads-design.md`
+
+**인계 노트 (백로그, 최종 리뷰 트리아지 완료 — 전부 비차단):** [P11-1] renameThread가 updated_at 미갱신(이름변경≠새 활동, 방어적), [P11-2] ChatStoredMessage.error 미영속(transient UI 상태 — 의도적), [P11-3] rename Enter+blur 중복(멱등 무해), [P11-5] create/load/rename/delete IPC try/catch 미비(save만 — 드문 DB 실패 시 create throw가 send 거부 가능), [P11-6] 스레드/프로젝트 전환 시 디바운스 타이머 미클리어(sub-300ms 편집 후 즉시 전환 시 마지막 편집 유실 — 크로스 프로젝트 쓰기는 구조적으로 방지됨). Important [I-1] 이름변경 되돌림은 병합 전 해소.
+
 ### 다음 후보
 사용자 결정 대기 — v2 이후 백로그에서 선택.
 
