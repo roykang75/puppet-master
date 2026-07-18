@@ -159,6 +159,24 @@ describe('appearance', () => {
   });
 });
 
+describe('Context7 API 키', () => {
+  it('setContext7Key→toPublic.hasContext7Key, 값은 공개 객체에 없음', () => {
+    const store = new SettingsStore(baseDir);
+    expect(store.getContext7Key()).toBeNull();
+    expect(store.toPublic().hasContext7Key).toBe(false);
+    store.setContext7Key('ctx7sk_x');
+    expect(store.getContext7Key()).toBe('ctx7sk_x');
+    const pub = store.toPublic();
+    expect(pub.hasContext7Key).toBe(true);
+    expect('context7ApiKey' in pub).toBe(false);
+    expect(JSON.stringify(pub)).not.toContain('ctx7sk_x');
+    // 빈 문자열 = 삭제
+    store.setContext7Key('');
+    expect(store.getContext7Key()).toBeNull();
+    expect(store.toPublic().hasContext7Key).toBe(false);
+  });
+});
+
 describe('agent 설정', () => {
   it('기본 allowedDirs [] , set→get 라운드트립, 프로파일과 독립', () => {
     const store = new SettingsStore(baseDir);

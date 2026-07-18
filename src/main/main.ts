@@ -307,6 +307,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
   ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
   ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs: string[] }) => settingsStore.setAgent(a));
+  ipcMain.handle('settings:context7:set-key', (_e, key: string) => settingsStore.setContext7Key(key));
 
   const themesDir = () => path.join(app.getPath('userData'), 'themes');
   ipcMain.handle('theme:list', () => {

@@ -75,6 +75,7 @@ export interface CompletionSettings {
   hasApiKey: boolean;
   profiles: CompletionProfilePublic[];
   activeId: string | null;
+  hasContext7Key: boolean;
 }
 
 // ── AI 코드 자동완성 요청/응답 (커서 컨텍스트 → 완성 텍스트) ──
