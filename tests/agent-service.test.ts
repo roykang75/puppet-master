@@ -153,7 +153,7 @@ describe('AgentService 루프', () => {
     const svc = new AgentService(baseDeps(adapter));
     const { on } = collect();
     await svc.send([{ role: 'user', content: 'x' }], null, false, on, true);
-    expect(toolNames).toEqual(['list_dir', 'read_file', 'search_text']);
+    expect(toolNames).toEqual(['list_dir', 'read_file', 'search_text', 'library_docs']);
   });
 
   it('읽기 전용 모드: 도구 한도가 READONLY_MAX_TOOL_CALLS로 낮아진다', async () => {

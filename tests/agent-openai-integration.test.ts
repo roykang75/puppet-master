@@ -48,7 +48,7 @@ describe('OpenAI 에이전트 어댑터 통합 (fake SSE tool calling 서버)', 
       expect(chunks.join('')).toBe('생성 완료');
       expect(t2.toolCalls).toHaveLength(0);
       expect(bodies[1].messages.some((m: any) => m.role === 'tool')).toBe(true);
-      expect(bodies[0].tools).toHaveLength(5);
+      expect(bodies[0].tools).toHaveLength(AGENT_TOOLS.length);
     } finally {
       server.close();
     }
