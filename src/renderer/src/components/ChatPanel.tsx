@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop, VscFolderOpened, VscFileCode, VscEdit, VscSearch, VscTerminal, VscTools, VscBook } from 'react-icons/vsc';
+import { VscAdd, VscHistory, VscEllipsis, VscClose, VscArrowUp, VscCheck, VscCopy, VscDebugStop, VscFolderOpened, VscFileCode, VscEdit, VscSearch, VscTerminal, VscTools, VscBook, VscSymbolMethod, VscTypeHierarchy, VscWarning, VscArrowSwap } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { scheduleChatSave } from '../chat-persist';
 import { deriveTitle } from '../../../shared/chat-title';
-import { buildChatContext } from '../chat-context';
+import { buildChatContext, buildStructureLines } from '../chat-context';
 import { retrieveSnippets } from '../chat-retrieval';
 import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
@@ -52,6 +52,10 @@ const TOOL_META: Record<string, { icon: ReactNode; label: string }> = {
   search_text: { icon: <VscSearch />, label: 'Search' },
   run_command: { icon: <VscTerminal />, label: 'Run Command' },
   library_docs: { icon: <VscBook />, label: 'Docs' },
+  find_symbol: { icon: <VscSymbolMethod />, label: 'Symbol' },
+  get_call_graph: { icon: <VscTypeHierarchy />, label: 'Call Graph' },
+  get_impact: { icon: <VscWarning />, label: 'Impact' },
+  trace_http: { icon: <VscArrowSwap />, label: 'HTTP Flow' },
 };
 
 function formatTime(ts?: number): string {
@@ -155,7 +159,18 @@ export function ChatPanel() {
         .then((o) => o.map((s) => s.signature).filter(Boolean))
         .catch(() => []);
     }
-    const activeCtx = buildChatContext(editorState, signatures);
+    // v3: 커서 심볼의 구조 블록 (callers/callees) — 실패 시 빈 배열(additive)
+    let structure: string[] = [];
+    const cur = useAppStore.getState().cursorSymbol;
+    if (cur) {
+      const [callers, cands] = await Promise.all([
+        window.si.getCallers(cur.name).catch(() => []),
+        window.si.resolve(cur.name, cur.path).catch(() => []),
+      ]);
+      const callees = cands[0] ? await window.si.getCallees(cands[0].id).catch(() => []) : [];
+      structure = buildStructureLines(cur.name, callers, callees);
+    }
+    const activeCtx = buildChatContext(editorState, signatures, structure);
     const retrieved = await retrieveSnippets(text, editorState?.path).catch(() => []);
     const stack = await window.si.getProjectStack().catch(() => null);
     const base = retrieved.length > 0 ? { ...(activeCtx ?? {}), retrieved } : activeCtx;

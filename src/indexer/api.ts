@@ -287,6 +287,21 @@ export function getFlowForFile(db: Database, relPath: string): FileFlow {
   };
 }
 
+/** HTTP 경로 부분일치 또는 핸들러명 일치로 Flow 체인 검색 — 에이전트 trace_http용. */
+export function traceHttp(db: Database, query: string, limit = 20): FileFlow {
+  const like = `%${query}%`;
+  const endpoints = db
+    .prepare(`${EP_SELECT} WHERE (e.path LIKE ? OR hs.name = ?) ORDER BY e.path LIMIT ?`)
+    .all(like, query, limit) as EndpointHit[];
+  const calls = db
+    .prepare(`${HC_SELECT} WHERE c.path LIKE ? AND c.path != '' ORDER BY f.path, c.line LIMIT ?`)
+    .all(like, limit) as HttpCallHit[];
+  return {
+    calls: calls.map((c) => ({ ...c, endpoints: matchCallToEndpoints(db, c.id) })),
+    endpoints: endpoints.map((e) => ({ ...e, calls: matchEndpointToCalls(db, e.id) })),
+  };
+}
+
 // ── Impact (blast radius) — 이름 기반 전이적 callers ──
 
 export interface ImpactHit {

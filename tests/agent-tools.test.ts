@@ -24,9 +24,9 @@ afterEach(() => {
 });
 
 describe('AGENT_TOOLS 스키마', () => {
-  it('6종 도구가 이름/설명/파라미터를 갖는다', () => {
+  it('10종 도구가 이름/설명/파라미터를 갖는다', () => {
     expect(AGENT_TOOLS.map((t) => t.name).sort()).toEqual(
-      ['library_docs', 'list_dir', 'read_file', 'run_command', 'search_text', 'write_file'],
+      ['find_symbol', 'get_call_graph', 'get_impact', 'library_docs', 'list_dir', 'read_file', 'run_command', 'search_text', 'trace_http', 'write_file'],
     );
     for (const t of AGENT_TOOLS) {
       expect(t.description.length).toBeGreaterThan(10);
@@ -178,7 +178,7 @@ describe.skipIf(process.platform !== 'darwin')('run_command 샌드박스', () =>
 
   it('읽기 전용 도구셋은 쓰기/실행 도구를 제외한다', () => {
     const names = READONLY_AGENT_TOOLS.map((t) => t.name);
-    expect(names).toEqual(['list_dir', 'read_file', 'search_text', 'library_docs']);
+    expect(names).toEqual(['list_dir', 'read_file', 'search_text', 'library_docs', 'find_symbol', 'get_call_graph', 'get_impact', 'trace_http']);
     expect(names).not.toContain('write_file');
     expect(names).not.toContain('run_command');
   });

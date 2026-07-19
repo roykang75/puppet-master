@@ -496,6 +496,9 @@ app.whenReady().then(() => {
                 ? ((await indexer.rpc.request('searchText', { query }, { timeoutMs: 30_000 })) as { path: string; snippet: string }[])
                 : [],
             libraryDocs: (library: string, query: string) => context7.libraryDocs(library, query),
+            // v3 구조 도구 — 인덱서 RPC 일반 호출 (find_symbol/get_call_graph/get_impact/trace_http)
+            indexerQuery: (method: string, params: Record<string, unknown>) =>
+              indexer ? indexer.rpc.request(method, params, { timeoutMs: 30_000 }) : Promise.resolve(null),
           }
         : null,
   });

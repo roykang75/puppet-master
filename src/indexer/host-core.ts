@@ -82,6 +82,8 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
     getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
     getFlowForFile: (p: FileParams) => queries.getFlowForFile(opened().db, p.path),
+    getImpact: (p: { name: string; depth?: number }) => queries.getImpact(opened().db, p.name, p.depth ?? 2),
+    traceHttp: (p: { query: string }) => queries.traceHttp(opened().db, p.query),
   });
 
   server.emit('ready', { protocolVersion: PROTOCOL_VERSION });

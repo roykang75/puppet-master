@@ -20,6 +20,11 @@ export function buildChatSystemPrompt(context: ChatContext | null): string {
       for (const sig of context.signatures) lines.push(`- ${sig}`);
     }
   }
+  if (context?.structure && context.structure.length > 0) {
+    lines.push('');
+    lines.push('커서 심볼의 호출 구조 (심볼 인덱스 기반):');
+    for (const s of context.structure) lines.push(`- ${s}`);
+  }
   if (context?.stack) {
     lines.push('');
     lines.push(`이 프로젝트의 스택(참고): ${context.stack}`);

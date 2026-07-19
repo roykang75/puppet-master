@@ -18,6 +18,8 @@ export interface AgentToolDeps {
   searchText(query: string): Promise<{ path: string; snippet: string }[]>;
   commandTimeoutMs?: number; // 기본 30초 — 테스트 주입용
   libraryDocs?: (library: string, query: string) => Promise<string>;
+  /** 인덱서 RPC 일반 호출 (v3 구조 도구용) — 미주입 시 구조 도구는 안내 문자열 반환 */
+  indexerQuery?: (method: string, params: Record<string, unknown>) => Promise<unknown>;
 }
 
 const OUTPUT_CAP = 20 * 1024; // run_command 출력 절단 (스펙 §3)
@@ -62,6 +64,34 @@ export const AGENT_TOOLS: ToolSpec[] = [
     name: 'library_docs',
     description: '라이브러리/프레임워크의 최신 문서를 Context7에서 가져온다. library=패키지명(예: react), query=알고 싶은 주제.',
     parameters: { type: 'object', properties: { library: { type: 'string', description: '패키지/라이브러리 이름' }, query: { type: 'string', description: '알고 싶은 주제/질문' } }, required: ['library', 'query'] },
+  },
+  // ── v3 구조 도구 — 인덱서 심볼 DB/호출 그래프 기반. 이름을 알면 search_text(grep)보다 먼저 사용. ──
+  {
+    name: 'find_symbol',
+    description: '심볼(함수/클래스/메서드) 정의를 심볼 인덱스에서 찾는다. 시그니처+파일:줄 반환. grep보다 정확 — 심볼 이름을 알면 이걸 먼저 쓴다.',
+    parameters: { type: 'object', properties: { name: { type: 'string', description: '심볼 이름' } }, required: ['name'] },
+  },
+  {
+    name: 'get_call_graph',
+    description: '심볼의 호출 그래프를 본다. direction=callers(누가 이걸 부르나)/callees(이게 무엇을 부르나).',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '심볼 이름' },
+        direction: { type: 'string', enum: ['callers', 'callees'], description: 'callers | callees' },
+      },
+      required: ['name', 'direction'],
+    },
+  },
+  {
+    name: 'get_impact',
+    description: '심볼을 변경했을 때 영향받는 코드(전이적 호출자, blast radius). "이거 바꾸면 뭐가 깨져?"에 사용.',
+    parameters: { type: 'object', properties: { name: { type: 'string', description: '심볼 이름' } }, required: ['name'] },
+  },
+  {
+    name: 'trace_http',
+    description: 'HTTP 경로 일부(예: /api/users) 또는 핸들러 함수명으로 프론트 호출부 ↔ 백엔드 엔드포인트 연결 체인을 추적한다.',
+    parameters: { type: 'object', properties: { query: { type: 'string', description: '경로 일부 또는 핸들러명' } }, required: ['query'] },
   },
 ];
 
@@ -139,9 +169,90 @@ export function buildWriteDiff(deps: AgentToolDeps, rel: string, content: string
 /** 카드 표시용 대상 요약 */
 export function toolSummary(name: string, args: Record<string, unknown>): string {
   if (name === 'run_command') return String(args.command ?? '');
-  if (name === 'search_text') return String(args.query ?? '');
+  if (name === 'search_text' || name === 'trace_http') return String(args.query ?? '');
   if (name === 'library_docs') return String(args.library ?? '');
+  if (name === 'find_symbol' || name === 'get_impact') return String(args.name ?? '');
+  if (name === 'get_call_graph') return `${args.name ?? ''} (${args.direction ?? ''})`;
   return String(args.path ?? '');
+}
+
+// ── v3 구조 도구 구현 — 인덱서 심볼 DB/호출 그래프. deps.indexerQuery 경유 (순수·테스트 주입 가능) ──
+
+interface CandLike { name: string; kind: string; signature: string; path: string; line: number; id: number }
+interface CallerLike { callerId: number | null; callerName: string | null; callerKind: string | null; path: string; line: number }
+interface ImpactLike { name: string | null; kind: string | null; path: string; line: number; depth: number }
+interface FlowLike {
+  calls: { method: string; path: string; rawPath: string; file: string; line: number; enclosingName: string | null; endpoints: { method: string; path: string; file: string; line: number; handlerName: string | null }[] }[];
+  endpoints: { method: string; path: string; file: string; line: number; handlerName: string | null; calls: { file: string; line: number; enclosingName: string | null }[] }[];
+}
+
+const NO_INDEXER = '오류: 인덱서를 사용할 수 없습니다 (프로젝트 인덱싱 전이거나 미기동).';
+
+async function runFindSymbol(deps: AgentToolDeps, name: string): Promise<string> {
+  const cands = ((await deps.indexerQuery!('resolve', { name, fromPath: '' })) ?? []) as CandLike[];
+  if (cands.length === 0) return `'${name}' 정의를 인덱스에서 찾지 못했습니다. search_text로 시도해 보세요.`;
+  return cands.slice(0, 5).map((c) => `${c.kind} ${c.name} — ${c.path}:${c.line + 1}\n  ${c.signature}`).join('\n');
+}
+
+async function runCallGraph(deps: AgentToolDeps, name: string, direction: string): Promise<string> {
+  const q = deps.indexerQuery!;
+  const lines: string[] = [];
+  if (direction === 'callers') {
+    const l1 = ((await q('getCallers', { name })) ?? []) as CallerLike[];
+    if (l1.length === 0) return `'${name}'를 부르는 곳이 인덱스에 없습니다.`;
+    const seen = new Set<string>();
+    for (const c of l1.slice(0, 20)) {
+      lines.push(`${c.callerName ?? '(파일 최상위)'} — ${c.path}:${c.line + 1}`);
+      if (c.callerName && !seen.has(c.callerName)) {
+        seen.add(c.callerName);
+        const l2 = ((await q('getCallers', { name: c.callerName })) ?? []) as CallerLike[];
+        for (const c2 of l2.slice(0, 5)) lines.push(`  ↳ ${c2.callerName ?? '(파일 최상위)'} — ${c2.path}:${c2.line + 1}`);
+      }
+      if (lines.length > 60) break;
+    }
+  } else {
+    const cands = ((await q('resolve', { name, fromPath: '' })) ?? []) as CandLike[];
+    if (cands.length === 0) return `'${name}' 정의를 찾지 못했습니다.`;
+    const l1 = ((await q('getCallees', { symbolId: cands[0].id })) ?? []) as CandLike[];
+    if (l1.length === 0) return `'${name}'가 부르는 심볼이 인덱스에 없습니다.`;
+    for (const s of l1.slice(0, 20)) {
+      lines.push(`${s.name} — ${s.path}:${s.line + 1}`);
+      const l2 = ((await q('getCallees', { symbolId: s.id })) ?? []) as CandLike[];
+      for (const s2 of l2.slice(0, 5)) lines.push(`  ↳ ${s2.name} — ${s2.path}:${s2.line + 1}`);
+      if (lines.length > 60) break;
+    }
+  }
+  return lines.join('\n');
+}
+
+async function runImpact(deps: AgentToolDeps, name: string): Promise<string> {
+  const hits = ((await deps.indexerQuery!('getImpact', { name, depth: 2 })) ?? []) as ImpactLike[];
+  if (hits.length === 0) return `'${name}'의 호출자가 인덱스에 없습니다 (외부 진입점이거나 미사용).`;
+  const fmt = (h: ImpactLike) => `${h.name ?? '(파일 최상위)'} — ${h.path}:${h.line + 1}`;
+  const d1 = hits.filter((h) => h.depth === 1);
+  const d2 = hits.filter((h) => h.depth === 2);
+  const out = [`'${name}' 변경 영향 — 총 ${hits.length}개 위치:`, '직접 호출자:', ...d1.map(fmt)];
+  if (d2.length > 0) out.push('간접(2단계):', ...d2.map(fmt));
+  return out.join('\n');
+}
+
+async function runTraceHttp(deps: AgentToolDeps, query: string): Promise<string> {
+  const flow = (await deps.indexerQuery!('traceHttp', { query })) as FlowLike | null;
+  if (!flow || (flow.calls.length === 0 && flow.endpoints.length === 0)) {
+    return `'${query}'에 해당하는 HTTP 경계를 찾지 못했습니다.`;
+  }
+  const out: string[] = [];
+  for (const e of flow.endpoints) {
+    out.push(`[${e.method}] ${e.path} — 핸들러 ${e.handlerName ?? '?'} (${e.file}:${e.line + 1})`);
+    for (const c of e.calls) out.push(`  ← 호출: ${c.enclosingName ?? '(파일)'} (${c.file}:${c.line + 1})`);
+    if (e.calls.length === 0) out.push('  ← 호출부 없음');
+  }
+  for (const c of flow.calls) {
+    out.push(`[${c.method}] ${c.rawPath} — 호출부 ${c.enclosingName ?? '(파일)'} (${c.file}:${c.line + 1})`);
+    for (const e of c.endpoints) out.push(`  → 핸들러: ${e.handlerName ?? e.path} (${e.file}:${e.line + 1})`);
+    if (c.endpoints.length === 0) out.push('  → 매칭 엔드포인트 없음');
+  }
+  return out.join('\n');
 }
 
 /** sandbox-exec 프로파일 — 쓰기는 루트+$TMPDIR+/dev/null만 (스펙 §1 실측 검증 형태) */
@@ -237,6 +348,16 @@ export async function executeTool(
         if (!deps.libraryDocs) return '오류: 라이브러리 문서 도구를 사용할 수 없습니다 (Context7 미구성).';
         return await deps.libraryDocs(String(args.library ?? ''), String(args.query ?? ''));
       }
+      case 'find_symbol':
+        return deps.indexerQuery ? await runFindSymbol(deps, String(args.name ?? '')) : NO_INDEXER;
+      case 'get_call_graph':
+        return deps.indexerQuery
+          ? await runCallGraph(deps, String(args.name ?? ''), String(args.direction ?? 'callers'))
+          : NO_INDEXER;
+      case 'get_impact':
+        return deps.indexerQuery ? await runImpact(deps, String(args.name ?? '')) : NO_INDEXER;
+      case 'trace_http':
+        return deps.indexerQuery ? await runTraceHttp(deps, String(args.query ?? '')) : NO_INDEXER;
       default:
         return `오류: 알 수 없는 도구 '${name}'`;
     }

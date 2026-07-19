@@ -143,6 +143,7 @@ export interface ChatContext {
   signatures?: string[];
   retrieved?: RetrievedSnippet[]; // 자동 검색으로 찾은 관련 코드
   stack?: string; // 프로젝트 스택 요약(자동 감지)
+  structure?: string[]; // v3: 커서 심볼의 구조(callers/callees 시그니처) — 실패 시 생략(additive)
 }
 export type ChatEvent =
   | { type: 'chunk'; text: string }

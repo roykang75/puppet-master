@@ -8,7 +8,7 @@ import type { Database } from 'better-sqlite3';
 import { openDb } from '../src/indexer/db';
 import { Indexer } from '../src/indexer/pipeline';
 import {
-  getEndpoints, getHttpCalls, matchCallToEndpoints, matchEndpointToCalls, getImpact, getFlowForFile,
+  getEndpoints, getHttpCalls, matchCallToEndpoints, matchEndpointToCalls, getImpact, getFlowForFile, traceHttp,
 } from '../src/indexer/api';
 
 let dir: string;
@@ -132,6 +132,20 @@ describe('getFlowForFile (Flow 탭 단일 왕복)', () => {
     const flow = getFlowForFile(db, 'server/main.py');
     expect(flow.endpoints).toHaveLength(1);
     expect(flow.endpoints[0].calls[0]).toMatchObject({ enclosingName: 'loadUser', file: 'web/src/App.tsx' });
+  });
+});
+
+describe('traceHttp (에이전트 trace_http 백엔드)', () => {
+  it('경로 부분일치로 체인 검색', () => {
+    const flow = traceHttp(db, '/api/users');
+    expect(flow.endpoints).toHaveLength(1);
+    expect(flow.endpoints[0].calls[0].enclosingName).toBe('loadUser');
+    expect(flow.calls[0].endpoints[0].handlerName).toBe('read_user');
+  });
+  it('핸들러명으로도 검색', () => {
+    const flow = traceHttp(db, 'read_user');
+    expect(flow.endpoints).toHaveLength(1);
+    expect(flow.endpoints[0].handlerName).toBe('read_user');
   });
 });
 
