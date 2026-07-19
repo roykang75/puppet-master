@@ -1,0 +1,63 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2f3a"/>
+      <stop offset="1" stop-color="#15161a"/>
+    </linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#63b0ff"/>
+      <stop offset="1" stop-color="#3a86e0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 배경 -->
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="url(#bg)"/>
+
+  <!-- 줄 (strings) -->
+  <g stroke="#7f8ea8" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.85">
+    <line x1="512" y1="300" x2="512" y2="384"/>
+    <line x1="336" y1="262" x2="430" y2="676"/>
+    <line x1="688" y1="262" x2="594" y2="676"/>
+  </g>
+
+  <!-- 인형 (마리오네트) -->
+  <g fill="#e7ecf4" stroke="#e7ecf4" stroke-linecap="round">
+    <!-- 팔 -->
+    <g fill="none" stroke-width="26">
+      <line x1="474" y1="508" x2="420" y2="590"/>
+      <line x1="420" y1="590" x2="432" y2="674"/>
+      <line x1="550" y1="508" x2="604" y2="590"/>
+      <line x1="604" y1="590" x2="592" y2="674"/>
+    </g>
+    <!-- 다리 -->
+    <g fill="none" stroke-width="28">
+      <line x1="488" y1="628" x2="470" y2="724"/>
+      <line x1="470" y1="724" x2="486" y2="812"/>
+      <line x1="536" y1="628" x2="554" y2="724"/>
+      <line x1="554" y1="724" x2="538" y2="812"/>
+    </g>
+    <!-- 몸통 -->
+    <rect x="460" y="484" width="104" height="156" rx="36" stroke="none"/>
+    <!-- 머리 -->
+    <circle cx="512" cy="430" r="52" stroke="none"/>
+    <!-- 손/발 -->
+    <circle cx="432" cy="676" r="15" stroke="none"/>
+    <circle cx="592" cy="676" r="15" stroke="none"/>
+    <circle cx="486" cy="814" r="16" stroke="none"/>
+    <circle cx="538" cy="814" r="16" stroke="none"/>
+  </g>
+
+  <!-- 관절 포인트 (액센트) -->
+  <g fill="#63b0ff">
+    <circle cx="420" cy="590" r="11"/>
+    <circle cx="604" cy="590" r="11"/>
+    <circle cx="470" cy="724" r="11"/>
+    <circle cx="554" cy="724" r="11"/>
+  </g>
+
+  <!-- 컨트롤 바 (조종 십자) -->
+  <g stroke="url(#acc)" stroke-linecap="round" fill="none">
+    <line x1="300" y1="250" x2="724" y2="250" stroke-width="46"/>
+    <line x1="512" y1="202" x2="512" y2="300" stroke-width="46"/>
+  </g>
+</svg>

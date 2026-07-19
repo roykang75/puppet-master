@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawnIndexer, IndexerManager } from './indexer-manager';
@@ -417,6 +417,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // dev 모드 dock 아이콘 (패키지 앱은 electron-builder가 .icns로 처리)
+  if (!app.isPackaged && process.platform === 'darwin') {
+    const img = nativeImage.createFromPath(path.join(app.getAppPath(), 'build/icon.png'));
+    if (!img.isEmpty()) app.dock?.setIcon(img);
+  }
   persistence = new Persistence(app.getPath('userData'));
   settingsStore = new SettingsStore(app.getPath('userData'));
   completionService = new CompletionService({

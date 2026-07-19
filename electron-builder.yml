@@ -32,3 +32,4 @@ mac:
   target: [dir, dmg, zip]
   identity: null
   category: public.app-category.developer-tools
+  icon: build/icon.icns
