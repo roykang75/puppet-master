@@ -315,8 +315,19 @@
 **인계 노트(비차단):** 마크는 **디스크 기준**(HEAD vs 워킹트리 파일) — 저장 전 미저장 편집은 미반영(저장 후 갱신).
 미추적(untracked) 파일은 마크 없음(git diff 대상 아님). 삭제는 앵커 라인 빨강 바로 단순 표시(삼각형 아님).
 
+## ✅ HTML 내보내기 (v2 13탄) — 완료 (main 직접 커밋)
+
+- [x] **활성 파일을 하이라이트된 자기완결 HTML로 내보내기** (File 메뉴 "HTML로 내보내기…", Cmd/Ctrl+Shift+E).
+  Monaco `colorize`(.mtkN 스팬) + 라이브 스타일시트의 `.mtk` 색 규칙 수집(`.monaco-editor ` 프리픽스 제거)
+  + 테마 `--bg`/`--fg` 인라인 → 단일 HTML 문서. `html-doc.ts`(순수 조립) + `html-export.ts`(colorize/수집/저장).
+- [x] main `file:exportHtml`(save dialog + write, 사용자가 고른 경로라 루트 제한 밖 허용), preload, MenuAction, App 핸들러.
+- [x] 검증: 단위(buildHtmlDocument 3 — 구조/이스케이프/색 폴백), 전체 **391/391**, 빌드 클린.
+
+**인계 노트(비차단):** colorize 출력 + 네이티브 저장 다이얼로그는 Playwright 블록으로 E2E 비현실적 → 실 저장 산출물은
+수동 확인 대상. 선택 영역만 내보내기·인쇄용 라인번호는 후속.
+
 ### 다음 후보
-사용자 결정 대기 — HTML 내보내기/레이아웃 프리셋/Directory Compare/Code Beautifier 중 선택.
+사용자 결정 대기 — 레이아웃 프리셋/Directory Compare/Code Beautifier 중 선택.
 
 ### v2 이후 (백로그)
-- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
+- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)

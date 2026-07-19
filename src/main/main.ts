@@ -182,6 +182,12 @@ function registerIpc(): void {
   ipcMain.handle('file:read', (_e, rel: string) => requireFiles().readFile(rel));
   ipcMain.handle('file:read-binary', (_e, rel: string) => requireFiles().readBinary(rel));
   ipcMain.handle('git:fileDiff', (_e, rel: string) => (currentRoot ? getFileChanges(currentRoot, rel) : []));
+  ipcMain.handle('file:exportHtml', async (_e, defaultName: string, content: string) => {
+    const r = await dialog.showSaveDialog(win!, { defaultPath: defaultName, filters: [{ name: 'HTML', extensions: ['html'] }] });
+    if (r.canceled || !r.filePath) return null;
+    fs.writeFileSync(r.filePath, content, 'utf8'); // 사용자가 다이얼로그로 고른 경로 — 루트 제한 밖 허용
+    return r.filePath;
+  });
   ipcMain.handle('file:save', (_e, rel: string, content: string) => {
     try {
       requireFiles().saveFile(rel, content);

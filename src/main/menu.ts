@@ -1,7 +1,7 @@
 import { Menu } from 'electron';
 import type { RecentEntry } from './persistence';
 
-export type MenuAction = { type: 'open-folder' } | { type: 'save' } | { type: 'open-recent'; root: string };
+export type MenuAction = { type: 'open-folder' } | { type: 'save' } | { type: 'open-recent'; root: string } | { type: 'export-html' };
 
 export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => void): void {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -18,6 +18,8 @@ export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => v
         },
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => send({ type: 'save' }) },
+        { type: 'separator' },
+        { label: 'HTML로 내보내기…', accelerator: 'CmdOrCtrl+Shift+E', click: () => send({ type: 'export-html' }) },
         { type: 'separator' },
         process.platform === 'darwin' ? { role: 'close' as const } : { role: 'quit' as const },
       ],

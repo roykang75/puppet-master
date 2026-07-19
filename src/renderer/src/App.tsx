@@ -10,7 +10,8 @@ import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
-import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels } from './components/EditorPane';
+import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels, isDiffTabPath } from './components/EditorPane';
+import { exportFileHtml } from './html-export';
 import { CHAT_ERROR_TEXT } from './components/ChatPanel';
 import { scheduleChatSave } from './chat-persist';
 import { SearchOverlay } from './components/SearchOverlay';
@@ -224,6 +225,10 @@ export function App() {
       }
       if (action.type === 'open-recent') void openProject(action.root);
       if (action.type === 'save') window.dispatchEvent(new CustomEvent('si:save'));
+      if (action.type === 'export-html') {
+        const p = useAppStore.getState().activePath;
+        if (p && !isDiffTabPath(p)) void exportFileHtml(monaco, p);
+      }
     });
     // 채팅 스트림 이벤트 구독 — App은 항상 마운트 상태이므로 RightPanel의 탭 전환으로
     // ChatPanel이 언마운트돼도 이벤트가 유실되지 않는다 (P1 수정).

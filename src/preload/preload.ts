@@ -22,6 +22,7 @@ const api = {
   readFileBinary: (rel: string): Promise<string> => ipcRenderer.invoke('file:read-binary', rel),
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
   gitFileDiff: (rel: string): Promise<GitChangeRange[]> => ipcRenderer.invoke('git:fileDiff', rel),
+  exportHtml: (defaultName: string, content: string): Promise<string | null> => ipcRenderer.invoke('file:exportHtml', defaultName, content),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),
   getFileTokens: (path: string): Promise<FileTokens> =>
