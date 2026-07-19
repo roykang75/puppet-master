@@ -5,6 +5,7 @@ import { jumpTo, setCurrentLocProvider, type Loc } from '../navigation';
 import { buildTokenDecorations } from '../semantic-tokens';
 import { registerCompletionProvider } from '../completion-provider';
 import { registerLspFeatures, tryLspDefinition } from '../lsp-features';
+import { registerSymbolCompletion } from '../symbol-completion';
 import { registerSnippetProviders } from '../snippets';
 import { ensureLanguageRegistered } from '../textmate/registry';
 import { lspSync, isLspPath } from '../lsp-sync';
@@ -179,6 +180,7 @@ export function EditorPane() {
     });
     registerCompletionProvider(monaco); // 앱 수명 1회 (내부 플래그로 재마운트 이중 등록 방지)
     registerLspFeatures(monaco); // 앱 수명 1회 (내부 플래그)
+    registerSymbolCompletion(monaco); // 비-LSP 언어(c/cpp/java) 인덱서 심볼 완성 — 앱 수명 1회
     registerSnippetProviders(monaco); // 앱 수명 1회 (내부 플래그) — 스니펫 완성 제공자
     editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
       window.dispatchEvent(new CustomEvent('si:save')),

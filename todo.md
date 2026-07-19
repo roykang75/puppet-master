@@ -277,8 +277,20 @@
 (비식별자 rename 엣지 미포함 — references 위치 기반, 폴백 안전), Monaco 피크/시그니처 팝업의 GUI 물리동작은
 실서버 왕복까진 실증됨·에디터 UI 구동은 사용자 수동 확인 권장(Plan 6 F12 계열과 동일).
 
+## ✅ Plan 15: 심볼 자동완성(비-AI) (v2 10탄) — 완료 (main 직접 커밋)
+
+- [x] **비-LSP 인덱싱 언어(c/cpp/java)** — LSP가 없어 자동완성 전무였던 언어에 인덱서 심볼 DB 기반 완성 제공.
+  `symbol-completion.ts`: Monaco `registerCompletionItemProvider(['c','cpp','java'])` → `searchSymbols`(fragment-prefix)
+  → 이름 dedup + kind 매핑. LSP 언어(ts/js/py)는 기존 LSP 완성이 담당(제외).
+- [x] EditorPane에서 registerLspFeatures 옆 1회 배선. 인덱서/DB 무변경(기존 read-only RPC 재사용).
+- [x] 검증: 단위(dedup/kind매핑/언어목록) 5건, 전체 **378/378**, 빌드 클린. Monaco basic-languages id(c/cpp/java) 일치 확인.
+- **분리**: Code Beautifier는 포매터 의존성(prettier vs LSP formatting, pyright 미지원) 결정이 별도라 후속 Plan으로 뺌.
+
+**인계 노트(비차단):** searchSymbols는 전 언어 전역 검색이라 C 파일에서 Java 심볼도 제안될 수 있음(SI식 전역 완성 — 의도적,
+필요 시 path 확장자 필터로 언어 한정 가능). 에디터 드롭다운 GUI 물리동작은 수동 확인 권장.
+
 ### 다음 후보
-사용자 결정 대기 — 로드맵 Plan 15(심볼 자동완성+Beautifier)/16(File Compare)/17(리비전마크·HTML·레이아웃) 중 선택.
+사용자 결정 대기 — 로드맵 Plan 16(File/Directory Compare)/17(리비전마크·HTML·레이아웃)/Code Beautifier 중 선택.
 
 ### v2 이후 (백로그)
-- [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
+- [ ] Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
