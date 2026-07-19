@@ -25,6 +25,11 @@ export class Persistence {
     return path.join(this.baseDir, 'chat', `${this.projectHash(root)}.db`);
   }
 
+  // 에이전트 격리 worktree 베이스 — 프로젝트 밖(userData 하위)이라 원본 오염 없음
+  worktreeBaseDir(root: string): string {
+    return path.join(this.baseDir, 'agent-worktrees', this.projectHash(root));
+  }
+
   loadRecent(): RecentEntry[] {
     try {
       return JSON.parse(fs.readFileSync(path.join(this.baseDir, 'recent.json'), 'utf8')) as RecentEntry[];

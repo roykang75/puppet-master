@@ -270,6 +270,9 @@ export function App() {
           // 승인 대기 중 열어둔 변경 제안 탭은 실행 완료 시 자동으로 닫는다 (내용이 stale)
           if (st.tabs.some((t) => t.path === `diff://${ev.path}`)) st.closeTab(`diff://${ev.path}`);
         }
+      } else if (ev.type === 'worktree') {
+        // 격리 턴 종료 — 변경이 있으면 적용 바 표시, 없으면 클리어
+        st.setWorktreeChanges(ev.changes.length > 0 ? ev.changes : null);
       } else if (ev.type === 'done') { st.setChatStreaming(false); scheduleChatSave(); }
       else {
         st.setChatError(CHAT_ERROR_TEXT[ev.kind] ?? CHAT_ERROR_TEXT.other);

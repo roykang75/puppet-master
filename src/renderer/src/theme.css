@@ -469,6 +469,19 @@ body {
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .changed-file-chip:hover { background: var(--bg-hover); border-color: var(--accent); }
+/* 격리(worktree) 리뷰/적용 바 — 격리 턴 종료 후 입력창 위에 표시 */
+.worktree-bar {
+  flex: none; margin: 0 8px 6px; padding: 8px 10px;
+  background: var(--bg); border: 1px solid var(--accent); border-radius: 10px;
+}
+.worktree-bar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.worktree-bar-label { font-size: 12px; font-weight: 600; }
+.worktree-bar-actions { display: flex; gap: 6px; }
+.worktree-bar-files { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.worktree-status { font-size: 10px; font-weight: 700; }
+.worktree-status-A { color: var(--diff-add-fg, #4caf50); }
+.worktree-status-M { color: var(--accent); }
+.worktree-status-D { color: var(--diff-del-fg, #e05252); }
 .chat-input-row {
   flex: none; margin: 8px; padding: 6px 8px;
   background: var(--bg); border: 1px solid var(--border); border-radius: 10px;

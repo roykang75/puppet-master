@@ -161,9 +161,12 @@ export interface AgentToolUi {
   before?: string; // write_file 이전 내용 — 에디터 diff 뷰용 (100KB 초과 시 생략)
   after?: string; // write_file 제안 내용 — 에디터 diff 뷰용 (100KB 초과 시 생략)
 }
+// 격리(worktree) 모드에서 wt의 HEAD 대비 변경 파일 (리뷰/적용 UI용)
+export interface WorktreeChange { path: string; status: 'M' | 'A' | 'D' }
 export type AgentEvent =
   | { type: 'chunk'; text: string }
   | ({ type: 'tool' } & AgentToolUi)
+  | { type: 'worktree'; changes: WorktreeChange[] } // 격리 턴 종료 시 — done 직전 1회
   | { type: 'done' }
   | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
 

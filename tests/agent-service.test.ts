@@ -168,6 +168,66 @@ describe('AgentService 루프', () => {
     expect(READONLY_MAX_TOOL_CALLS).toBeLessThan(MAX_TOOL_CALLS);
   });
 
+  it('격리 모드(git): 도구 deps.projectRoot가 wt로 교체되고 done 직전 worktree 이벤트 방출', async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'a.py', content: 'x' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    let seenRoot = '';
+    const svc = new AgentService({
+      ...baseDeps(adapter),
+      executeToolOverride: async (_n, _a, deps) => { seenRoot = deps.projectRoot; return 'OK'; },
+      isolation: {
+        enabled: () => true,
+        isGit: () => true,
+        ensure: () => ({ dir: '/tmp/wt', skipped: [] }),
+        changes: () => [{ path: 'a.py', status: 'A' }],
+      },
+    });
+    const { events, on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    expect(seenRoot).toBe('/tmp/wt'); // 파일 도구가 wt 기준으로 격리됨
+    const wt = events.find((e) => e.type === 'worktree') as any;
+    expect(wt.changes).toEqual([{ path: 'a.py', status: 'A' }]);
+    // worktree는 done 직전 1회
+    expect(events[events.length - 1]).toEqual({ type: 'done' });
+    expect(events[events.length - 2].type).toBe('worktree');
+  });
+
+  it('격리 모드(비-git): 쓰기 없이 명시적 오류 안내 후 done (묵시 폴백 금지)', async () => {
+    let called = false;
+    const { adapter } = fakeAdapter([
+      { text: '무시됨', toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'a.py', content: 'x' } }] },
+    ]);
+    const svc = new AgentService({
+      ...baseDeps(adapter),
+      executeToolOverride: async () => { called = true; return 'OK'; },
+      isolation: {
+        enabled: () => true,
+        isGit: () => false,
+        ensure: () => { throw new Error('ensure는 호출되면 안 됨'); },
+        changes: () => [],
+      },
+    });
+    const { events, on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    expect(called).toBe(false); // 어떤 도구도 실행되지 않음
+    expect(events.some((e) => e.type === 'chunk' && e.text.includes('git 저장소'))).toBe(true);
+    expect(events.some((e) => e.type === 'worktree')).toBe(false);
+    expect(events[events.length - 1]).toEqual({ type: 'done' });
+  });
+
+  it('격리 미사용(isolation undefined): 기존 직접 모드 그대로, worktree 이벤트 없음', async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'a.py', content: 'x' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    expect(events.some((e) => e.type === 'worktree')).toBe(false);
+  });
+
   it('취소: awaiting 대기 중 cancel → 조용히 done', async () => {
     const { adapter } = fakeAdapter([
       { text: '', toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'a', content: 'b' } }] },

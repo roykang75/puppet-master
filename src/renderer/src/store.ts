@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { IndexStats } from '../../indexer/pipeline';
-import type { AgentToolUi, ThreadMeta } from '../../shared/protocol';
+import type { AgentToolUi, ThreadMeta, WorktreeChange } from '../../shared/protocol';
 import type { Bookmark } from './bookmarks';
 
 export interface Tab {
@@ -34,6 +34,8 @@ interface AppState {
   threads: ThreadMeta[];
   agentMode: boolean;
   autoApprove: boolean;
+  isolate: boolean; // 격리(worktree) 모드 — settings와 동기화, ChatPanel 토글
+  worktreeChanges: WorktreeChange[] | null; // 격리 턴 종료 후 리뷰/적용 바 (null = 없음)
   chatDraft: string | null; // diff 주석 → 채팅 입력창 프리필 대기값. ChatPanel이 소비 후 클리어
   treeRefreshNonce: number;
   rightTab: 'relation' | 'chat';
@@ -78,6 +80,8 @@ interface AppState {
   loadThreadMessages(msgs: AppState['chatMessages']): void;
   setAgentMode(v: boolean): void;
   setAutoApprove(v: boolean): void;
+  setIsolate(v: boolean): void;
+  setWorktreeChanges(c: WorktreeChange[] | null): void;
   setChatDraft(v: string | null): void;
   upsertChatTool(tool: AgentToolUi): void;
   bumpTreeRefresh(): void;
@@ -115,6 +119,8 @@ export const useAppStore = create<AppState>((set) => ({
   threads: [],
   agentMode: false,
   autoApprove: true,
+  isolate: false,
+  worktreeChanges: null,
   chatDraft: null,
   treeRefreshNonce: 0,
   rightTab: 'relation',
@@ -124,7 +130,7 @@ export const useAppStore = create<AppState>((set) => ({
   split: null,
   setSplit: (split) => set({ split }),
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, compareBase: null, compareBaseDir: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, activeThreadId: null, threads: [], terminals: [], activeTerminalId: null, split: null }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, compareBase: null, compareBaseDir: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, activeThreadId: null, threads: [], terminals: [], activeTerminalId: null, split: null, worktreeChanges: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -202,6 +208,8 @@ export const useAppStore = create<AppState>((set) => ({
   loadThreadMessages: (chatMessages) => set({ chatMessages, chatStreaming: false }),
   setAgentMode: (v) => set({ agentMode: v }),
   setAutoApprove: (v) => set({ autoApprove: v }),
+  setIsolate: (v) => set({ isolate: v }),
+  setWorktreeChanges: (c) => set({ worktreeChanges: c }),
   setChatDraft: (v) => set({ chatDraft: v }),
   bumpTreeRefresh: () => set((s) => ({ treeRefreshNonce: s.treeRefreshNonce + 1 })),
   upsertChatTool: (tool) =>

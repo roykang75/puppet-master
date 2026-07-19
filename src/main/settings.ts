@@ -33,7 +33,7 @@ interface SettingsFile {
   profiles?: CompletionProfile[];
   activeProfileId?: string | null;
   appearance?: { theme: string };
-  agent?: { allowedDirs: string[] };
+  agent?: { allowedDirs: string[]; isolate?: boolean };
   context7ApiKey?: string;
 }
 
@@ -41,7 +41,7 @@ interface Normalized {
   profiles: CompletionProfile[];
   activeProfileId: string | null;
   appearance?: { theme: string };
-  agent?: { allowedDirs: string[] };
+  agent?: { allowedDirs: string[]; isolate?: boolean };
   context7ApiKey?: string;
 }
 
@@ -154,13 +154,21 @@ export class SettingsStore {
     this.write({ ...prev, appearance: { theme: a.theme } });
   }
 
-  getAgent(): { allowedDirs: string[] } {
-    return this.read().agent ?? { allowedDirs: [] };
+  getAgent(): { allowedDirs: string[]; isolate: boolean } {
+    const a = this.read().agent;
+    return { allowedDirs: a?.allowedDirs ?? [], isolate: a?.isolate ?? false };
   }
 
-  setAgent(a: { allowedDirs: string[] }): void {
+  /** 부분 갱신 — 지정한 필드만 바꾸고 나머지는 기존 유지 (allowedDirs/isolate가 서로 다른 UI에서 저장됨). */
+  setAgent(patch: { allowedDirs?: string[]; isolate?: boolean }): void {
     const prev = this.read();
-    this.write({ ...prev, agent: { allowedDirs: a.allowedDirs.filter((d) => typeof d === 'string' && d) } });
+    const cur = prev.agent ?? { allowedDirs: [] };
+    const allowedDirs =
+      patch.allowedDirs !== undefined
+        ? patch.allowedDirs.filter((d) => typeof d === 'string' && d)
+        : cur.allowedDirs;
+    const isolate = patch.isolate !== undefined ? patch.isolate : cur.isolate ?? false;
+    this.write({ ...prev, agent: { allowedDirs, isolate } });
   }
 
   getContext7Key(): string | null {

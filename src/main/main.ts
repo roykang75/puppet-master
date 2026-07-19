@@ -14,6 +14,7 @@ import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
 import { getFileChanges } from './git-diff';
+import { isGitRepo, ensureWorktree, worktreeChanges, applyWorktree, discardWorktree } from './agent/worktree';
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
@@ -45,6 +46,7 @@ let terminals: TerminalManager | null = null;
 let files: ProjectFiles | null = null;
 let currentRoot: string | null = null;
 let currentStack: ProjectStack | null = null;
+let agentWorktreeDir: string | null = null; // 격리 모드 활성 worktree — ensure 시 갱신, apply/discard/프로젝트전환 시 클리어
 let quitting = false;
 let persistence: Persistence;
 let settingsStore: SettingsStore;
@@ -109,6 +111,7 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
     });
     terminals?.killAll();
     agentService?.cancel(); // 진행 중 에이전트 루프 중단 — 이전 프로젝트에 쓰기 방지
+    agentWorktreeDir = null; // 이전 프로젝트의 wt 포인터 클리어 (다음 격리 턴이 새 프로젝트 wt를 ensure)
     chatStore?.close();
     const chatDbPath = persistence.chatDbPathFor(root);
     fs.mkdirSync(path.dirname(chatDbPath), { recursive: true });
@@ -343,7 +346,34 @@ function registerIpc(): void {
   ipcMain.handle('settings:appearance:get', () => settingsStore.getAppearance());
   ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
   ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
-  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs: string[] }) => settingsStore.setAgent(a));
+  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs?: string[]; isolate?: boolean }) => settingsStore.setAgent(a));
+  // 격리(worktree) 모드 — 프로젝트가 git 저장소일 때만 사용 가능 (렌더러 토글 disable 판단용)
+  ipcMain.handle('agent:isolationAvailable', () => (currentRoot ? isGitRepo(currentRoot) : false));
+  // wt 파일 내용 읽기 — 리뷰 diff의 after 쪽. 활성 wt 루트 안만 허용.
+  ipcMain.handle('agent:worktreeRead', (_e, rel: string) => {
+    if (!agentWorktreeDir) throw new Error('활성 격리 워크트리가 없습니다');
+    const base = path.resolve(agentWorktreeDir);
+    const abs = path.resolve(base, rel);
+    if (abs !== base && !abs.startsWith(base + path.sep)) throw new Error('워크트리 밖 경로');
+    return fs.readFileSync(abs, 'utf8');
+  });
+  // wt 변경을 원본으로 적용 → 적용 파일 재인덱싱(fileIndexed로 열린 탭 리로드) → wt 폐기
+  ipcMain.handle('agent:worktreeApply', (_e, paths?: string[]) => {
+    if (!agentWorktreeDir || !currentRoot) throw new Error('활성 격리 워크트리가 없습니다');
+    const applied = applyWorktree(currentRoot, agentWorktreeDir, paths);
+    agentWorktreeDir = null;
+    for (const rel of applied) {
+      // file:save 패턴 — 비동기 재인덱싱(실패해도 로그만), fileIndexed 이벤트가 열린 탭 라이브 리로드
+      indexer?.rpc.request('indexFile', { path: rel }, { timeoutMs: 180_000 }).catch((err: Error) => {
+        console.error('[worktreeApply indexFile]', rel, err.message);
+      });
+    }
+    return applied;
+  });
+  ipcMain.handle('agent:worktreeDiscard', () => {
+    if (agentWorktreeDir && currentRoot) discardWorktree(currentRoot, agentWorktreeDir);
+    agentWorktreeDir = null;
+  });
   ipcMain.handle('settings:context7:set-key', (_e, key: string) => settingsStore.setContext7Key(key));
   ipcMain.handle('stack:get', () => (currentStack ? buildStackSummary(currentStack) : null));
 
@@ -501,6 +531,17 @@ app.whenReady().then(() => {
               indexer ? indexer.rpc.request(method, params, { timeoutMs: 30_000 }) : Promise.resolve(null),
           }
         : null,
+    isolation: {
+      enabled: () => settingsStore.getAgent().isolate,
+      isGit: () => (currentRoot ? isGitRepo(currentRoot) : false),
+      ensure: () => {
+        if (!currentRoot) throw new Error('프로젝트가 열려 있지 않습니다');
+        const r = ensureWorktree(currentRoot, persistence.worktreeBaseDir(currentRoot));
+        agentWorktreeDir = r.dir;
+        return r;
+      },
+      changes: (dir: string) => worktreeChanges(dir),
+    },
   });
   createWindow();
   buildMenu(persistence.loadRecent(), sendMenu, openAboutWindow);

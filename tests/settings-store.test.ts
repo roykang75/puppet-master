@@ -180,11 +180,21 @@ describe('Context7 API 키', () => {
 describe('agent 설정', () => {
   it('기본 allowedDirs [] , set→get 라운드트립, 프로파일과 독립', () => {
     const store = new SettingsStore(baseDir);
-    expect(store.getAgent()).toEqual({ allowedDirs: [] });
+    expect(store.getAgent()).toEqual({ allowedDirs: [], isolate: false });
     store.setAgent({ allowedDirs: ['/Users/x/docs', '/tmp/ref'] });
-    expect(store.getAgent()).toEqual({ allowedDirs: ['/Users/x/docs', '/tmp/ref'] });
+    expect(store.getAgent()).toEqual({ allowedDirs: ['/Users/x/docs', '/tmp/ref'], isolate: false });
     store.setProfiles([{ name: 'a', provider: 'openai', model: 'm' }], 0);
     expect(store.getAgent().allowedDirs).toHaveLength(2); // 프로파일 저장이 agent 보존
     expect(new SettingsStore(baseDir).getAgent().allowedDirs).toHaveLength(2);
+  });
+
+  it('isolate 부분 갱신 — allowedDirs와 서로 독립 보존', () => {
+    const store = new SettingsStore(baseDir);
+    store.setAgent({ allowedDirs: ['/tmp/ref'] });
+    store.setAgent({ isolate: true }); // isolate만 바꿔도 allowedDirs 유지
+    expect(store.getAgent()).toEqual({ allowedDirs: ['/tmp/ref'], isolate: true });
+    store.setAgent({ allowedDirs: [] }); // allowedDirs만 바꿔도 isolate 유지
+    expect(store.getAgent()).toEqual({ allowedDirs: [], isolate: true });
+    expect(new SettingsStore(baseDir).getAgent().isolate).toBe(true); // 영속화
   });
 });

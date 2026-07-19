@@ -68,10 +68,14 @@ export function ChatPanel() {
   const streaming = useAppStore((s) => s.chatStreaming);
   const agentMode = useAppStore((s) => s.agentMode);
   const autoApprove = useAppStore((s) => s.autoApprove);
+  const isolate = useAppStore((s) => s.isolate);
+  const worktreeChanges = useAppStore((s) => s.worktreeChanges);
+  const [isolationAvailable, setIsolationAvailable] = useState(true);
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const activeThreadId = useAppStore((s) => s.activeThreadId);
   const threads = useAppStore((s) => s.threads);
   const chatDraft = useAppStore((s) => s.chatDraft);
+  const root = useAppStore((s) => s.root);
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [profiles, setProfiles] = useState<CompletionProfilePublic[]>([]);
@@ -134,6 +138,34 @@ export function ChatPanel() {
       setActiveId(s.activeId);
     }).catch(() => {});
   }, [settingsOpen]);
+
+  // 격리 설정/가용성 로드 — 프로젝트 전환(root)마다 git 여부 재확인
+  useEffect(() => {
+    void window.si.getAgentSettings().then((a) => useAppStore.getState().setIsolate(a.isolate)).catch(() => {});
+    void window.si.agentIsolationAvailable().then(setIsolationAvailable).catch(() => setIsolationAvailable(false));
+  }, [root]);
+
+  const toggleIsolate = (v: boolean) => {
+    useAppStore.getState().setIsolate(v);
+    void window.si.setAgentSettings({ isolate: v });
+  };
+
+  // 격리 변경 파일 diff 열기 — before=원본(없으면 ''), after=wt 내용(삭제면 '')
+  const openWorktreeDiff = async (c: { path: string; status: 'M' | 'A' | 'D' }) => {
+    const before = c.status === 'A' ? '' : await window.si.readFile(c.path).catch(() => '');
+    const after = c.status === 'D' ? '' : await window.si.agentWorktreeRead(c.path).catch(() => '');
+    useAppStore.getState().openDiffTab(c.path, before, after, undefined, 'agent');
+  };
+  const applyWorktree = async () => {
+    await window.si.agentWorktreeApply().catch(() => {});
+    const st = useAppStore.getState();
+    st.setWorktreeChanges(null);
+    st.bumpTreeRefresh();
+  };
+  const discardWorktree = async () => {
+    await window.si.agentWorktreeDiscard().catch(() => {});
+    useAppStore.getState().setWorktreeChanges(null);
+  };
 
   const switchProfile = (id: string) => {
     setActiveId(id);
@@ -395,6 +427,31 @@ export function ChatPanel() {
         ))}
         {streaming && <div className="chat-streaming">…</div>}
       </div>
+      {worktreeChanges && worktreeChanges.length > 0 && (
+        <div className="worktree-bar">
+          <div className="worktree-bar-head">
+            <span className="worktree-bar-label">격리된 변경 {worktreeChanges.length}개 파일</span>
+            <span className="worktree-bar-actions">
+              <button className="rename-btn primary" onClick={() => void applyWorktree()}>적용</button>
+              <button className="rename-btn" onClick={() => void discardWorktree()}>폐기</button>
+            </span>
+          </div>
+          <div className="worktree-bar-files">
+            {worktreeChanges.map((c) => (
+              <span
+                key={c.path}
+                className="changed-file-chip"
+                title={`${c.path} (${c.status}) — 클릭하면 변경 내용(diff)`}
+                onClick={() => void openWorktreeDiff(c)}
+              >
+                <img className="file-icon tab-file-icon" src={fileIconUrl(c.path.split('/').pop() ?? '')} alt="" />
+                <span className={`worktree-status worktree-status-${c.status}`}>{c.status}</span>
+                {c.path}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="chat-input-row">
         <textarea
           ref={textareaRef}
@@ -431,6 +488,22 @@ export function ChatPanel() {
                   onChange={(e) => useAppStore.getState().setAutoApprove(e.target.checked)}
                 />
                 <span className="chat-context-label">자동 승인</span>
+              </label>
+            )}
+            {agentMode && (
+              <label
+                className="chat-context-toggle"
+                title={isolationAvailable
+                  ? '켜면 에이전트가 프로젝트 밖 git worktree 샌드박스에서 작업하고, 턴 종료 후 변경을 리뷰·적용합니다'
+                  : 'git 저장소에서만 사용 가능합니다'}
+              >
+                <input
+                  type="checkbox"
+                  checked={isolate}
+                  disabled={streaming || !isolationAvailable}
+                  onChange={(e) => toggleIsolate(e.target.checked)}
+                />
+                <span className="chat-context-label">격리(worktree)</span>
               </label>
             )}
             <select

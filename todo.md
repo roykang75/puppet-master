@@ -386,5 +386,24 @@
   순수 헬퍼 `composeDiffFeedback`(diff-feedback.ts) + store `origin`/`chatDraft`. 파일 비교 diff는 현행 유지.
   단위 12종(피드백 합성 4·store 2 신규 포함) 471/471, E2E `diff-annotate.spec`(칩→diff→주석→프리필), build EXIT=0.
 
+- [x] **에이전트 격리 모드(worktree 샌드박스)**(Orca "Parallel Worktrees" 차용 2탄 — 단일 에이전트 v1):
+  옵트인 격리 on 시 에이전트가 프로젝트 밖 git worktree(`userData/agent-worktrees/<projectHash>/agent-wt`)에서
+  작업 → 턴 종료 후 사용자가 리뷰(diff)하고 [적용]/[폐기]. 원본 오염 없음.
+  - main `agent/worktree.ts`(electron-free·테스트가능): `isGitRepo`/`ensureWorktree`(재사용+dirty 동기화
+    M/A/??/D, 캡 파일 500·2MB/파일 스킵)/`worktreeChanges`(porcelain -z)/`applyWorktree`(wt→원본 복사·삭제 후
+    폐기)/`discardWorktree`(worktree remove+prune).
+  - `AgentService`에 `isolation` deps 주입 — 턴 시작 시 `projectRoot`를 wt로 교체(파일 도구·sandbox-exec 쓰기
+    루트가 자동 격리), searchText/indexerQuery는 원본 인덱스(read-only) 유지. 비-git인데 격리 on이면 명시적
+    오류 안내 후 중단(직접 모드 묵시 폴백 금지). 턴 종료 시 `worktree` 이벤트로 변경 목록 방출.
+  - settings `agent.isolate`(부분 갱신, allowedDirs와 독립) + IPC(`agent:isolationAvailable`/`worktreeRead`/
+    `worktreeApply`(적용 후 재인덱싱→열린 탭 라이브 리로드)/`worktreeDiscard`). ChatPanel: 에이전트 컨트롤에
+    "격리(worktree)" 토글(비-git이면 disabled), 입력창 위 적용 바(파일 칩 클릭 → 기존 diff 주석 뷰 재사용).
+  - 검증: 단위/통합 `agent-worktree.test`(dirty 동기화·changes·apply·discard·비-git throw·재사용·resolveToolPath
+    격리) + `agent-service` 격리 3종(deps.projectRoot 교체·비-git 중단·미사용 회귀), 483/483.
+    E2E `agent-isolation.spec`(격리 on→wt 생성·원본 없음→적용 바→[적용]→원본 반영+트리) + 기존 agent.spec 회귀,
+    build EXIT=0.
+  - **v1 스코프 아웃**(의도적): 병렬 worktree 다중, 브랜치/커밋 생성, 3-way 병합(적용=파일 복사·마지막 승리 —
+    diff 리뷰가 안전장치), 인덱서의 wt 신규 파일 인식.
+
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)
