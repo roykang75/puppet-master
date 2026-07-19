@@ -72,6 +72,7 @@ export function SearchOverlay() {
   const [sel, setSel] = useState(0);
   const [preview, setPreview] = useState<Preview | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeLineRef = useRef<HTMLDivElement>(null);
   // 마지막으로 읽은 (path, content) 한 쌍만 캐시 — 같은 파일 연속 선택 시 재읽기 방지
   const contentCache = useRef<{ path: string; content: string } | null>(null);
 
@@ -142,6 +143,11 @@ export function SearchOverlay() {
       clearTimeout(t);
     };
   }, [sel, items, open]);
+
+  // 미리보기 렌더 후 active 줄을 패널 중앙으로 스크롤 — 슬라이스가 패널보다 길어 항상 보이도록
+  useEffect(() => {
+    activeLineRef.current?.scrollIntoView({ block: 'center' });
+  }, [preview]);
 
   useEffect(() => {
     if (!open || q.trim().length < 2) {
@@ -280,7 +286,11 @@ export function SearchOverlay() {
                 const active = lineNo === preview.targetLine;
                 const lineHtml = preview.html?.[i];
                 return (
-                  <div key={lineNo} className={`search-preview-line${active ? ' active' : ''}`}>
+                  <div
+                    key={lineNo}
+                    ref={active ? activeLineRef : undefined}
+                    className={`search-preview-line${active ? ' active' : ''}`}
+                  >
                     <span className="search-preview-lineno">{lineNo}</span>
                     {lineHtml != null ? (
                       // Monaco colorize가 이스케이프한 .mtkN 스팬 — 안전. 빈 줄은 nbsp로 높이 유지.

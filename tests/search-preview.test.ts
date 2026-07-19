@@ -12,17 +12,19 @@ describe('buildPreviewSlice', () => {
     expect(s.lines[s.lines.length - 1]).toBe('line22');
   });
 
-  it('파일 시작 경계 클램프', () => {
+  it('파일 시작 근처: 끝쪽으로 확장해 창(15줄) 유지', () => {
     const s = buildPreviewSlice(content, 2, 7);
     expect(s.startLine).toBe(1);
+    expect(s.lines).toHaveLength(15);
     expect(s.lines[0]).toBe('line1');
-    expect(s.lines[s.lines.length - 1]).toBe('line9'); // 1..9
+    expect(s.lines[s.lines.length - 1]).toBe('line15'); // 1..15
   });
 
-  it('파일 끝 경계 클램프', () => {
+  it('파일 끝 근처: 시작쪽으로 확장해 창(15줄) 유지', () => {
     const s = buildPreviewSlice(content, 29, 7);
-    expect(s.startLine).toBe(22);
-    expect(s.lines[s.lines.length - 1]).toBe('line30'); // 22..30
+    expect(s.startLine).toBe(16);
+    expect(s.lines).toHaveLength(15);
+    expect(s.lines[s.lines.length - 1]).toBe('line30'); // 16..30
   });
 
   it('짧은 파일: 전체 반환', () => {
@@ -48,5 +50,14 @@ describe('buildPreviewSlice', () => {
     expect(buildPreviewSlice(content, 0, 2).startLine).toBe(1);
     const over = buildPreviewSlice(content, 999, 2);
     expect(over.lines[over.lines.length - 1]).toBe('line30');
+  });
+
+  it('기본 radius=30: 중앙 61줄 창', () => {
+    const long = Array.from({ length: 100 }, (_, i) => `L${i + 1}`).join('\n');
+    const s = buildPreviewSlice(long, 50);
+    expect(s.startLine).toBe(20); // 50-30
+    expect(s.lines).toHaveLength(61); // 20..80
+    expect(s.lines[0]).toBe('L20');
+    expect(s.lines[s.lines.length - 1]).toBe('L80');
   });
 });
