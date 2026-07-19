@@ -6,7 +6,7 @@ const G = 'src/renderer/assets/grammars';
 const T = 'src/renderer/assets/themes';
 
 describe('벤더링 자산', () => {
-  it('문법 6종 존재 + scopeName 일치', () => {
+  it('문법 7종 존재 + scopeName 일치', () => {
     const expected: Record<string, string> = {
       'c.tmLanguage.json': 'source.c',
       'cpp.tmLanguage.json': 'source.cpp',
@@ -14,6 +14,7 @@ describe('벤더링 자산', () => {
       'typescript.tmLanguage.json': 'source.ts',
       'javascript.tmLanguage.json': 'source.js',
       'java.tmLanguage.json': 'source.java',
+      'groovy.tmLanguage.json': 'source.groovy',
     };
     for (const [file, scope] of Object.entries(expected)) {
       const j = JSON.parse(fs.readFileSync(path.join(G, file), 'utf8'));

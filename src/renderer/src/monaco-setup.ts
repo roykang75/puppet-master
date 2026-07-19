@@ -5,6 +5,17 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 
+// groovy는 monaco basic-languages에 없어(java/scala만 존재) 언어 자체를 등록한다.
+// 확장자 없는 Jenkinsfile을 파일명으로 groovy에 연결 — createModel(content, undefined, uri)의
+// URI 추론이 이 등록을 참조한다. monaco-setup은 앱 최초 import 시 1회 실행되므로 모든 모델 생성 전에 완료된다.
+// TextMate 토크나이저(source.groovy)는 EditorPane의 ensureLanguageRegistered가 이후 지연 등록한다.
+monaco.languages.register({
+  id: 'groovy',
+  extensions: ['.groovy', '.gradle', '.gvy', '.jenkinsfile'],
+  filenames: ['Jenkinsfile', 'jenkinsfile', 'Jenkinsfile.groovy'],
+  aliases: ['Groovy', 'groovy'],
+});
+
 self.MonacoEnvironment = {
   getWorker(_workerId: string, label: string) {
     if (label === 'typescript' || label === 'javascript') return new tsWorker();

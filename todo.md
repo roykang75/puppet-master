@@ -240,6 +240,7 @@
 - [x] 도구 카드 아이콘+영문 라벨(`2839b26`) → 배지(pill) 스타일(`f7dd22f`)
 - [x] 에디터 가짜 오류(빨간 줄) 제거 — 내장 TS/JS 워커 진단 off(`64d25ad`), 이후 Plan 13으로 근본 교체
 - [x] AI 설정: 모델 추가/편집을 팝업 모달로, 목록은 컴팩트 행(설정 창이 길어지지 않게) (`aa8d0c9`)
+- [x] Groovy/Jenkinsfile 구문 강조 — groovy.tmLanguage.json 벤더링(VS Code 1.101.0, MIT) + monaco 언어 등록(확장자 없는 Jenkinsfile을 파일명으로 groovy 연결) + registry source.groovy 지연 등록. **스코프 아웃**: Groovy는 tree-sitter 인덱서 언어가 아니라 심볼/Relation 미지원(색칠만)
 
 ## ✅ Plan 18: 부채 정리 + 채팅 FTS (main 직접 커밋)
 

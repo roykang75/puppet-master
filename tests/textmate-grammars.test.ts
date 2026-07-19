@@ -12,6 +12,7 @@ const SCOPE_FILE: Record<string, string> = {
   'source.c': 'c.tmLanguage.json', 'source.cpp': 'cpp.tmLanguage.json',
   'source.python': 'python.tmLanguage.json', 'source.ts': 'typescript.tmLanguage.json',
   'source.js': 'javascript.tmLanguage.json', 'source.java': 'java.tmLanguage.json',
+  'source.groovy': 'groovy.tmLanguage.json',
 };
 
 beforeAll(async () => {
@@ -57,6 +58,11 @@ describe('실문법 scope 검증 (언어별 대표 라인)', () => {
   it('C++ / JS 주석', async () => {
     expect((await scopesOf('source.cpp', '// comment')).some((s) => s.startsWith('comment'))).toBe(true);
     expect((await scopesOf('source.js', '// comment')).some((s) => s.startsWith('comment'))).toBe(true);
+  });
+  it('Groovy 키워드/문자열 (Jenkinsfile 파이프라인)', async () => {
+    const scopes = await scopesOf('source.groovy', "def name = 'build'");
+    expect(scopes.some((s) => s.startsWith('storage.type') || s.startsWith('keyword'))).toBe(true);
+    expect(scopes.some((s) => s.startsWith('string'))).toBe(true);
   });
 });
 

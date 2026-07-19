@@ -11,14 +11,18 @@ import pyRaw from '../../assets/grammars/python.tmLanguage.json?raw';
 import tsRaw from '../../assets/grammars/typescript.tmLanguage.json?raw';
 import jsRaw from '../../assets/grammars/javascript.tmLanguage.json?raw';
 import javaRaw from '../../assets/grammars/java.tmLanguage.json?raw';
+// groovy: VS Code 1.101.0, MIT (basic-languages 미포함이라 monaco-setup에서 언어 자체를 별도 등록)
+import groovyRaw from '../../assets/grammars/groovy.tmLanguage.json?raw';
 
 const LANG_TO_SCOPE: Record<string, string> = {
   c: 'source.c', cpp: 'source.cpp', python: 'source.python',
   typescript: 'source.ts', javascript: 'source.js', java: 'source.java',
+  groovy: 'source.groovy',
 };
 const SCOPE_TO_RAW: Record<string, string> = {
   'source.c': cRaw, 'source.cpp': cppRaw, 'source.python': pyRaw,
   'source.ts': tsRaw, 'source.js': jsRaw, 'source.java': javaRaw,
+  'source.groovy': groovyRaw,
 };
 
 let registryPromise: Promise<Registry | null> | null = null;
