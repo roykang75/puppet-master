@@ -21,6 +21,17 @@ function makeFakeServer(caps: Record<string, unknown>): FakeServer {
     { uri: 'file:///root/src/def.ts', range: { start: { line: 1, character: 2 }, end: { line: 1, character: 5 } } },
     { uri: 'file:///outside/x.ts', range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } } },
   ]);
+  conn.onRequest('textDocument/references', (p: any) => {
+    log.push({ method: 'textDocument/references', params: p });
+    return [
+      { uri: 'file:///root/a.ts', range: { start: { line: 3, character: 4 }, end: { line: 3, character: 7 } } },
+      { uri: 'file:///outside/y.ts', range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } } },
+    ];
+  });
+  conn.onRequest('textDocument/signatureHelp', () => ({
+    signatures: [{ label: 'foo(a)', parameters: [{ label: 'a' }] }],
+    activeSignature: 0, activeParameter: 0,
+  }));
   conn.listen();
   const child: ChildLike = {
     stdout: s2c, stdin: c2s,
@@ -95,6 +106,23 @@ describe('LspManager', () => {
     expect(hover.markdown).toBe('h');
     const defs = (await mgr.request('definition', { path: 'a.ts', line: 0, col: 1 })) as any[];
     expect(defs).toEqual([{ path: 'src/def.ts', line: 1, col: 2 }]); // 밖은 필터됨
+  });
+
+  it('references: includeDeclaration 컨텍스트 + toLocations(밖 필터)', async () => {
+    mgr.notify('didOpen', { path: 'a.ts', text: 'x' });
+    await wait(80);
+    const refs = (await mgr.request('references', { path: 'a.ts', line: 3, col: 4 })) as any[];
+    expect(refs).toEqual([{ path: 'a.ts', line: 3, col: 4 }]); // outside 필터됨
+    const req = servers[0].log.find((l) => l.method === 'textDocument/references')!;
+    expect(req.params.context).toEqual({ includeDeclaration: true });
+  });
+
+  it('signatureHelp: toSignatureHelp 변환', async () => {
+    mgr.notify('didOpen', { path: 'a.ts', text: 'x' });
+    await wait(80);
+    const sh = (await mgr.request('signatureHelp', { path: 'a.ts', line: 0, col: 5 })) as any;
+    expect(sh.signatures[0].label).toBe('foo(a)');
+    expect(sh.signatures[0].parameters[0].label).toBe('a');
   });
 
   it('서버 없는 확장자 request → null', async () => {

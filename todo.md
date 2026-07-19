@@ -258,8 +258,27 @@
 
 **남은 확인(비차단):** 패키지 `.app`을 실제 실행해 TS LSP를 구동하는 최종 수동 확인(정적 검사는 통과 — spawn 대상 전부 실재).
 
+## ✅ Plan 14: LSP 후속 3종 (v2 9탄) — 완료 (main 직접 커밋)
+
+- [x] **참조 찾기(Shift+F12)**: manager `references` kind(includeDeclaration) + Monaco `registerReferenceProvider`.
+  기존 RelationPanel References 탭(인덱서 이름매칭)과 별개·공존. `toLocations` 재사용.
+  *한계*: Monaco 네이티브 피크는 열려있지 않은 파일 본문 미리보기를 모델 부재로 못 채울 수 있음(위치·이동은 정상).
+- [x] **시그니처 도움말**: manager `signatureHelp` kind + `toSignatureHelp`/`LspSignatureHelpN` + Monaco
+  `registerSignatureHelpProvider`(트리거 `(` `,`).
+- [x] **LSP Rename(F2)**: LSP 언어(TS/JS/Py)는 references(정밀 위치)→기존 `RenameTargets` 형태(전부 체크,
+  unconfirmed=[])로 주입 → 기존 RenameOverlay 미리보기+applyRename 파이프라인 그대로 재사용. 비면 인덱서
+  `getRenameTargets` 폴백, 그 외 언어는 인덱서 Smart Rename. (`lsp-rename.ts` locationsToRenameTargets, Monaco 비의존)
+- [x] IPC 허용목록 확장만(`LSP_CALL_ALLOWED`에 references/signatureHelp), 인덱서/DB 무변경.
+- [x] 검증: 단위(convert/manager/rename) + **실서버 통합**(classic tsserver 실왕복 references=선언+사용 across files,
+  signatureHelp=name 파라미터 실증) — 전체 **373/373**, 빌드 클린, node ABI 유지.
+  스펙: `docs/superpowers/specs/2026-07-19-plan14-lsp-references-rename-signature-design.md`
+
+**인계 노트(백로그, 비차단):** 참조 피크의 미열림 파일 미리보기 한계(위 한계), LSP rename은 식별자 단순치환 가정
+(비식별자 rename 엣지 미포함 — references 위치 기반, 폴백 안전), Monaco 피크/시그니처 팝업의 GUI 물리동작은
+실서버 왕복까진 실증됨·에디터 UI 구동은 사용자 수동 확인 권장(Plan 6 F12 계열과 동일).
+
 ### 다음 후보
-사용자 결정 대기 — 로드맵 Plan 14(LSP 후속 3종)/15/16/17 중 선택.
+사용자 결정 대기 — 로드맵 Plan 15(심볼 자동완성+Beautifier)/16(File Compare)/17(리비전마크·HTML·레이아웃) 중 선택.
 
 ### v2 이후 (백로그)
-- [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
+- [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)

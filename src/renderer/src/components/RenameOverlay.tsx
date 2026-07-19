@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { getContent } from './EditorPane';
-import type { RenameFileGroup, RenameOccurrence, RenameTargets, RenameApplyResult } from '../../../shared/protocol';
+import type { RenameFileGroup, RenameOccurrence, RenameTargets, RenameApplyResult, LspLocationN } from '../../../shared/protocol';
 import { keyOf, mergeCheckedGroups } from './renameMerge';
+import { isLspPath, lspSync } from '../lsp-sync';
+import { locationsToRenameTargets } from '../lsp-rename';
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
@@ -37,9 +39,18 @@ export function RenameOverlay() {
     setLoadError(null);
     setTimeout(() => inputRef.current?.focus(), 0);
 
-    void window.si
-      .getRenameTargets(request.name)
-      .then(async (t) => {
+    void (async () => {
+      try {
+        // LSP 지원 언어면 references(정밀 위치)로 대상 구성 — 실패/빈 결과 시 인덱서 폴백.
+        let t: RenameTargets | null = null;
+        if (request.line != null && request.col != null && isLspPath(request.path)) {
+          await lspSync.lspFlush();
+          const locs = (await window.si
+            .lspCall('references', { path: request.path, line: request.line - 1, col: request.col - 1 })
+            .catch(() => null)) as LspLocationN[] | null;
+          if (locs) t = locationsToRenameTargets(locs);
+        }
+        if (!t) t = await window.si.getRenameTargets(request.name);
         if (cancelled) return;
         setTargets(t);
         // 파일 그룹은 기본 체크, unconfirmed는 기본 해제
@@ -56,10 +67,10 @@ export function RenameOverlay() {
           }),
         );
         if (!cancelled) setLines(map);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;

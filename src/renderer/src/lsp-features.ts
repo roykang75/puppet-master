@@ -3,7 +3,7 @@ import type * as Monaco from 'monaco-editor';
 import { lspSync, isLspPath } from './lsp-sync';
 import { useAppStore } from './store';
 import { jumpTo } from './navigation';
-import type { LspCompletionItemN, LspDiagnosticN, LspHoverN, LspLocationN } from '../../shared/protocol';
+import type { LspCompletionItemN, LspDiagnosticN, LspHoverN, LspLocationN, LspSignatureHelpN } from '../../shared/protocol';
 
 let registered = false;
 let monacoRef: typeof Monaco | null = null;
@@ -72,6 +72,50 @@ export function registerLspFeatures(monaco: typeof Monaco): void {
         .catch(() => null)) as LspHoverN | null;
       if (!hover) return null;
       return { contents: [{ value: hover.markdown }] };
+    },
+  });
+
+  // 참조 찾기 — Shift+F12 네이티브 피크. 열린 파일/동일 파일은 본문 미리보기, 그 외는 위치·이동만.
+  monaco.languages.registerReferenceProvider(LSP_MONACO_LANGS, {
+    async provideReferences(model, position) {
+      const path = pathOf(model);
+      if (!path || !isLspPath(path)) return [];
+      await lspSync.lspFlush();
+      const locs = (await window.si
+        .lspCall('references', { path, line: position.lineNumber - 1, col: position.column - 1 })
+        .catch(() => null)) as LspLocationN[] | null;
+      if (!locs) return [];
+      return locs.map((l) => ({
+        uri: monaco.Uri.file('/' + l.path),
+        range: new monaco.Range(l.line + 1, l.col + 1, l.line + 1, l.col + 1),
+      }));
+    },
+  });
+
+  // 시그니처 도움말 — '(' ',' 트리거 팝업
+  monaco.languages.registerSignatureHelpProvider(LSP_MONACO_LANGS, {
+    signatureHelpTriggerCharacters: ['(', ','],
+    signatureHelpRetriggerCharacters: [','],
+    async provideSignatureHelp(model, position) {
+      const path = pathOf(model);
+      if (!path || !isLspPath(path)) return null;
+      await lspSync.lspFlush();
+      const sh = (await window.si
+        .lspCall('signatureHelp', { path, line: position.lineNumber - 1, col: position.column - 1 })
+        .catch(() => null)) as LspSignatureHelpN | null;
+      if (!sh || sh.signatures.length === 0) return null;
+      return {
+        value: {
+          signatures: sh.signatures.map((s) => ({
+            label: s.label,
+            documentation: s.documentation,
+            parameters: s.parameters.map((p) => ({ label: p.label, documentation: p.documentation })),
+          })),
+          activeSignature: sh.activeSignature,
+          activeParameter: sh.activeParameter,
+        },
+        dispose() {},
+      };
     },
   });
 

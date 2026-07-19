@@ -64,6 +64,20 @@ describe('tsgo 실왕복', () => {
     await waitFor(() => (diags.get('bad.ts')?.length ?? 0) > 0, 20_000);
     expect(diags.get('bad.ts')![0].message.length).toBeGreaterThan(0);
   }, 30_000);
+
+  it('references: greet → 선언(lib.ts) + 사용(use.ts)', async () => {
+    const refs = (await mgr.request('references', { path: 'use.ts', line: 1, col: 11 })) as { path: string }[];
+    const paths = refs.map((r) => r.path);
+    expect(paths).toContain('lib.ts'); // includeDeclaration
+    expect(paths).toContain('use.ts');
+  }, 30_000);
+
+  it('signatureHelp: greet( 안에서 name 파라미터', async () => {
+    const sh = (await mgr.request('signatureHelp', { path: 'use.ts', line: 1, col: 16 })) as {
+      signatures: { label: string }[];
+    } | null;
+    expect(sh?.signatures[0]?.label ?? '').toContain('name');
+  }, 30_000);
 });
 
 describe('pyright 실왕복', () => {

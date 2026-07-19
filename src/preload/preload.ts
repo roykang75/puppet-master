@@ -115,7 +115,7 @@ const api = {
   saveUiState: (state: UiState): Promise<void> => ipcRenderer.invoke('ui:saveState', state),
   loadBookmarks: (): Promise<unknown[]> => ipcRenderer.invoke('bookmarks:load'),
   saveBookmarks: (list: unknown[]): Promise<void> => ipcRenderer.invoke('bookmarks:save', list),
-  lspCall: (method: 'completion' | 'hover' | 'definition', params: LspCallParams): Promise<unknown> =>
+  lspCall: (method: 'completion' | 'hover' | 'definition' | 'references' | 'signatureHelp', params: LspCallParams): Promise<unknown> =>
     ipcRenderer.invoke('lsp:call', method, params),
   lspNotify: (kind: 'didOpen' | 'didChange' | 'didClose' | 'didSave', params: { path: string; text?: string }): Promise<void> =>
     ipcRenderer.invoke('lsp:notify', kind, params),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toCompletionItems, toHover, toLocations, toDiagnostics, MAX_DIAGNOSTICS } from '../src/main/lsp/convert';
+import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp, MAX_DIAGNOSTICS } from '../src/main/lsp/convert';
 
 const uriToRel = (uri: string) =>
   uri.startsWith('file:///proj/') ? uri.slice('file:///proj/'.length) : null;
@@ -59,6 +59,42 @@ describe('toLocations', () => {
 
   it('null → 빈 배열', () => {
     expect(toLocations(null, uriToRel)).toEqual([]);
+  });
+});
+
+describe('toSignatureHelp', () => {
+  it('시그니처/파라미터/active 변환', () => {
+    const raw = {
+      activeSignature: 0,
+      activeParameter: 1,
+      signatures: [
+        {
+          label: 'foo(a: number, b: string): void',
+          documentation: { kind: 'markdown', value: 'does foo' },
+          parameters: [{ label: 'a: number' }, { label: [7, 16] }],
+        },
+      ],
+    };
+    expect(toSignatureHelp(raw)).toEqual({
+      activeSignature: 0,
+      activeParameter: 1,
+      signatures: [
+        {
+          label: 'foo(a: number, b: string): void',
+          documentation: 'does foo',
+          parameters: [
+            { label: 'a: number', documentation: undefined },
+            { label: [7, 16], documentation: undefined },
+          ],
+        },
+      ],
+    });
+  });
+  it('빈 signatures → null, 누락 active 기본 0', () => {
+    expect(toSignatureHelp({ signatures: [] })).toBeNull();
+    expect(toSignatureHelp(null)).toBeNull();
+    const r = toSignatureHelp({ signatures: [{ label: 'x()' }] });
+    expect(r).toEqual({ activeSignature: 0, activeParameter: 0, signatures: [{ label: 'x()', documentation: undefined, parameters: [] }] });
   });
 });
 

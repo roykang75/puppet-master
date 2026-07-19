@@ -243,7 +243,7 @@ export function EditorPane() {
       const model = editorInstance?.getModel();
       if (!loc || !model) return;
       const word = model.getWordAtPosition({ lineNumber: loc.line, column: loc.col });
-      if (word) useAppStore.getState().setRenameRequest({ name: word.word, path: loc.path });
+      if (word) useAppStore.getState().setRenameRequest({ name: word.word, path: loc.path, line: loc.line, col: word.startColumn });
     });
 
     return () => {

@@ -27,7 +27,7 @@ const INDEXER_CALL_ALLOWED = new Set([
   'getFileTokens',
 ]);
 
-const LSP_CALL_ALLOWED = new Set(['completion', 'hover', 'definition']);
+const LSP_CALL_ALLOWED = new Set(['completion', 'hover', 'definition', 'references', 'signatureHelp']);
 const LSP_NOTIFY_ALLOWED = new Set(['didOpen', 'didChange', 'didClose', 'didSave']);
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -217,7 +217,7 @@ function registerIpc(): void {
   ipcMain.handle('terminal:kill', (_e, id: number) => terminals?.kill(id));
   ipcMain.handle('lsp:call', (_e, method: string, params: unknown) => {
     if (!LSP_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 LSP 메서드: ${method}`);
-    return lsp?.request(method as 'completion' | 'hover' | 'definition', params as LspCallParams) ?? null;
+    return lsp?.request(method as 'completion' | 'hover' | 'definition' | 'references' | 'signatureHelp', params as LspCallParams) ?? null;
   });
   ipcMain.handle('lsp:notify', (_e, kind: string, params: unknown) => {
     if (!LSP_NOTIFY_ALLOWED.has(kind)) throw new Error(`허용되지 않은 LSP 통지: ${kind}`);

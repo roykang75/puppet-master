@@ -1,5 +1,5 @@
 // LSP 원시 응답 → 중립 타입 순수 변환 — electron/모나코 임포트 금지
-import type { LspCompletionItemN, LspHoverN, LspLocationN, LspDiagnosticN } from '../../shared/protocol';
+import type { LspCompletionItemN, LspHoverN, LspLocationN, LspDiagnosticN, LspSignatureHelpN } from '../../shared/protocol';
 
 export const MAX_DIAGNOSTICS = 500;
 
@@ -60,6 +60,37 @@ export function toLocations(raw: unknown, uriToRel: (uri: string) => string | nu
     out.push({ path: rel, line: range.start.line, col: range.start.character });
   }
   return out;
+}
+
+interface RawSigLabel { label?: string | [number, number]; documentation?: unknown }
+interface RawSignature { label?: string; documentation?: unknown; parameters?: RawSigLabel[] }
+interface RawSigHelp { signatures?: RawSignature[]; activeSignature?: number; activeParameter?: number }
+
+function docToString(d: unknown): string | undefined {
+  if (typeof d === 'string') return d || undefined;
+  if (d && typeof (d as { value?: unknown }).value === 'string') return (d as { value: string }).value || undefined;
+  return undefined;
+}
+
+export function toSignatureHelp(raw: unknown): LspSignatureHelpN | null {
+  const sh = raw as RawSigHelp | null;
+  const sigs = Array.isArray(sh?.signatures) ? sh!.signatures : [];
+  if (sigs.length === 0) return null;
+  return {
+    activeSignature: typeof sh?.activeSignature === 'number' ? sh.activeSignature : 0,
+    activeParameter: typeof sh?.activeParameter === 'number' ? sh.activeParameter : 0,
+    signatures: sigs
+      .filter((s) => typeof s.label === 'string')
+      .map((s) => ({
+        label: s.label as string,
+        documentation: docToString(s.documentation),
+        parameters: (Array.isArray(s.parameters) ? s.parameters : []).map((p) => ({
+          // label은 문자열이거나 시그니처 문자열 내 [start,end] 오프셋 — Monaco는 둘 다 허용
+          label: p.label ?? '',
+          documentation: docToString(p.documentation),
+        })),
+      })),
+  };
 }
 
 interface RawDiag {

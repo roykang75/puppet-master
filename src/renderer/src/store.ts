@@ -22,7 +22,7 @@ interface AppState {
   pendingJump: { path: string; line: number; col: number } | null;
   searchOpen: boolean;
   settingsOpen: boolean;
-  renameRequest: { name: string; path: string } | null;
+  renameRequest: { name: string; path: string; line?: number; col?: number } | null;
   completionStatus: string | null;
   lspStopped: string[]; // 중지된 LSP 언어 목록 (예: ['ts'])
   bookmarks: Bookmark[];
@@ -55,7 +55,7 @@ interface AppState {
   setPendingJump(j: AppState['pendingJump']): void;
   setSearchOpen(v: boolean): void;
   setSettingsOpen(v: boolean): void;
-  setRenameRequest(r: { name: string; path: string } | null): void;
+  setRenameRequest(r: { name: string; path: string; line?: number; col?: number } | null): void;
   setCompletionStatus(msg: string | null): void;
   setLspStopped(lang: string, stopped: boolean): void;
   setBookmarks(list: Bookmark[]): void;

@@ -4,11 +4,11 @@ import * as path from 'path';
 import { pathToFileURL, fileURLToPath } from 'url';
 import { LspClient } from './client';
 import { serverForExt, LspSpawnSpec } from './servers';
-import { toCompletionItems, toHover, toLocations, toDiagnostics } from './convert';
+import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp } from './convert';
 import { LSP_EXT_TO_LANGUAGE } from '../../shared/protocol';
 import type { LspCallParams, LspDiagnosticN, LspLanguage, LspStatusN } from '../../shared/protocol';
 
-export type LspRequestKind = 'completion' | 'hover' | 'definition';
+export type LspRequestKind = 'completion' | 'hover' | 'definition' | 'references' | 'signatureHelp';
 
 export interface ChildLike {
   stdout: NodeJS.ReadableStream;
@@ -42,11 +42,15 @@ interface Entry {
 const MAX_CRASHES = 3;
 const DEFAULT_CRASH_RESET_MS = 60_000;
 const PULL_DEBOUNCE_MS = 300;
-const TIMEOUT_MS: Record<LspRequestKind, number> = { completion: 5_000, hover: 5_000, definition: 1_500 };
+const TIMEOUT_MS: Record<LspRequestKind, number> = {
+  completion: 5_000, hover: 5_000, definition: 1_500, references: 5_000, signatureHelp: 2_000,
+};
 const LSP_METHOD: Record<LspRequestKind, string> = {
   completion: 'textDocument/completion',
   hover: 'textDocument/hover',
   definition: 'textDocument/definition',
+  references: 'textDocument/references',
+  signatureHelp: 'textDocument/signatureHelp',
 };
 
 export class LspManager {
@@ -208,13 +212,15 @@ export class LspManager {
         textDocument: { uri: this.uriFor(params.path) },
         position: { line: params.line, character: params.col },
         ...(kind === 'completion' ? { context: { triggerKind: 1 } } : {}),
+        ...(kind === 'references' ? { context: { includeDeclaration: true } } : {}),
       },
       TIMEOUT_MS[kind],
     );
     if (raw == null) return null;
     if (kind === 'completion') return toCompletionItems(raw);
     if (kind === 'hover') return toHover(raw);
-    return toLocations(raw, this.uriToRel);
+    if (kind === 'signatureHelp') return toSignatureHelp(raw);
+    return toLocations(raw, this.uriToRel); // definition | references
   }
 
   shutdownAll(): void {
