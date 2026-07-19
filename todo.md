@@ -241,9 +241,25 @@
 - [x] 에디터 가짜 오류(빨간 줄) 제거 — 내장 TS/JS 워커 진단 off(`64d25ad`), 이후 Plan 13으로 근본 교체
 - [x] AI 설정: 모델 추가/편집을 팝업 모달로, 목록은 컴팩트 행(설정 창이 길어지지 않게) (`aa8d0c9`)
 
+## ✅ Plan 18: 부채 정리 + 채팅 FTS (main 직접 커밋)
+
+- [x] **[P12-5] Context7 실 스키마 파서 수정** (`fd56abb`): 실제 `/context` 응답이 `codeSnippets[].codeList[].code`
+  구조라 기존 `snippets[].code` 파서는 항상 빈 결과→raw JSON 덤프였음. 실 스키마 우선 파싱(codeDescription/codeList)
+  + 구버전 폴백 유지, 빈 결과는 JSON 미덤프. context7-client 11/11.
+- [x] **채팅 스레드 FTS 검색** (`fd56abb`): ChatStore에 messages 외부콘텐츠 FTS5 + insert/delete 트리거 동기화
+  + 열 때 rebuild(기존 DB 정합). `searchMessages`는 토큰 인용으로 특수문자 안전, 스레드당 1건 bm25 순.
+  chat:threads:search IPC/preload/protocol 배선, 히스토리 드롭다운에 검색 입력+스니펫 결과 UI. chat-store 11/11(FTS 6).
+- [x] **[P13-1] 패키지 스모크 빌드로 실제 버그 발견·수정** (`68c905e`): `npm run package` 정적 검사 결과
+  typescript-classic·typescript-language-server가 **devDependencies라 electron-builder 번들에서 통째로 제외** →
+  배포 앱에서 tsserver.js·cli.mjs 부재로 **TS LSP 완전 불능**(extraResources의 .d.ts만 남아 복원된 듯 착시).
+  두 모듈을 dependencies로 이동 → asarUnpack 정상 언팩 실증(cli.mjs·tsserver.js + .d.ts 102), servers.ts
+  require.resolve→unpacked 경로 일치 확인.
+- 검증: 전체 **364/364** green, dev 빌드 클린, node ABI 복구.
+
+**남은 확인(비차단):** 패키지 `.app`을 실제 실행해 TS LSP를 구동하는 최종 수동 확인(정적 검사는 통과 — spawn 대상 전부 실재).
+
 ### 다음 후보
-사용자 결정 대기 — v2 이후 백로그에서 선택.
+사용자 결정 대기 — 로드맵 Plan 14(LSP 후속 3종)/15/16/17 중 선택.
 
 ### v2 이후 (백로그)
 - [ ] 심볼 자동완성(비-AI), Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(참조 찾기/rename/시그니처 도움말, Java jdtls)
-- [ ] [P13-1] 배포 패키지 스모크 빌드(tsserver .d.ts 복원 검증), [P12-5] Context7 실 응답 스키마 확인, 채팅 스레드 FTS 검색
