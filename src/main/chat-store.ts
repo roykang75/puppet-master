@@ -7,6 +7,12 @@ export interface ThreadMeta {
   title: string;
   updatedAt: number;
 }
+export interface ThreadSearchHit {
+  threadId: string;
+  title: string;
+  updatedAt: number;
+  snippet: string;
+}
 export interface StoredMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -32,7 +38,17 @@ export class ChatStore {
         FOREIGN KEY(thread_id) REFERENCES threads(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id, seq);
+      -- 전문검색: messages.content 외부콘텐츠 FTS5 + insert/delete 트리거 동기화
+      CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(content, content='messages', content_rowid='id');
+      CREATE TRIGGER IF NOT EXISTS messages_fts_ai AFTER INSERT ON messages BEGIN
+        INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
+      END;
+      CREATE TRIGGER IF NOT EXISTS messages_fts_ad AFTER DELETE ON messages BEGIN
+        INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.id, old.content);
+      END;
     `);
+    // 기존 DB(트리거 이전 삽입분) 정합을 위해 열 때 1회 재구축 — 채팅 규모라 저비용.
+    this.db.exec(`INSERT INTO messages_fts(messages_fts) VALUES ('rebuild');`);
   }
 
   close(): void {
@@ -81,6 +97,39 @@ export class ChatStore {
       );
     });
     tx();
+  }
+
+  /** 전체 스레드의 메시지 본문을 전문검색. 스레드당 최상위 1건, 관련도순. */
+  searchMessages(query: string, limit = 30): ThreadSearchHit[] {
+    // 사용자 입력을 안전한 FTS5 phrase(토큰별 인용)로 — 특수문자 구문오류 방지, 토큰 AND.
+    const match = query
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((t) => '"' + t.replace(/"/g, '""') + '"')
+      .join(' ');
+    if (!match) return [];
+    const rows = this.db
+      .prepare(
+        `SELECT t.id AS threadId, t.title AS title, t.updated_at AS updatedAt,
+                snippet(messages_fts, 0, '⟦', '⟧', '…', 12) AS snippet
+         FROM messages_fts f
+         JOIN messages m ON m.id = f.rowid
+         JOIN threads t ON t.id = m.thread_id
+         WHERE messages_fts MATCH ?
+         ORDER BY bm25(messages_fts)
+         LIMIT 200`,
+      )
+      .all(match) as ThreadSearchHit[];
+    const seen = new Set<string>();
+    const out: ThreadSearchHit[] = [];
+    for (const r of rows) {
+      if (seen.has(r.threadId)) continue;
+      seen.add(r.threadId);
+      out.push(r);
+      if (out.length >= limit) break;
+    }
+    return out;
   }
 
   renameThread(id: string, title: string): void {

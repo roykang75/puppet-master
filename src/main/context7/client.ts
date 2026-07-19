@@ -41,10 +41,21 @@ export async function getDocs(
 ): Promise<string> {
   const url = `${BASE}/context?libraryId=${encodeURIComponent(libraryId)}&query=${encodeURIComponent(query)}&type=json`;
   const body = await getJson(url, apiKey, fetchImpl);
-  const snippets = (body?.snippets ?? []) as { code?: string; description?: string }[];
-  const text = snippets
-    .map((s) => [s.description, s.code].filter(Boolean).join('\n'))
+  // 실제 v2 스키마: codeSnippets[].{codeDescription, codeList[].code}. 구버전 방어: snippets[].{description, code}.
+  const raw = (body?.codeSnippets ?? body?.snippets ?? []) as Array<{
+    codeDescription?: string; description?: string; codeTitle?: string;
+    code?: string; codeList?: Array<{ code?: string }>;
+  }>;
+  const text = raw
+    .map((s) => {
+      const desc = s.codeDescription ?? s.description ?? s.codeTitle;
+      const code = Array.isArray(s.codeList)
+        ? s.codeList.map((c) => c?.code).filter(Boolean).join('\n')
+        : s.code;
+      return [desc, code].filter(Boolean).join('\n');
+    })
+    .filter(Boolean)
     .join('\n\n')
-    || (typeof body === 'string' ? body : JSON.stringify(body));
+    || (typeof body === 'string' ? body : '');
   return text.length > DOCS_CAP ? text.slice(0, DOCS_CAP) + '\n…(잘림)' : text;
 }

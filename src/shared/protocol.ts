@@ -161,6 +161,7 @@ export type AgentEvent =
 
 // ── 채팅 스레드 영속화 (Plan 11) ──
 export interface ThreadMeta { id: string; title: string; updatedAt: number }
+export interface ThreadSearchHit { threadId: string; title: string; updatedAt: number; snippet: string }
 export interface ChatStoredMessage {
   role: 'user' | 'assistant';
   content: string;

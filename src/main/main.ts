@@ -291,6 +291,7 @@ function registerIpc(): void {
   });
   ipcMain.handle('chat:cancel', () => chatService.cancel());
   ipcMain.handle('chat:threads:list', () => chatStore?.listThreads() ?? []);
+  ipcMain.handle('chat:threads:search', (_e, query: string) => chatStore?.searchMessages(query) ?? []);
   ipcMain.handle('chat:thread:load', (_e, id: string) => chatStore?.loadThread(id) ?? []);
   ipcMain.handle('chat:thread:create', (_e, title: string) => ({ id: chatStore?.createThread(title) ?? '' }));
   ipcMain.handle('chat:thread:save', (_e, id: string, title: string, messages: ChatStoredMessage[]) => {

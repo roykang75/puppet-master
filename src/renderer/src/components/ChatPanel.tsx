@@ -9,7 +9,7 @@ import { renderMarkdown } from './MarkdownView';
 import { refreshCompletionSettings } from '../completion-provider';
 import { getChatEditorState } from './EditorPane';
 import { fileIconUrl } from '../file-icons';
-import type { AgentToolUi, ChatContext, CompletionProfilePublic } from '../../../shared/protocol';
+import type { AgentToolUi, ChatContext, CompletionProfilePublic, ThreadSearchHit } from '../../../shared/protocol';
 
 export const CHAT_ERROR_TEXT: Record<string, string> = {
   auth: '인증 오류 — Cmd+,에서 설정을 확인하세요',
@@ -72,6 +72,8 @@ export function ChatPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [searchHits, setSearchHits] = useState<ThreadSearchHit[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -105,6 +107,18 @@ export function ChatPanel() {
     if (!activeThreadId || !title.trim()) return;
     void window.si.chatThreadRename(activeThreadId, title.trim()).then(refreshThreads);
   };
+
+  // 대화 기록 전문검색 — 입력 디바운스(200ms). 빈 질의면 결과 비움(전체 목록으로 복귀).
+  useEffect(() => {
+    if (!listOpen) return;
+    const q = searchQ.trim();
+    if (!q) { setSearchHits([]); return; }
+    let cancelled = false;
+    const h = setTimeout(() => {
+      void window.si.chatThreadsSearch(q).then((hits) => { if (!cancelled) setSearchHits(hits); });
+    }, 200);
+    return () => { cancelled = true; clearTimeout(h); };
+  }, [searchQ, listOpen]);
 
   // provider 미설정 감지 (전송 전 단락 — 스펙 §4) + 설정 오버레이 닫힐 때 재로드
   useEffect(() => {
@@ -207,22 +221,49 @@ export function ChatPanel() {
         )}
         <span className="chat-thread-actions">
           <button className="chat-new" title="새 대화" onClick={newThread}><VscAdd /></button>
-          <button className="chat-new" title="대화 기록" onClick={() => { refreshThreads(); setListOpen((o) => !o); }}><VscHistory /></button>
+          <button className="chat-new" title="대화 기록" onClick={() => { refreshThreads(); setSearchQ(''); setSearchHits([]); setListOpen((o) => !o); }}><VscHistory /></button>
           <button className="chat-new" title="현재 대화" onClick={() => setMenuOpen((o) => !o)} disabled={!activeThreadId}><VscEllipsis /></button>
         </span>
         {listOpen && (
           <>
             <div className="open-editors-backdrop" onMouseDown={() => setListOpen(false)} />
             <div className="open-editors-menu chat-thread-menu">
-              <div className="open-editors-title">대화 기록 {threads.length}개</div>
-              {threads.length === 0 && <div className="hint">저장된 대화가 없습니다.</div>}
-              {threads.map((t) => (
-                <div key={t.id} className={`open-editors-item${t.id === activeThreadId ? ' active' : ''}`} onClick={() => void switchThread(t.id)}>
-                  <VscHistory />
-                  <span className="open-editors-name">{t.title}</span>
-                  <span className="tab-close" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }}><VscClose /></span>
-                </div>
-              ))}
+              <div className="chat-thread-search">
+                <VscSearch />
+                <input
+                  className="chat-thread-search-input"
+                  placeholder="대화 내용 검색…"
+                  value={searchQ}
+                  autoFocus
+                  onChange={(e) => setSearchQ(e.target.value)}
+                />
+              </div>
+              {searchQ.trim() ? (
+                <>
+                  {searchHits.length === 0 && <div className="hint">일치하는 대화가 없습니다.</div>}
+                  {searchHits.map((h) => (
+                    <div key={h.threadId} className={`open-editors-item${h.threadId === activeThreadId ? ' active' : ''}`} onClick={() => void switchThread(h.threadId)}>
+                      <VscHistory />
+                      <span className="open-editors-name">
+                        {h.title}
+                        <span className="chat-thread-snippet">{h.snippet}</span>
+                      </span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div className="open-editors-title">대화 기록 {threads.length}개</div>
+                  {threads.length === 0 && <div className="hint">저장된 대화가 없습니다.</div>}
+                  {threads.map((t) => (
+                    <div key={t.id} className={`open-editors-item${t.id === activeThreadId ? ' active' : ''}`} onClick={() => void switchThread(t.id)}>
+                      <VscHistory />
+                      <span className="open-editors-name">{t.title}</span>
+                      <span className="tab-close" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }}><VscClose /></span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </>
         )}
