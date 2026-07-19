@@ -17,7 +17,7 @@ import { getFileChanges } from './git-diff';
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
-import type { UiState, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage, ProjectStack } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage, ProjectStack } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
@@ -276,6 +276,8 @@ function registerIpc(): void {
   ipcMain.handle('ui:saveState', (_e, state: UiState) => {
     if (currentRoot) persistence.saveUiState(currentRoot, state);
   });
+  ipcMain.handle('layout:presetsGet', () => persistence.loadLayoutPresets());
+  ipcMain.handle('layout:presetsSave', (_e, presets: LayoutPresets) => persistence.saveLayoutPresets(presets));
   ipcMain.handle('bookmarks:load', () => (currentRoot ? persistence.loadBookmarks(currentRoot) : []));
   ipcMain.handle('bookmarks:save', (_e, list: unknown[]) => {
     if (currentRoot) persistence.saveBookmarks(currentRoot, list);

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { UiState } from '../shared/protocol';
+import { UiState, LayoutPresets } from '../shared/protocol';
 
 export interface RecentEntry {
   root: string;
@@ -41,6 +41,20 @@ export class Persistence {
 
   private uiStatePath(root: string): string {
     return path.join(this.baseDir, 'projects', `${this.projectHash(root)}.json`);
+  }
+
+  // 레이아웃 프리셋 — 전역(프로젝트 무관) 단일 파일
+  loadLayoutPresets(): LayoutPresets {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(this.baseDir, 'layout-presets.json'), 'utf8')) as LayoutPresets;
+    } catch {
+      return {};
+    }
+  }
+
+  saveLayoutPresets(presets: LayoutPresets): void {
+    fs.mkdirSync(this.baseDir, { recursive: true });
+    fs.writeFileSync(path.join(this.baseDir, 'layout-presets.json'), JSON.stringify(presets, null, 2));
   }
 
   loadUiState(root: string): UiState | null {

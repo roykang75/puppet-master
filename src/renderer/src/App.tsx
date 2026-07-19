@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Group, Panel, Separator, useDefaultLayout } from 'react-resizable-panels';
+import { Group, Panel, Separator, useDefaultLayout, useGroupRef } from 'react-resizable-panels';
+import { registerLayoutGroup } from './layout-presets';
 import { useAppStore } from './store';
 import { initLayouts, layoutStorage, scheduleSave } from './persistence-bridge';
 import { EmptyState } from './components/EmptyState';
@@ -135,6 +136,15 @@ function Workspace() {
   const rootV = useDefaultLayout({ id: 'root-v', storage: layoutStorage });
   const mainH = useDefaultLayout({ id: 'main-h', storage: layoutStorage });
   const sideV = useDefaultLayout({ id: 'side-v', storage: layoutStorage });
+  // 레이아웃 프리셋 — 그룹 임퍼러티브 핸들 등록 (캡처/적용용)
+  const rootVRef = useGroupRef();
+  const mainHRef = useGroupRef();
+  const sideVRef = useGroupRef();
+  useEffect(() => {
+    registerLayoutGroup('root-v', () => rootVRef.current);
+    registerLayoutGroup('main-h', () => mainHRef.current);
+    registerLayoutGroup('side-v', () => sideVRef.current);
+  }, [rootVRef, mainHRef, sideVRef]);
   // 접힘은 min=max=헤더높이로 패널 크기를 '잠가서' 구현한다. collapse()의 여유공간
   // 재분배(인접 형제로 흘러 다른 패널이 다시 열리는 문제)를 피하고, 남는 공간은
   // 잠기지 않은 project로만 흐르므로 두 패널이 완전히 독립적으로 접힌다.
@@ -144,6 +154,7 @@ function Workspace() {
     <Group
       orientation="vertical"
       id="root-v"
+      groupRef={rootVRef}
       defaultLayout={rootV.defaultLayout}
       onLayoutChanged={rootV.onLayoutChanged}
     >
@@ -151,6 +162,7 @@ function Workspace() {
         <Group
           orientation="horizontal"
           id="main-h"
+          groupRef={mainHRef}
           defaultLayout={mainH.defaultLayout}
           onLayoutChanged={mainH.onLayoutChanged}
         >
@@ -158,6 +170,7 @@ function Workspace() {
             <Group
               orientation="vertical"
               id="side-v"
+              groupRef={sideVRef}
               defaultLayout={sideV.defaultLayout}
               onLayoutChanged={sideV.onLayoutChanged}
             >

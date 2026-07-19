@@ -133,6 +133,13 @@ body {
 .dircmp-left-only .dircmp-status { color: #e5534b; border: 1px solid #e5534b; }
 .dircmp-right-only .dircmp-status { color: #2ea043; border: 1px solid #2ea043; }
 .dircmp-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 레이아웃 프리셋 컨트롤 (상태바) */
+.statusbar-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layout-preset { position: relative; flex: none; display: inline-flex; align-items: center; }
+.layout-preset-btn { background: none; border: none; color: var(--fg-dim); cursor: pointer; display: inline-flex; padding: 0 4px; font-size: 13px; }
+.layout-preset-btn:hover { color: var(--fg); }
+.layout-preset-menu { top: auto; bottom: 100%; right: 4px; min-width: 200px; }
 .open-editors-menu {
   position: absolute; top: 100%; right: 4px; z-index: 41;
   min-width: 240px; max-width: 420px; max-height: 50vh; overflow-y: auto;

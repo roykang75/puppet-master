@@ -183,6 +183,10 @@ export interface UiState {
   activeTab: string | null;
 }
 
+// 레이아웃 프리셋 — 그룹id → (패널id → 퍼센트). 전역(프로젝트 무관) 저장.
+export type LayoutSnapshot = Record<string, Record<string, number>>;
+export type LayoutPresets = Record<string, LayoutSnapshot>;
+
 // ── 프로젝트 스택 감지 (Plan 12) ──
 export interface ProjectStack {
   languages: string[];
