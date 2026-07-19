@@ -1,4 +1,5 @@
 import { LanguageSpec, getParser, getQuery } from './languages';
+import { extractHttp, EndpointRow, HttpCallRow } from './http';
 
 export interface SymbolRow {
   name: string;
@@ -26,6 +27,8 @@ export interface RefRow {
 export interface ExtractResult {
   symbols: SymbolRow[];
   refs: RefRow[];
+  endpoints: EndpointRow[];
+  httpCalls: HttpCallRow[];
 }
 
 const SCOPE_KINDS = new Set(['function', 'method', 'class', 'struct', 'interface', 'namespace']);
@@ -56,8 +59,17 @@ function rangeSize(s: SymbolRow): number {
   return (s.endLine - s.startLine) * 100000 + (s.endCol - s.startCol);
 }
 
-export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
-  if (Buffer.byteLength(source) > MAX_FILE_BYTES) return { symbols: [], refs: [] };
+/** 좌표를 포함하는 가장 안쪽 SCOPE_KINDS 심볼의 인덱스 — refs·http_calls 공용. */
+export function findEnclosingIndex(symbols: SymbolRow[], line: number, col: number): number | null {
+  const enclosing = symbols
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => SCOPE_KINDS.has(s.kind) && containsPoint(s, line, col))
+    .sort((a, b) => rangeSize(a.s) - rangeSize(b.s))[0];
+  return enclosing ? enclosing.i : null;
+}
+
+export function extractFile(source: string, spec: LanguageSpec, relPath = ''): ExtractResult {
+  if (Buffer.byteLength(source) > MAX_FILE_BYTES) return { symbols: [], refs: [], endpoints: [], httpCalls: [] };
   const tree = getParser(spec).parse(source);
   const query = getQuery(spec);
   const symbols: SymbolRow[] = [];
@@ -106,13 +118,16 @@ export function extractFile(source: string, spec: LanguageSpec): ExtractResult {
     s.scope = containers.map((c) => c.name).join('::');
   }
 
-  const refs: RefRow[] = rawRefs.map((r) => {
-    const enclosing = symbols
-      .map((s, i) => ({ s, i }))
-      .filter(({ s }) => SCOPE_KINDS.has(s.kind) && containsPoint(s, r.line, r.col))
-      .sort((a, b) => rangeSize(a.s) - rangeSize(b.s))[0];
-    return { name: r.name, kind: r.kind, line: r.line, col: r.col, enclosingIndex: enclosing ? enclosing.i : null };
-  });
+  const refs: RefRow[] = rawRefs.map((r) => ({
+    name: r.name,
+    kind: r.kind,
+    line: r.line,
+    col: r.col,
+    enclosingIndex: findEnclosingIndex(symbols, r.line, r.col),
+  }));
 
-  return { symbols, refs };
+  // HTTP 경계 추출 (v3) — 기존 쿼리와 분리된 트리 워크. 지원 외 언어는 빈 결과.
+  const { endpoints, httpCalls } = extractHttp(tree.rootNode, spec.id, symbols, relPath);
+
+  return { symbols, refs, endpoints, httpCalls };
 }

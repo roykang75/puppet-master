@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 
-export const SCHEMA_VERSION = 3; // v3: symbols에 name_line/name_col(심볼 이름 식별자 위치) 추가
+export const SCHEMA_VERSION = 4; // v4: HTTP 경계(endpoints/http_calls) 추가 — 버전 불일치 시 전체 재생성(기존 규약)
 
 const SCHEMA = `
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -43,6 +43,29 @@ CREATE TABLE name_fragments (
   symbol_id INTEGER NOT NULL REFERENCES symbols(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_fragments ON name_fragments(fragment);
+CREATE TABLE endpoints (
+  id INTEGER PRIMARY KEY,
+  file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  symbol_id INTEGER,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  raw_path TEXT NOT NULL,
+  line INTEGER NOT NULL
+);
+CREATE INDEX idx_endpoints_path ON endpoints(path);
+CREATE INDEX idx_endpoints_file ON endpoints(file_id);
+CREATE TABLE http_calls (
+  id INTEGER PRIMARY KEY,
+  file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  enclosing_symbol_id INTEGER,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  raw_path TEXT NOT NULL,
+  line INTEGER NOT NULL,
+  col INTEGER NOT NULL
+);
+CREATE INDEX idx_http_calls_path ON http_calls(path);
+CREATE INDEX idx_http_calls_file ON http_calls(file_id);
 CREATE VIRTUAL TABLE file_text USING fts5(path UNINDEXED, content);
 `;
 
@@ -64,6 +87,8 @@ export function openDb(dbPath: string): Database.Database {
 function rebuildSchema(db: Database.Database): void {
   db.pragma('foreign_keys = OFF');
   db.exec(`
+    DROP TABLE IF EXISTS http_calls;
+    DROP TABLE IF EXISTS endpoints;
     DROP TABLE IF EXISTS name_fragments;
     DROP TABLE IF EXISTS refs;
     DROP TABLE IF EXISTS symbols;

@@ -209,3 +209,102 @@ export function getSubclasses(db: Database, name: string): SymbolHit[] {
     )
     .all(name) as SymbolHit[];
 }
+
+// ── HTTP 경계 매칭 (v3 스펙 §B) ──
+
+export interface EndpointHit {
+  id: number;
+  method: string;
+  path: string;
+  rawPath: string;
+  file: string;
+  line: number;
+  handlerId: number | null;
+  handlerName: string | null;
+}
+
+export interface HttpCallHit {
+  id: number;
+  method: string;
+  path: string; // ''이면 unresolved(동적 URL)
+  rawPath: string;
+  file: string;
+  line: number;
+  col: number;
+  enclosingName: string | null;
+}
+
+const EP_SELECT = `SELECT e.id, e.method, e.path, e.raw_path AS rawPath, f.path AS file, e.line,
+  e.symbol_id AS handlerId, hs.name AS handlerName
+  FROM endpoints e JOIN files f ON f.id = e.file_id LEFT JOIN symbols hs ON hs.id = e.symbol_id`;
+
+const HC_SELECT = `SELECT c.id, c.method, c.path, c.raw_path AS rawPath, f.path AS file, c.line, c.col,
+  es.name AS enclosingName
+  FROM http_calls c JOIN files f ON f.id = c.file_id LEFT JOIN symbols es ON es.id = c.enclosing_symbol_id`;
+
+// 메서드 호환: 완전 일치 또는 어느 한쪽이 '*'(불명)
+const METHOD_COMPAT = `(e.method = c.method OR e.method = '*' OR c.method = '*')`;
+
+export function getEndpoints(db: Database, limit = 500): EndpointHit[] {
+  return db.prepare(`${EP_SELECT} ORDER BY e.path, e.method LIMIT ?`).all(limit) as EndpointHit[];
+}
+
+export function getHttpCalls(db: Database, limit = 500): HttpCallHit[] {
+  return db.prepare(`${HC_SELECT} ORDER BY f.path, c.line LIMIT ?`).all(limit) as HttpCallHit[];
+}
+
+/** 호출부 → 매칭되는 엔드포인트들. 정규화 path 완전일치 + 메서드 호환. unresolved(path='')는 항상 []. */
+export function matchCallToEndpoints(db: Database, callId: number): EndpointHit[] {
+  return db
+    .prepare(
+      `${EP_SELECT} JOIN http_calls c ON c.path = e.path AND ${METHOD_COMPAT}
+       WHERE c.id = ? AND c.path != '' ORDER BY f.path, e.line`,
+    )
+    .all(callId) as EndpointHit[];
+}
+
+/** 엔드포인트 → 이를 부르는 프론트 호출부들 (역방향). */
+export function matchEndpointToCalls(db: Database, endpointId: number): HttpCallHit[] {
+  return db
+    .prepare(
+      `${HC_SELECT} JOIN endpoints e ON e.path = c.path AND ${METHOD_COMPAT}
+       WHERE e.id = ? AND c.path != '' ORDER BY f.path, c.line`,
+    )
+    .all(endpointId) as HttpCallHit[];
+}
+
+// ── Impact (blast radius) — 이름 기반 전이적 callers ──
+
+export interface ImpactHit {
+  name: string | null; // 호출자 심볼 이름 (파일 최상위 호출이면 null)
+  kind: string | null;
+  path: string;
+  line: number;
+  depth: number; // 1 = 직접 호출자
+}
+
+/** name 심볼의 전이적 호출자 BFS. 이름 기반 근사(동명 혼입 가능성은 Relation과 동일 한계). */
+export function getImpact(db: Database, name: string, depth = 2, limit = 200): ImpactHit[] {
+  const out: ImpactHit[] = [];
+  const seenSite = new Set<string>();
+  const visited = new Set<string>([name]);
+  let frontier = [name];
+  for (let d = 1; d <= depth && frontier.length > 0; d++) {
+    const next: string[] = [];
+    for (const n of frontier) {
+      for (const c of getCallers(db, n)) {
+        const key = `${c.callerName ?? '?'}:${c.path}:${c.line}`;
+        if (seenSite.has(key)) continue;
+        seenSite.add(key);
+        out.push({ name: c.callerName, kind: c.callerKind, path: c.path, line: c.line, depth: d });
+        if (out.length >= limit) return out;
+        if (c.callerName && !visited.has(c.callerName)) {
+          visited.add(c.callerName);
+          next.push(c.callerName);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return out;
+}

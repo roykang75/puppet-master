@@ -77,7 +77,7 @@ export class Indexer {
     const existing = this.db.prepare(`SELECT id, hash FROM files WHERE path=?`).get(rel) as { id: number; hash: string } | undefined;
     if (existing && existing.hash === hash) return false;
 
-    const { symbols, refs } = extractFile(content, spec);
+    const { symbols, refs, endpoints, httpCalls } = extractFile(content, spec, rel);
     const tx = this.db.transaction(() => {
       let fileId: number;
       if (existing) {
@@ -85,6 +85,8 @@ export class Indexer {
         this.db.prepare(`UPDATE files SET hash=?, language=?, indexed_at=? WHERE id=?`).run(hash, spec.id, Date.now(), fileId);
         this.db.prepare(`DELETE FROM symbols WHERE file_id=?`).run(fileId);
         this.db.prepare(`DELETE FROM refs WHERE file_id=?`).run(fileId);
+        this.db.prepare(`DELETE FROM endpoints WHERE file_id=?`).run(fileId);
+        this.db.prepare(`DELETE FROM http_calls WHERE file_id=?`).run(fileId);
         this.db.prepare(`DELETE FROM file_text WHERE rowid=?`).run(fileId);
       } else {
         fileId = Number(
@@ -104,6 +106,15 @@ export class Indexer {
       const insRef = this.db.prepare(`INSERT INTO refs (name,kind,file_id,line,col,enclosing_symbol_id) VALUES (?,?,?,?,?,?)`);
       for (const r of refs) {
         insRef.run(r.name, r.kind, fileId, r.line, r.col, r.enclosingIndex === null ? null : ids[r.enclosingIndex]);
+      }
+      // HTTP 경계 (v3) — symbolIndex/enclosingIndex는 이번 삽입의 심볼 id로 매핑
+      const insEp = this.db.prepare(`INSERT INTO endpoints (file_id,symbol_id,method,path,raw_path,line) VALUES (?,?,?,?,?,?)`);
+      for (const e of endpoints) {
+        insEp.run(fileId, e.symbolIndex === null ? null : ids[e.symbolIndex], e.method, e.path, e.rawPath, e.line);
+      }
+      const insHc = this.db.prepare(`INSERT INTO http_calls (file_id,enclosing_symbol_id,method,path,raw_path,line,col) VALUES (?,?,?,?,?,?,?)`);
+      for (const h of httpCalls) {
+        insHc.run(fileId, h.enclosingIndex === null ? null : ids[h.enclosingIndex], h.method, h.path, h.rawPath, h.line, h.col);
       }
       this.db.prepare(`INSERT INTO file_text (rowid, path, content) VALUES (?,?,?)`).run(fileId, rel, content);
     });
