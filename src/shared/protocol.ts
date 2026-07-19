@@ -200,3 +200,22 @@ export interface ProjectStack {
   languages: string[];
   libraries: { name: string; version?: string }[];
 }
+
+// ── 변경 리뷰 센터 (Plan 22) ──
+export interface ExtractSymbolsParams { path: string; content: string } // 확장자로 spec 결정 — 미지원 언어는 []
+export interface ReviewCommit { hash: string; subject: string; timestamp: number } // timestamp: 유닉스 초
+export interface ReviewChangedFile { path: string; status: 'A' | 'M' | 'D' } // rename은 R→ (D 옛경로 + A 새경로)로 단순화
+export interface ReviewState { baseline: string | null; reviewed: string[] } // reviewed 키: "<path>#<symbol>" 또는 "<path>"
+export interface ReviewFileDiff {
+  binary: boolean;     // 바이너리/2MB 초과 — 심볼 매핑 생략
+  before: string;      // baseline 시점 내용 (없으면 '')
+  after: string;       // 워킹트리 내용 (없으면 '')
+  hunks: GitChangeRange[]; // baseline↔워킹트리 -U0 헝크 (untracked는 전체 추가)
+}
+export interface ReviewCommitsResult {
+  isGit: boolean;
+  baseline: string | null;   // 실제 사용된 베이스라인 해시 (저장값 무효 시 HEAD로 폴백)
+  head: string | null;
+  sinceCommits: ReviewCommit[];  // baseline..HEAD (최신 우선)
+  recentCommits: ReviewCommit[]; // 최근 50개 (시작점 선택용)
+}

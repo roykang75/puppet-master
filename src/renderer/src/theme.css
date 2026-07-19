@@ -134,6 +134,44 @@ body {
 .dircmp-right-only .dircmp-status { color: #2ea043; border: 1px solid #2ea043; }
 .dircmp-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* 변경 리뷰 센터 (Plan 22) */
+.review { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--bg); color: var(--fg); user-select: none; }
+.review-topbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.review-baseline { color: var(--fg-dim); }
+.review-baseline b { color: var(--fg); font-family: var(--mono, monospace); }
+.review-progress { color: var(--fg-dim); margin-left: auto; }
+.review-body { flex: 1; display: flex; min-height: 0; }
+.review-commits { flex: none; width: 280px; overflow: auto; border-right: 1px solid var(--border); }
+.review-files { flex: 1; overflow: auto; }
+.review-section-title { padding: 6px 12px; font-size: 11px; text-transform: uppercase; color: var(--fg-dim); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+.review-commit { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12px; }
+.review-commit:hover { background: var(--bg-hover); }
+.review-commit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.review-commit-hash { color: var(--accent); font-family: var(--mono, monospace); font-size: 11px; }
+.review-commit-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-commit-from { flex: none; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 3px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+.review-commit-from:hover { color: var(--fg); border-color: var(--accent); }
+.review-file-group { border-bottom: 1px solid var(--border); }
+.review-file-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; font-size: 13px; }
+.review-file-row:hover { background: var(--bg-hover); }
+.review-caret { flex: none; width: 16px; display: inline-flex; justify-content: center; color: var(--fg-dim); cursor: pointer; }
+.review-caret-spacer { display: inline-block; width: 16px; }
+.review-status { flex: none; width: 40px; font-size: 11px; text-align: center; border-radius: 3px; padding: 1px 0; }
+.review-status-A { color: #2ea043; border: 1px solid #2ea043; }
+.review-status-M { color: #2f7ee6; border: 1px solid #2f7ee6; }
+.review-status-D { color: #e5534b; border: 1px solid #e5534b; }
+.review-file-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.review-file-path:hover { color: var(--accent); }
+.review-binary { flex: none; font-size: 11px; color: var(--fg-dim); }
+.review-symbol-row { display: flex; align-items: center; gap: 8px; padding: 3px 12px 3px 40px; font-size: 12px; }
+.review-symbol-row:hover { background: var(--bg-hover); }
+.review-badge { flex: none; font-size: 10px; border-radius: 3px; padding: 1px 5px; }
+.review-badge-added { color: #2ea043; border: 1px solid #2ea043; }
+.review-badge-modified { color: #2f7ee6; border: 1px solid #2f7ee6; }
+.review-badge-deleted { color: #e5534b; border: 1px solid #e5534b; }
+.review-symbol-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.review-symbol-name:hover { color: var(--accent); }
+
 /* 레이아웃 프리셋 컨트롤 (상태바) */
 .statusbar-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .layout-preset { position: relative; flex: none; display: inline-flex; align-items: center; }

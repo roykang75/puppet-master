@@ -7,8 +7,9 @@ export interface Tab {
   path: string; // 파일 탭: 실제 경로 / diff 탭: 'diff://<실경로>' (고유 키)
   dirty: boolean;
   diskChanged: boolean;
-  diff?: { path: string; before: string; after: string; label?: string; origin?: 'agent' | 'compare' }; // 있으면 diff 탭(읽기전용 가상문서). label 있으면 탭 제목 대체(파일 비교). origin==='agent'이면 줄 주석 UI 표시
+  diff?: { path: string; before: string; after: string; label?: string; origin?: 'agent' | 'compare' | 'review'; revealLine?: number }; // 있으면 diff 탭(읽기전용 가상문서). label 있으면 탭 제목 대체(파일 비교). origin==='agent'|'review'이면 줄 주석 UI 표시. revealLine: 마운트 시 해당 줄로 스크롤
   dirCompare?: { leftDir: string; rightDir: string; entries: import('../../shared/protocol').DirCompareEntry[] }; // 디렉터리 비교 탭
+  review?: true; // 변경 리뷰 센터 탭 (review:// 고유 키)
 }
 
 interface AppState {
@@ -50,7 +51,8 @@ interface AppState {
   setStats(s: IndexStats): void;
   setError(msg: string | null): void;
   openTab(path: string): void;
-  openDiffTab(path: string, before: string, after: string, label?: string, origin?: 'agent' | 'compare'): void; // 변경 제안/파일 비교 탭 열기/갱신 (키 diff://<path>)
+  openDiffTab(path: string, before: string, after: string, label?: string, origin?: 'agent' | 'compare' | 'review', revealLine?: number): void; // 변경 제안/파일 비교/리뷰 탭 열기/갱신 (키 diff://<path>)
+  openReviewTab(): void; // 변경 리뷰 센터 탭 열기 (키 review://)
   compareBase: string | null; // '비교 대상으로 선택'한 파일 rel — 없으면 null
   setCompareBase(rel: string | null): void;
   compareBaseDir: string | null; // '비교 대상 폴더로 선택'한 디렉터리 rel
@@ -140,13 +142,19 @@ export const useAppStore = create<AppState>((set) => ({
         ? { activePath: path }
         : { tabs: [...s.tabs, { path, dirty: false, diskChanged: false }], activePath: path },
     ),
-  openDiffTab: (path, before, after, label, origin) =>
+  openDiffTab: (path, before, after, label, origin, revealLine) =>
     set((s) => {
       const key = `diff://${path}`;
-      const tab: Tab = { path: key, dirty: false, diskChanged: false, diff: { path, before, after, label, origin } };
+      const tab: Tab = { path: key, dirty: false, diskChanged: false, diff: { path, before, after, label, origin, revealLine } };
       const idx = s.tabs.findIndex((t) => t.path === key);
       const tabs = idx >= 0 ? s.tabs.map((t, i) => (i === idx ? tab : t)) : [...s.tabs, tab];
       return { tabs, activePath: key };
+    }),
+  openReviewTab: () =>
+    set((s) => {
+      const key = 'review://';
+      if (s.tabs.some((t) => t.path === key)) return { activePath: key };
+      return { tabs: [...s.tabs, { path: key, dirty: false, diskChanged: false, review: true }], activePath: key };
     }),
   closeTab: (path) =>
     set((s) => {

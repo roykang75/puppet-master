@@ -14,8 +14,9 @@ OW.ENTIRE_DIFF_OVERVIEW_WIDTH = 16; // 8(삭제) + 8(추가)
 
 /** 에이전트 변경 제안 diff — Monaco DiffEditor (읽기 전용, 임시 인메모리 모델).
  * Monaco DiffEditor는 진짜 미니맵을 강제 비활성하므로 diff 오버뷰 룰러가 그 역할을 한다.
- * origin==='agent'이면 하단에 줄 주석 바를 표시해 코멘트를 모아 채팅 피드백으로 보낼 수 있다. */
-export function DiffView({ path, before, after, origin }: { path: string; before: string; after: string; origin?: 'agent' | 'compare' }) {
+ * origin==='agent'|'review'이면 하단에 줄 주석 바를 표시해 코멘트를 모아 채팅 피드백으로 보낼 수 있다.
+ * revealLine(1-based)이 있으면 마운트 시 해당 줄로 스크롤(리뷰 심볼 점프). */
+export function DiffView({ path, before, after, origin, revealLine }: { path: string; before: string; after: string; origin?: 'agent' | 'compare' | 'review'; revealLine?: number }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [curLine, setCurLine] = useState(1); // modified(오른쪽) 에디터 현재 줄 (1-기반)
   const [comment, setComment] = useState('');
@@ -45,6 +46,11 @@ export function DiffView({ path, before, after, origin }: { path: string; before
       scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
     });
     ed.setModel({ original, modified });
+    // 리뷰 심볼 점프 — 양쪽 에디터를 해당 줄로 스크롤 (삭제 심볼은 옛 줄, 추가/수정은 새 줄 기준이라 둘 다 reveal)
+    if (revealLine && revealLine > 0) {
+      ed.getModifiedEditor().revealLineInCenter(revealLine);
+      ed.getOriginalEditor().revealLineInCenter(revealLine);
+    }
     // modified(오른쪽) 에디터 커서 줄 추적 — 주석은 after 기준 줄에 단다
     const sub = ed.getModifiedEditor().onDidChangeCursorPosition((e) => setCurLine(e.position.lineNumber));
     return () => {
@@ -53,7 +59,7 @@ export function DiffView({ path, before, after, origin }: { path: string; before
       original.dispose();
       modified.dispose();
     };
-  }, [path, before, after]);
+  }, [path, before, after, revealLine]);
 
   const addAnnotation = () => {
     const c = comment.trim();
@@ -75,7 +81,7 @@ export function DiffView({ path, before, after, origin }: { path: string; before
   return (
     <div className="diff-tab-wrap">
       <div ref={hostRef} className="diff-tab-host" />
-      {origin === 'agent' && (
+      {(origin === 'agent' || origin === 'review') && (
         <div className="diff-annotate-bar">
           <div className="diff-annotate-input-row">
             <span className="diff-annotate-line">현재 {curLine}행</span>

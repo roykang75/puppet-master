@@ -15,10 +15,11 @@ import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
 import { getFileChanges } from './git-diff';
 import { isGitRepo, ensureWorktree, worktreeChanges, applyWorktree, discardWorktree } from './agent/worktree';
+import { listRecentCommits, listCommitsSince, changedFilesSince, fileDiffSince, headHash, isValidRef } from './review';
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
-import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, AgentTrustPreset, ChatStoredMessage, ProjectStack } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, AgentTrustPreset, ChatStoredMessage, ProjectStack, ReviewState, ReviewCommitsResult } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 // dev 모드에선 앱 이름이 실행 바이너리(Electron) 기준이라 macOS 앱 메뉴에 "Electron"으로 뜬다.
@@ -31,7 +32,7 @@ app.setPath('userData', userDataPath);
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
   'searchSymbols', 'searchText', 'searchTextDetailed', 'getCallers', 'getCallees', 'getRenameTargets',
-  'getFileTokens', 'getFlowForFile',
+  'getFileTokens', 'getFlowForFile', 'extractSymbols',
 ]);
 
 const LSP_CALL_ALLOWED = new Set(['completion', 'hover', 'definition', 'references', 'signatureHelp']);
@@ -378,6 +379,42 @@ function registerIpc(): void {
   });
   ipcMain.handle('settings:context7:set-key', (_e, key: string) => settingsStore.setContext7Key(key));
   ipcMain.handle('stack:get', () => (currentStack ? buildStackSummary(currentStack) : null));
+
+  // 변경 리뷰 센터 (Plan 22) — 저장된 baseline이 무효(리베이스 등)면 HEAD로 폴백. 모든 review:* 핸들러가 같은 baseline을 쓴다.
+  const reviewBaseline = (root: string): string | null => {
+    const head = headHash(root);
+    const st = persistence.loadReviewState(root);
+    if (!st.baseline || !isValidRef(root, st.baseline)) return head;
+    return st.baseline;
+  };
+  ipcMain.handle('review:commits', (): ReviewCommitsResult => {
+    if (!currentRoot || !isGitRepo(currentRoot)) {
+      return { isGit: false, baseline: null, head: null, sinceCommits: [], recentCommits: [] };
+    }
+    const baseline = reviewBaseline(currentRoot);
+    const head = headHash(currentRoot);
+    return {
+      isGit: true,
+      baseline,
+      head,
+      sinceCommits: baseline ? listCommitsSince(currentRoot, baseline) : [],
+      recentCommits: listRecentCommits(currentRoot),
+    };
+  });
+  ipcMain.handle('review:changes', () => {
+    if (!currentRoot || !isGitRepo(currentRoot)) return [];
+    const baseline = reviewBaseline(currentRoot);
+    return baseline ? changedFilesSince(currentRoot, baseline) : [];
+  });
+  ipcMain.handle('review:fileDiff', (_e, rel: string) => {
+    if (!currentRoot || !isGitRepo(currentRoot)) return { binary: false, before: '', after: '', hunks: [] };
+    const baseline = reviewBaseline(currentRoot);
+    return fileDiffSince(currentRoot, rel, baseline ?? 'HEAD');
+  });
+  ipcMain.handle('review:stateGet', (): ReviewState => (currentRoot ? persistence.loadReviewState(currentRoot) : { baseline: null, reviewed: [] }));
+  ipcMain.handle('review:stateSave', (_e, state: ReviewState) => {
+    if (currentRoot) persistence.saveReviewState(currentRoot, state);
+  });
 
   const themesDir = () => path.join(app.getPath('userData'), 'themes');
   ipcMain.handle('theme:list', () => {

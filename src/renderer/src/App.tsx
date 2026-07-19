@@ -247,6 +247,7 @@ export function App() {
         useAppStore.getState().setSearchSeed(normalizeSearchSeed(getSelectedText()));
         useAppStore.getState().setSearchOpen(true);
       }
+      if (action.type === 'review') useAppStore.getState().openReviewTab();
     });
     // 채팅 스트림 이벤트 구독 — App은 항상 마운트 상태이므로 RightPanel의 탭 전환으로
     // ChatPanel이 언마운트돼도 이벤트가 유실되지 않는다 (P1 수정).

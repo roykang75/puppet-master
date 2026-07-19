@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { UiState, LayoutPresets } from '../shared/protocol';
+import { UiState, LayoutPresets, ReviewState } from '../shared/protocol';
 
 export interface RecentEntry {
   root: string;
@@ -89,5 +89,22 @@ export class Persistence {
     const dir = path.join(this.baseDir, 'bookmarks');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, `${this.projectHash(root)}.json`), JSON.stringify(list, null, 2));
+  }
+
+  // 변경 리뷰 상태 (Plan 22) — 프로젝트별 baseline + reviewed 심볼 키 목록. bookmarks와 같은 패턴.
+  loadReviewState(root: string): ReviewState {
+    try {
+      return JSON.parse(
+        fs.readFileSync(path.join(this.baseDir, 'review', `${this.projectHash(root)}.json`), 'utf8'),
+      ) as ReviewState;
+    } catch {
+      return { baseline: null, reviewed: [] };
+    }
+  }
+
+  saveReviewState(root: string, state: ReviewState): void {
+    const dir = path.join(this.baseDir, 'review');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${this.projectHash(root)}.json`), JSON.stringify(state, null, 2));
   }
 }

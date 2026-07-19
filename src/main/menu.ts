@@ -1,7 +1,7 @@
 import { Menu } from 'electron';
 import type { RecentEntry } from './persistence';
 
-export type MenuAction = { type: 'open-folder' } | { type: 'save' } | { type: 'open-recent'; root: string } | { type: 'export-html' } | { type: 'find-in-files' };
+export type MenuAction = { type: 'open-folder' } | { type: 'save' } | { type: 'open-recent'; root: string } | { type: 'export-html' } | { type: 'find-in-files' } | { type: 'review' };
 
 export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => void, openAbout: () => void): void {
   // macOS 앱 메뉴 — 기본 appMenu 역할 대신 커스텀(About만 커스텀 창으로, 나머지는 표준 role)
@@ -37,6 +37,9 @@ export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => v
         // registerAccelerator:false — 라벨에 단축키만 표기하고 키 등록은 하지 않는다.
         // Cmd/Ctrl+Shift+F는 렌더러(App.tsx keydown)가 토글로 처리하므로 이중 발화를 막는다.
         { label: 'Find in Files…', accelerator: 'CmdOrCtrl+Shift+F', registerAccelerator: false, click: () => send({ type: 'find-in-files' }) },
+        { type: 'separator' },
+        // 변경 리뷰 센터 (Plan 22) — viewMenu의 reload(Cmd+R)/forceReload(Cmd+Shift+R)와 겹치지 않게 Alt 조합 사용
+        { label: '변경 리뷰…', accelerator: 'CmdOrCtrl+Alt+R', click: () => send({ type: 'review' }) },
         { type: 'separator' },
         { label: 'HTML로 내보내기…', accelerator: 'CmdOrCtrl+Shift+E', click: () => send({ type: 'export-html' }) },
         { type: 'separator' },

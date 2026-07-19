@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, AgentTrustPreset, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, AgentTrustPreset, ThreadMeta, ThreadSearchHit, ChatStoredMessage, ReviewState, ReviewCommitsResult, ReviewChangedFile, ReviewFileDiff } from '../shared/protocol';
+import type { SymbolRow } from '../indexer/extractor';
 import type { SymbolHit, TextHit, TextMatch, CallerHit, RefHit, FileFlow } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -114,6 +115,14 @@ const api = {
   agentWorktreeDiscard: (): Promise<void> => ipcRenderer.invoke('agent:worktreeDiscard'),
   setContext7Key: (key: string): Promise<void> => ipcRenderer.invoke('settings:context7:set-key', key),
   getProjectStack: (): Promise<string | null> => ipcRenderer.invoke('stack:get'),
+  // 변경 리뷰 센터 (Plan 22)
+  reviewCommits: (): Promise<ReviewCommitsResult> => ipcRenderer.invoke('review:commits'),
+  reviewChanges: (): Promise<ReviewChangedFile[]> => ipcRenderer.invoke('review:changes'),
+  reviewFileDiff: (rel: string): Promise<ReviewFileDiff> => ipcRenderer.invoke('review:fileDiff', rel),
+  reviewStateGet: (): Promise<ReviewState> => ipcRenderer.invoke('review:stateGet'),
+  reviewStateSave: (state: ReviewState): Promise<void> => ipcRenderer.invoke('review:stateSave', state),
+  extractSymbols: (path: string, content: string): Promise<SymbolRow[]> =>
+    ipcRenderer.invoke('indexer:call', 'extractSymbols', { path, content }),
   themeList: (): Promise<{ id: string; name: string }[]> => ipcRenderer.invoke('theme:list'),
   themeRead: (id: string): Promise<unknown | null> => ipcRenderer.invoke('theme:read', id),
   themeImport: (): Promise<{ id: string; name: string } | { error: string } | null> =>

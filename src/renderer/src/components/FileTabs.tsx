@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscArrowLeft, VscArrowRight, VscCircleFilled, VscClose, VscEllipsis, VscGitCompare, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
+import { VscArrowLeft, VscArrowRight, VscChecklist, VscCircleFilled, VscClose, VscEllipsis, VscGitCompare, VscOpenPreview, VscSplitHorizontal, VscWarning } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl } from '../file-icons';
 import { disposeModel, isDiffTabPath } from './EditorPane';
@@ -69,12 +69,14 @@ export function FileTabs() {
       <div className="tab-strip">
         {tabs.map((t) => (
           <div key={t.path} className={`tab${t.path === activePath ? ' active' : ''}`} onClick={() => setActive(t.path)}>
-            {t.diff ? (
+            {t.review ? (
+              <span className="split-tab-icon"><VscChecklist /></span>
+            ) : t.diff ? (
               <span className="split-tab-icon"><VscGitCompare /></span>
             ) : (
               <img className="file-icon tab-file-icon" src={fileIconUrl(t.path.split('/').pop() ?? '')} alt="" />
             )}
-            <span>{t.dirCompare ? `폴더 비교: ${t.dirCompare.leftDir.split('/').pop() || '.'} ↔ ${t.dirCompare.rightDir.split('/').pop() || '.'}` : t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : t.path.split('/').pop()}</span>
+            <span>{t.review ? '변경 리뷰' : t.dirCompare ? `폴더 비교: ${t.dirCompare.leftDir.split('/').pop() || '.'} ↔ ${t.dirCompare.rightDir.split('/').pop() || '.'}` : t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : t.path.split('/').pop()}</span>
             {t.dirty && <span className="dirty-dot"><VscCircleFilled /></span>}
             {t.diskChanged && <span className="disk-changed" title="디스크에서 변경됨"><VscWarning /></span>}
             <span
@@ -120,7 +122,7 @@ export function FileTabs() {
           <div className="open-editors-menu" ref={menuRef} tabIndex={-1} onKeyDown={onMenuKey}>
             <div className="open-editors-title">열린 파일 {tabs.length}개</div>
             {tabs.map((t, i) => {
-              const name = t.dirCompare ? `폴더 비교: ${t.dirCompare.leftDir.split('/').pop() || '.'} ↔ ${t.dirCompare.rightDir.split('/').pop() || '.'}` : t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : (t.path.split('/').pop() ?? t.path);
+              const name = t.review ? '변경 리뷰' : t.dirCompare ? `폴더 비교: ${t.dirCompare.leftDir.split('/').pop() || '.'} ↔ ${t.dirCompare.rightDir.split('/').pop() || '.'}` : t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : (t.path.split('/').pop() ?? t.path);
               const dir = t.path.slice(0, Math.max(0, t.path.length - name.length - 1));
               return (
                 <div

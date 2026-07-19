@@ -13,10 +13,12 @@ import { SplitPane } from './SplitPane';
 import { ImageView, isImagePath } from './ImageView';
 import { DiffView } from './DiffView';
 import { DirCompareView } from './DirCompareView';
+import { ReviewCenterView } from './ReviewCenterView';
 
 /** 에이전트 변경 제안 diff 탭 키 (가상 문서 — 파일 로드/저장/LSP 대상 아님) */
 export const isDiffTabPath = (p: string): boolean => p.startsWith('diff://');
 export const isDirCompareTabPath = (p: string): boolean => p.startsWith('dircmp://');
+export const isReviewTabPath = (p: string): boolean => p === 'review://';
 
 let editorInstance: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
 
@@ -263,8 +265,8 @@ export function EditorPane() {
       editorInstance?.setModel(null);
       return;
     }
-    // 이미지/diff/dircmp 탭 — 텍스트 모델을 만들지 않는다 (전용 뷰가 표시, Monaco는 CSS 숨김)
-    if (isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath)) {
+    // 이미지/diff/dircmp/리뷰 탭 — 텍스트 모델을 만들지 않는다 (전용 뷰가 표시, Monaco는 CSS 숨김)
+    if (isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath) || isReviewTabPath(activePath)) {
       editorInstance?.setModel(null);
       return;
     }
@@ -313,7 +315,7 @@ export function EditorPane() {
   // 시맨틱 토큰 색칠 — 심볼 DB 기반. 파일 전환/재인덱싱(outlineVersion) 시 재적용.
   useEffect(() => {
     clearSemanticTokens();
-    if (!activePath || indexing || isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath)) return; // 인덱싱 중/비활성/이미지/diff/dircmp 탭 → 색칠 없음(무해)
+    if (!activePath || indexing || isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath) || isReviewTabPath(activePath)) return; // 인덱싱 중/비활성/이미지/diff/dircmp/리뷰 탭 → 색칠 없음(무해)
     let cancelled = false;
     const uri = uriOf(activePath);
     const apply = (attempt = 0): void => {
@@ -348,7 +350,7 @@ export function EditorPane() {
   // 리비전 마크 — git HEAD 대비 변경 라인 gutter 바. 파일 전환/저장·재인덱싱(outlineVersion) 시 갱신.
   useEffect(() => {
     clearRevisionMarks();
-    if (!activePath || isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath)) return;
+    if (!activePath || isImagePath(activePath) || isDiffTabPath(activePath) || isDirCompareTabPath(activePath) || isReviewTabPath(activePath)) return;
     let cancelled = false;
     const uri = uriOf(activePath);
     const apply = (attempt = 0): void => {
@@ -388,13 +390,15 @@ export function EditorPane() {
   const activeTab = useAppStore((s) => (s.activePath ? s.tabs.find((t) => t.path === s.activePath) : undefined));
   const activeDiff = activeTab?.diff;
   const activeDirCompare = activeTab?.dirCompare;
-  const hideEditor = showImage || !!activeDiff || !!activeDirCompare;
+  const activeReview = activeTab?.review;
+  const hideEditor = showImage || !!activeDiff || !!activeDirCompare || !!activeReview;
   return (
     <div className="editor-split-row">
       <div ref={hostRef} className="editor-host" style={hideEditor ? { display: 'none' } : undefined} />
       {showImage && <ImageView path={activePath} />}
-      {activeDiff && <DiffView path={activeDiff.path} before={activeDiff.before} after={activeDiff.after} origin={activeDiff.origin} />}
+      {activeDiff && <DiffView path={activeDiff.path} before={activeDiff.before} after={activeDiff.after} origin={activeDiff.origin} revealLine={activeDiff.revealLine} />}
       {activeDirCompare && <DirCompareView leftDir={activeDirCompare.leftDir} rightDir={activeDirCompare.rightDir} entries={activeDirCompare.entries} />}
+      {activeReview && <ReviewCenterView />}
       <SplitPane />
     </div>
   );
