@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscLayout } from 'react-icons/vsc';
+import { VscLayout, VscCopy, VscCheck } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { captureLayout, applyLayout } from '../layout-presets';
 import type { LayoutPresets } from '../../../shared/protocol';
@@ -69,6 +69,19 @@ function LayoutPresetControl() {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="statusbar-copy"
+      title="복사"
+      onClick={() => { void navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1200); }); }}
+    >
+      {copied ? <VscCheck /> : <VscCopy />}
+    </button>
+  );
+}
+
 export function StatusBar() {
   const indexing = useAppStore((s) => s.indexing);
   const stats = useAppStore((s) => s.stats);
@@ -78,13 +91,13 @@ export function StatusBar() {
   const activePath = useAppStore((s) => s.activePath);
   return (
     <div className="statusbar">
-      <span>
-        {error ? <span className="error">{error}</span>
+      <span className="statusbar-msg">
+        {error ? <><span className="error">{error}</span><CopyButton text={error} /></>
           : indexing ? `인덱싱 ${indexing.done}/${indexing.total}`
           : stats ? `파일 ${stats.files + stats.skipped} · 심볼 ${stats.symbols}`
           : ''}
       </span>
-      {completionStatus && <span className="error">{completionStatus}</span>}
+      {completionStatus && <span className="statusbar-msg"><span className="error">{completionStatus}</span><CopyButton text={completionStatus} /></span>}
       {lspStopped.length > 0 && <span className="error">LSP({lspStopped.join(',')}): 중지됨</span>}
       <span className="statusbar-path">{activePath ?? ''}</span>
       <LayoutPresetControl />
