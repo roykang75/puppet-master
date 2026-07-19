@@ -233,6 +233,14 @@ body {
 .search-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-snippet { color: var(--fg-dim); font-size: 12px; }
 .search-detail { color: var(--fg-dim); font-size: 12px; white-space: nowrap; }
+.search-cap { color: var(--fg-dim); font-size: 11px; text-transform: none; }
+/* 텍스트 검색 — 파일별 그룹 헤더 + 줄 항목 */
+.search-file-header { display: flex; justify-content: space-between; gap: 12px; padding: 3px 12px; font-size: 12px; color: var(--fg-dim); background: var(--bg); }
+.search-file-path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
+.search-file-count { flex: none; opacity: 0.7; }
+.search-line-item { gap: 8px; padding-left: 24px; }
+.search-lineno { flex: none; min-width: 28px; text-align: right; color: var(--fg-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.search-hl { color: var(--fg); background: var(--bg-active); border-radius: 2px; }
 
 /* Smart Rename 오버레이 — search-backdrop/search-box 재사용 */
 .rename-box { width: 720px; max-height: 72vh; }

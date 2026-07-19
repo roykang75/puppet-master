@@ -29,7 +29,7 @@ app.setPath('userData', userDataPath);
 
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
-  'searchSymbols', 'searchText', 'getCallers', 'getCallees', 'getRenameTargets',
+  'searchSymbols', 'searchText', 'searchTextDetailed', 'getCallers', 'getCallees', 'getRenameTargets',
   'getFileTokens', 'getFlowForFile',
 ]);
 

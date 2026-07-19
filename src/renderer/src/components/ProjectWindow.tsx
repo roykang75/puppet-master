@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VscChevronDown, VscChevronRight, VscNewFile, VscNewFolder, VscRefresh } from 'react-icons/vsc';
+import { VscChevronDown, VscChevronRight, VscNewFile, VscNewFolder, VscRefresh, VscSearch } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl, folderIconUrl } from '../file-icons';
 import { buildCompareDiff } from '../compare';
@@ -209,6 +209,11 @@ export function ProjectWindow() {
       <div className="panel-title panel-title-row">
         <span>Project</span>
         <span className="panel-title-actions">
+          <button
+            className="panel-action"
+            title="전체 검색 (Cmd/Ctrl+Shift+F)"
+            onClick={() => useAppStore.getState().setSearchOpen(true)}
+          ><VscSearch /></button>
           <button
             className="panel-action"
             title="새 파일"

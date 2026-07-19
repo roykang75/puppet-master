@@ -19,6 +19,14 @@ export interface TextHit {
   snippet: string;
 }
 
+/** 줄 단위 텍스트 매치. line/col은 0-기반, lineText는 트림·절단된 원본 줄. */
+export interface TextMatch {
+  path: string;
+  line: number;
+  col: number;
+  lineText: string;
+}
+
 export interface CallerHit {
   callerId: number | null;
   callerName: string | null;
@@ -55,6 +63,40 @@ export function searchText(db: Database, query: string, limit = 50): TextHit[] {
   return db
     .prepare(`SELECT path, snippet(file_text, 1, '', '', '…', 12) AS snippet FROM file_text WHERE file_text MATCH ? LIMIT ?`)
     .all(escaped, limit) as TextHit[];
+}
+
+/**
+ * 줄 단위 상세 텍스트 검색 (0-기반 line/col):
+ *  - FTS MATCH로 후보 파일(최대 50개)을 좁힌 뒤 각 파일 content를 줄 단위 스캔.
+ *  - 대소문자 무시(lowercase indexOf) — FTS 기본 토크나이저와 일치. 한 줄 다중 매치는 각각 수집.
+ *  - 캡: 파일당 20개, 전체 limit. lineText는 트림 후 200자 절단(원본 col은 트림 전 기준).
+ */
+export function searchTextDetailed(db: Database, query: string, limit = 200): TextMatch[] {
+  const needle = query.toLowerCase();
+  if (!needle) return [];
+  const escaped = `"${query.replace(/"/g, '""')}"`;
+  const rows = db
+    .prepare(`SELECT path, content FROM file_text WHERE file_text MATCH ? LIMIT 50`)
+    .all(escaped) as { path: string; content: string }[];
+
+  const out: TextMatch[] = [];
+  for (const row of rows) {
+    if (out.length >= limit) break;
+    const lines = row.content.split('\n');
+    let perFile = 0;
+    for (let ln = 0; ln < lines.length && perFile < 20 && out.length < limit; ln++) {
+      const lower = lines[ln].toLowerCase();
+      let from = 0;
+      let idx: number;
+      while ((idx = lower.indexOf(needle, from)) !== -1) {
+        out.push({ path: row.path, line: ln, col: idx, lineText: lines[ln].trim().slice(0, 200) });
+        perFile++;
+        if (perFile >= 20 || out.length >= limit) break;
+        from = idx + needle.length;
+      }
+    }
+  }
+  return out;
 }
 
 export function getDefinitions(db: Database, name: string): SymbolHit[] {

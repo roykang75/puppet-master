@@ -361,5 +361,15 @@
 **v3 1차 완료 — 북극성 3게이트(S1·S2·S3) 전부 실증.** 남은 확인(비차단): dev 실사용 체감(F12/Flow/에이전트
 질문), 대형 레포에서 추출 성능 계측, [v3.1 후보] Express/Nest·httpx/requests 백엔드 호출부·OpenAPI 연동.
 
+## ✅ 전체 검색 강화 (발견성 + 줄 단위 텍스트 검색) — 완료
+- [x] 인덱서 `searchTextDetailed`(스키마 무변경, read-only): FTS로 파일 프리필터(≤50) → 줄 단위 대소문자 무시
+  스캔으로 정확 위치(0-기반 line/col) 수집. 파일당 20·전체 200 캡, lineText 트림·200자 절단. host RPC + 허용목록 + preload 추가.
+- [x] SearchOverlay: 텍스트 결과를 파일별 그룹 헤더(path+건수) + 줄 항목(줄번호·질의 하이라이트)으로 교체,
+  클릭/Enter가 `jumpTo(path, line+1, col+1)`로 정확 점프. FTS 폴백(findFirstAndReveal) 제거.
+- [x] 발견성: File 메뉴 "Find in Files…"(CmdOrCtrl+Shift+F, registerAccelerator:false로 이중발화 방지) +
+  Project 패널 돋보기 버튼(VscSearch).
+- [x] 검증: 단위 7종(위치·다중매치·대소문자·캡·특수문자·limit·빈질의) 전체 449/449, `npm run build` EXIT=0,
+  기존 E2E analysis.spec 그대로 통과(심볼 경로 무변경).
+
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)

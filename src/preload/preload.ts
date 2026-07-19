@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
-import type { SymbolHit, TextHit, CallerHit, RefHit, FileFlow } from '../indexer/api';
+import type { SymbolHit, TextHit, TextMatch, CallerHit, RefHit, FileFlow } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
 import type { RecentEntry } from '../main/persistence';
@@ -42,6 +42,8 @@ const api = {
     ipcRenderer.invoke('indexer:call', 'searchSymbols', { query }),
   searchText: (query: string): Promise<TextHit[]> =>
     ipcRenderer.invoke('indexer:call', 'searchText', { query }),
+  searchTextDetailed: (query: string): Promise<TextMatch[]> =>
+    ipcRenderer.invoke('indexer:call', 'searchTextDetailed', { query }),
   getCallers: (name: string): Promise<CallerHit[]> =>
     ipcRenderer.invoke('indexer:call', 'getCallers', { name }),
   getCallees: (symbolId: number): Promise<SymbolHit[]> =>

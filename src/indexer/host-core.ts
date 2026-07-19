@@ -73,6 +73,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     }),
     searchSymbols: (p: SearchParams) => queries.searchSymbols(opened().db, p.query, p.limit),
     searchText: (p: SearchParams) => queries.searchText(opened().db, p.query, p.limit),
+    searchTextDetailed: (p: SearchParams) => queries.searchTextDetailed(opened().db, p.query, p.limit),
     getDefinitions: (p: NameParams) => queries.getDefinitions(opened().db, p.name),
     getCallers: (p: NameParams) => queries.getCallers(opened().db, p.name),
     getCallees: (p: SymbolIdParams) => queries.getCallees(opened().db, p.symbolId),

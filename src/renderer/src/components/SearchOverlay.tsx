@@ -1,16 +1,41 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
-import { findFirstAndReveal } from './EditorPane';
-import type { SymbolHit, TextHit } from '../../../indexer/api';
+import type { SymbolHit, TextMatch } from '../../../indexer/api';
 
 interface Item {
   kind: 'symbol' | 'text';
   label: string;
   detail: string;
   path: string;
-  line?: number; // symbol만
-  query?: string; // text만
+  line?: number; // symbol: 1-based / text: 0-based(원본)
+  col?: number; // text: 0-based(원본)
+  lineText?: string; // text만
+  query?: string; // text 하이라이트용
+}
+
+const TEXT_LIMIT = 200; // searchTextDetailed의 전체 캡과 동일
+
+/** 질의를 대소문자 무시 부분일치로 강조. lineText 표시용. */
+function highlight(text: string, query: string): React.ReactNode {
+  if (!query) return text;
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let from = 0;
+  let idx: number;
+  let key = 0;
+  while ((idx = lower.indexOf(q, from)) !== -1) {
+    if (idx > from) parts.push(text.slice(from, idx));
+    parts.push(
+      <span key={key++} className="search-hl">
+        {text.slice(idx, idx + q.length)}
+      </span>,
+    );
+    from = idx + q.length;
+  }
+  parts.push(text.slice(from));
+  return parts;
 }
 
 export function SearchOverlay() {
@@ -39,7 +64,7 @@ export function SearchOverlay() {
     const t = setTimeout(() => {
       void Promise.all([
         window.si.searchSymbols(q).catch(() => [] as SymbolHit[]),
-        window.si.searchText(q).catch(() => [] as TextHit[]),
+        window.si.searchTextDetailed(q).catch(() => [] as TextMatch[]),
       ]).then(([syms, texts]) => {
         if (cancelled) return;
         const si: Item[] = syms.slice(0, 30).map((s) => ({
@@ -49,11 +74,14 @@ export function SearchOverlay() {
           path: s.path,
           line: s.line + 1,
         }));
-        const ti: Item[] = texts.slice(0, 30).map((t2) => ({
+        const ti: Item[] = texts.map((m) => ({
           kind: 'text',
-          label: t2.snippet,
-          detail: t2.path,
-          path: t2.path,
+          label: m.lineText,
+          detail: m.path,
+          path: m.path,
+          line: m.line,
+          col: m.col,
+          lineText: m.lineText,
           query: q,
         }));
         setItems([...si, ...ti]);
@@ -71,7 +99,7 @@ export function SearchOverlay() {
   const pick = (it: Item) => {
     setOpen(false);
     if (it.kind === 'symbol') jumpTo(it.path, it.line!);
-    else findFirstAndReveal(it.path, it.query!);
+    else jumpTo(it.path, it.line! + 1, it.col! + 1); // text: 0-기반 → 1-기반
   };
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -90,6 +118,17 @@ export function SearchOverlay() {
   const symbols = items.filter((i) => i.kind === 'symbol');
   const texts = items.filter((i) => i.kind === 'text');
   const idxOf = (it: Item) => items.indexOf(it);
+
+  // 텍스트 결과를 path별 그룹으로 (첫 등장 순서 유지)
+  const textGroups: { path: string; group: Item[] }[] = [];
+  for (const it of texts) {
+    let g = textGroups.find((x) => x.path === it.path);
+    if (!g) {
+      g = { path: it.path, group: [] };
+      textGroups.push(g);
+    }
+    g.group.push(it);
+  }
 
   return (
     // click 대신 mousedown + target 검사 — 상자 안에서 드래그해 밖에서 떼도 닫히지 않도록
@@ -114,15 +153,28 @@ export function SearchOverlay() {
               <span className="search-detail">{it.detail}</span>
             </div>
           ))}
-          {texts.length > 0 && <div className="search-section">전문 (FTS)</div>}
-          {texts.map((it) => (
-            <div
-              key={`t${idxOf(it)}`}
-              className={`search-item${idxOf(it) === sel ? ' selected' : ''}`}
-              onClick={() => pick(it)}
-            >
-              <span className="search-label search-snippet">{it.label}</span>
-              <span className="search-detail">{it.detail}</span>
+          {texts.length > 0 && (
+            <div className="search-section">
+              텍스트
+              {texts.length >= TEXT_LIMIT && <span className="search-cap"> — 일치 {TEXT_LIMIT}+개, 상위만 표시</span>}
+            </div>
+          )}
+          {textGroups.map((tg) => (
+            <div key={`g${tg.path}`}>
+              <div className="search-file-header">
+                <span className="search-file-path">{tg.path}</span>
+                <span className="search-file-count">{tg.group.length}</span>
+              </div>
+              {tg.group.map((it) => (
+                <div
+                  key={`t${idxOf(it)}`}
+                  className={`search-item search-line-item${idxOf(it) === sel ? ' selected' : ''}`}
+                  onClick={() => pick(it)}
+                >
+                  <span className="search-lineno">{it.line! + 1}</span>
+                  <span className="search-label search-snippet">{highlight(it.lineText!, it.query!)}</span>
+                </div>
+              ))}
             </div>
           ))}
           {q.trim().length >= 2 && items.length === 0 && <div className="hint">결과 없음</div>}
