@@ -326,8 +326,24 @@
 **인계 노트(비차단):** colorize 출력 + 네이티브 저장 다이얼로그는 Playwright 블록으로 E2E 비현실적 → 실 저장 산출물은
 수동 확인 대상. 선택 영역만 내보내기·인쇄용 라인번호는 후속.
 
-### 다음 후보
-사용자 결정 대기 — 레이아웃 프리셋/Directory Compare/Code Beautifier 중 선택.
+## ✅ Directory Compare (v2 14탄) — 완료 (main e72ad6a)
+- [x] 트리 폴더 우클릭 "비교 대상 폴더로 선택"→"폴더 비교" 재귀 비교. main dir-compare.ts(.git/node_modules 스킵,
+  바이트 비교, 동일 제외), dircmp:// 탭 + DirCompareView(다름→파일 diff, 한쪽만→열기). File Compare 인프라 재사용.
+- [x] 검증: 단위 3 + **E2E dir-compare.spec 실증**(폴더 비교→결과 목록→파일 diff). 전체 그린.
 
-### v2 이후 (백로그)
-- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
+## ✅ 레이아웃 프리셋 (v2 15탄) — 완료 (main 6132ba5)
+- [x] react-resizable-panels v4 임퍼러티브 API(groupRef getLayout/setLayout)로 3그룹 레이아웃 캡처·적용
+  (리마운트 없이 에디터 보존). 전역 파일(layout-presets.json) + IPC, StatusBar 프리셋 드롭다운(저장/적용/삭제).
+- [x] 검증: 단위(Persistence 라운드트립 3). 라이브 적용은 문서화된 임퍼러티브 API — 수동 확인.
+
+## ✅ Code Beautifier (v2 16탄) — 완료 (main 8611e98)
+- [x] LSP 문서 포매팅(Plan 14 인프라 재사용): manager.format + toTextEdits + IPC + Monaco
+  registerDocumentFormattingEditProvider → 네이티브 "Format Document"(Shift+Alt+F). tsserver=TS/JS, pyright 미지원→무변경.
+- [x] 검증: 단위(toTextEdits 2) + **실서버 통합**(tsserver가 messy.ts에 정렬 편집 반환 실증). 전체 400/400.
+
+## 🔚 남은 백로그 트리아지 (사용자 결정 필요 — 자동 진행 부적합)
+- [ ] **AI 완성 스트리밍** — Plan 5에서 이미 판정: Monaco `InlineCompletionsProvider`가 항목 배열을 한 번에 반환
+  → 점진 렌더 경로 없음, 짧은 완성+디바운스에선 이득 사실상 0. **won't-do**(어댑터는 후속 여지 유지).
+- [ ] **LSP 후속: Java jdtls** — Eclipse JDT LS(~50MB+ 바이너리 + JRE 의존 + 패키징)는 별도 통합 프로젝트.
+  기존 경량 LSP 클라이언트에 얹을 수 있으나 바이너리/런타임 번들이 큰 작업 → **별도 Plan 필요**.
+- [ ] **사용자 정의 언어 규칙** — 범위 불명확(TextMate 문법? 심볼 추출 쿼리? 파일 연결?). **스펙/브레인스토밍 선행 필요**.
