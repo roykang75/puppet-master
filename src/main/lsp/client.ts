@@ -10,6 +10,7 @@ export interface LspClientOpts {
   rootUri: string;
   onDiagnostics(uri: string, diagnostics: unknown[]): void;
   initializationOptions?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
 }
 
 export class LspClient {
@@ -27,7 +28,23 @@ export class LspClient {
       this.opts.onDiagnostics(p.uri, p.diagnostics ?? []);
     });
     this.conn.onError(() => {}); // 연결 오류는 manager의 프로세스 exit 처리로 수렴
+    // 방어: 서버가 pull(workspace/configuration)로 설정을 요청해도 죽지 않게 — 주입받은
+    // settings에서 각 item.section을 dot-path로 찾아 반환(없으면 null).
+    this.conn.onRequest('workspace/configuration', (p: { items?: { section?: string }[] }) =>
+      (p.items ?? []).map((item) => this.configSection(item.section)),
+    );
     this.conn.listen();
+  }
+
+  // settings에서 "python.analysis" 같은 dot-path 섹션을 조회. 없으면 null.
+  private configSection(section: string | undefined): unknown {
+    if (!section) return this.opts.settings ?? null;
+    let cur: unknown = this.opts.settings;
+    for (const key of section.split('.')) {
+      if (cur == null || typeof cur !== 'object') return null;
+      cur = (cur as Record<string, unknown>)[key];
+    }
+    return cur ?? null;
   }
 
   async initialize(): Promise<void> {
@@ -48,6 +65,11 @@ export class LspClient {
     })) as { capabilities?: Record<string, unknown> };
     this.capabilities = result?.capabilities ?? {};
     await this.conn.sendNotification('initialized', {});
+  }
+
+  // push 방식 설정 전달 — 서버가 pull(workspace/configuration)을 안 해도 초기 설정을 반영시킨다.
+  didChangeConfiguration(settings: Record<string, unknown>): void {
+    void this.conn.sendNotification('workspace/didChangeConfiguration', { settings });
   }
 
   supportsPullDiagnostics(): boolean {

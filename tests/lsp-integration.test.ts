@@ -22,9 +22,11 @@ beforeAll(() => {
   fs.writeFileSync(path.join(root, 'use.ts'), "import { greet } from './lib';\nconst s = greet('hi');\ns.\n");
   fs.writeFileSync(path.join(root, 'bad.ts'), "const n: number = 'oops';\n");
   fs.writeFileSync(path.join(root, 'm.py'), 'def add(a: int, b: int) -> int:\n    return a + b\n');
-  fs.writeFileSync(path.join(root, 'use.py'), 'from m import add\nx: int = "bad"\ns = "hi"\ns.\n');
+  // pyrightconfig.json 없음 = 설정 없는 평범한 파이썬 프로젝트(노이즈가 나던 실제 시나리오).
+  // 이 경우 우리가 주입한 typeCheckingMode off가 유효 → 타입 잔소리 억제, 미정의/문법은 유지.
+  // undefined_name(미정의 변수)과 s.(문법)로 "완전 침묵이 아님"을 검증.
+  fs.writeFileSync(path.join(root, 'use.py'), 'from m import add\nx: int = "bad"\nundef_result = undefined_name + 1\ns = "hi"\ns.\n');
   fs.writeFileSync(path.join(root, 'tsconfig.json'), '{"compilerOptions":{"strict":true}}\n');
-  fs.writeFileSync(path.join(root, 'pyrightconfig.json'), '{}\n');
   mgr = new LspManager({
     root,
     onDiagnostics: (p, d) => diags.set(p, d),
@@ -90,16 +92,24 @@ describe('tsgo 실왕복', () => {
 });
 
 describe('pyright 실왕복', () => {
-  it('didOpen → running + 진단(push): 타입 오류 수신', async () => {
+  it('didOpen → running + 진단(push): off 모드는 타입 오류 억제, 미정의/문법은 유지', async () => {
     for (const f of ['m.py', 'use.py']) {
       mgr.notify('didOpen', { path: f, text: fs.readFileSync(path.join(root, f), 'utf8') });
     }
     await waitFor(() => statuses.some((s) => s.lang === 'py' && s.state === 'running'), 60_000);
-    await waitFor(() => (diags.get('use.py')?.length ?? 0) > 0, 60_000);
+    // off 모드에서도 유지되는 진단(reportUndefinedVariable)이 올 때까지 대기. pyright는 한 분석 패스에
+    // 파일의 모든 진단을 함께 싣는다 — 이게 도착했다면 타입 오류가 켜져 있었다면 같은 배치에 실렸을 것.
+    await waitFor(() => (diags.get('use.py') ?? []).some((d) => d.message.includes('is not defined')), 60_000);
+    const msgs = (diags.get('use.py') ?? []).map((d) => d.message);
+    // (b) 완전 침묵이 아님: 미정의 변수 + 문법 오류는 off 모드에서도 보고된다
+    expect(msgs.some((m) => m.includes('"undefined_name" is not defined'))).toBe(true);
+    expect(msgs.some((m) => m.includes('Expected attribute name'))).toBe(true);
+    // (a) typeCheckingMode off → 타입 불일치(x: int = "bad")는 억제된다 (VS Code/Pylance 패리티)
+    expect(msgs.some((m) => m.includes('is not assignable'))).toBe(false);
   }, 120_000);
 
   it('completion: s. 뒤에서 upper 제안', async () => {
-    const items = (await mgr.request('completion', { path: 'use.py', line: 3, col: 2 })) as { label: string }[];
+    const items = (await mgr.request('completion', { path: 'use.py', line: 4, col: 2 })) as { label: string }[];
     expect(items.map((i) => i.label)).toContain('upper');
   }, 60_000);
 

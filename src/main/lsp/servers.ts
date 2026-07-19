@@ -2,7 +2,7 @@
 import * as path from 'path';
 import type { LspLanguage } from '../../shared/protocol';
 
-export interface LspSpawnSpec { command: string; args: string[]; env?: NodeJS.ProcessEnv; initializationOptions?: Record<string, unknown> }
+export interface LspSpawnSpec { command: string; args: string[]; env?: NodeJS.ProcessEnv; initializationOptions?: Record<string, unknown>; settings?: Record<string, unknown> }
 export interface LspServerDef {
   lang: LspLanguage;
   exts: Set<string>;
@@ -55,6 +55,10 @@ export const LSP_SERVERS: LspServerDef[] = [
       command: process.execPath, // Electron 바이너리를 node로 사용 — 사용자 머신 node 불요
       args: [pyrightEntryPath(), '--stdio'],
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      // VS Code(Pylance) 기본 off와 패리티 — 타입 잔소리 억제, 완성/정의이동/미정의·문법 진단은 유지.
+      // 프로젝트에 pyrightconfig.json/[tool.pyright]가 있으면 그 설정이 우선(pyright 우선순위)이라
+      // 명시적으로 엄격한 프로젝트는 그대로 엄격.
+      settings: { python: { analysis: { typeCheckingMode: 'off' } } },
     }),
   },
 ];

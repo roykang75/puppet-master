@@ -35,6 +35,14 @@ describe('LSP 서버 정의', () => {
     expect(py.env?.ELECTRON_RUN_AS_NODE).toBe('1');
   });
 
+  it('pyright 스폰 스펙에 typeCheckingMode off 설정이 주입된다 (VS Code 패리티)', () => {
+    const py = LSP_SERVERS.find((s) => s.lang === 'py')!.resolveSpawn();
+    expect(py.settings).toEqual({ python: { analysis: { typeCheckingMode: 'off' } } });
+    // ts 경로는 settings 무주입 — 무변경
+    const ts = LSP_SERVERS.find((s) => s.lang === 'ts')!.resolveSpawn();
+    expect(ts.settings).toBeUndefined();
+  });
+
   it('languageId 매핑', () => {
     expect(LSP_EXT_TO_LANGUAGE['.ts']).toBe('typescript');
     expect(LSP_EXT_TO_LANGUAGE['.tsx']).toBe('typescriptreact');

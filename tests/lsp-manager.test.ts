@@ -145,6 +145,23 @@ describe('LspManager', () => {
     expect(statuses.at(-1)).toEqual({ lang: 'ts', state: 'stopped' });
   });
 
+  it('spec.settings가 있으면 초기화 후 workspace/didChangeConfiguration을 전송한다 (py)', async () => {
+    mgr.notify('didOpen', { path: 'a.py', text: 'x = 1' });
+    await wait(80);
+    // pyright 스펙엔 settings 주입됨 → spawnFn이 받은 spec에도 존재
+    expect(spawned[0].settings).toEqual({ python: { analysis: { typeCheckingMode: 'off' } } });
+    const cfg = servers[0].log.find((l) => l.method === 'workspace/didChangeConfiguration')!;
+    expect(cfg).toBeTruthy();
+    expect(cfg.params.settings).toEqual({ python: { analysis: { typeCheckingMode: 'off' } } });
+  });
+
+  it('spec.settings가 없으면 didChangeConfiguration을 보내지 않는다 (ts)', async () => {
+    mgr.notify('didOpen', { path: 'a.ts', text: 'const x = 1;' });
+    await wait(80);
+    expect(spawned[0].settings).toBeUndefined();
+    expect(servers[0].log.find((l) => l.method === 'workspace/didChangeConfiguration')).toBeUndefined();
+  });
+
   it('shutdownAll 후에는 exit가 재기동을 유발하지 않는다', async () => {
     mgr.notify('didOpen', { path: 'a.ts', text: 'x' });
     await wait(80);

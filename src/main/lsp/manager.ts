@@ -109,6 +109,7 @@ export class LspManager {
         if (rel != null) this.deps.onDiagnostics(rel, toDiagnostics(raw));
       },
       initializationOptions: spec.initializationOptions,
+      settings: spec.settings,
     });
     const entry: Entry = {
       client,
@@ -121,6 +122,8 @@ export class LspManager {
         .initialize()
         .then(() => {
           this.deps.onStatus({ lang, state: 'running' });
+          // 초기 워크스페이스 설정 push (pyright typeCheckingMode off 등)
+          if (spec.settings) client.didChangeConfiguration(spec.settings);
           // 안정 타이머: 이 기간 동안 크래시 없이 실행되면 카운터 리셋 ("연속 N회" 의미 구현)
           entry.stableTimer = setTimeout(() => {
             entry.crashes = 0;
