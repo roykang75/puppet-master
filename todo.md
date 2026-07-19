@@ -354,7 +354,12 @@
 - [x] **Plan 20** (`b73db0f`): Relation "Flow" 탭 — 파일 기반 단일 왕복(getFlowForFile), 호출부→매칭 핸들러
   점프·엔드포인트→역방향 호출부, unresolved 뱃지. **E2E flow.spec으로 북극성 S1·S2 화면 실증**
   (fetch→read_user 클릭→main.py 점프→역방향 loadUser). 전체 424/424.
-- [ ] **Plan 21**: 에이전트 구조 도구 4종(find_symbol/get_call_graph/get_impact/trace_http) + 컨텍스트 구조 블록
+- [x] **Plan 21** (`6ae8baa`): 에이전트 구조 도구 4종(find_symbol/get_call_graph/get_impact/trace_http, 질문 모드
+  포함) + 프롬프트 "구조 도구 우선·grep 최후" + 커서 심볼 callers/callees 구조 블록(ChatContext.structure).
+  **S3 실증**(fake 서버: "target 바꾸면?"→get_impact→callers가 응답에 반영). 전체 439/439.
+
+**v3 1차 완료 — 북극성 3게이트(S1·S2·S3) 전부 실증.** 남은 확인(비차단): dev 실사용 체감(F12/Flow/에이전트
+질문), 대형 레포에서 추출 성능 계측, [v3.1 후보] Express/Nest·httpx/requests 백엔드 호출부·OpenAPI 연동.
 
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)
