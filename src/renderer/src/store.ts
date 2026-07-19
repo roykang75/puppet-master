@@ -7,7 +7,7 @@ export interface Tab {
   path: string; // 파일 탭: 실제 경로 / diff 탭: 'diff://<실경로>' (고유 키)
   dirty: boolean;
   diskChanged: boolean;
-  diff?: { path: string; before: string; after: string; label?: string }; // 있으면 diff 탭(읽기전용 가상문서). label 있으면 탭 제목 대체(파일 비교)
+  diff?: { path: string; before: string; after: string; label?: string; origin?: 'agent' | 'compare' }; // 있으면 diff 탭(읽기전용 가상문서). label 있으면 탭 제목 대체(파일 비교). origin==='agent'이면 줄 주석 UI 표시
   dirCompare?: { leftDir: string; rightDir: string; entries: import('../../shared/protocol').DirCompareEntry[] }; // 디렉터리 비교 탭
 }
 
@@ -34,6 +34,7 @@ interface AppState {
   threads: ThreadMeta[];
   agentMode: boolean;
   autoApprove: boolean;
+  chatDraft: string | null; // diff 주석 → 채팅 입력창 프리필 대기값. ChatPanel이 소비 후 클리어
   treeRefreshNonce: number;
   rightTab: 'relation' | 'chat';
   terminals: { id: number; title: string; exited: boolean }[];
@@ -47,7 +48,7 @@ interface AppState {
   setStats(s: IndexStats): void;
   setError(msg: string | null): void;
   openTab(path: string): void;
-  openDiffTab(path: string, before: string, after: string, label?: string): void; // 변경 제안/파일 비교 탭 열기/갱신 (키 diff://<path>)
+  openDiffTab(path: string, before: string, after: string, label?: string, origin?: 'agent' | 'compare'): void; // 변경 제안/파일 비교 탭 열기/갱신 (키 diff://<path>)
   compareBase: string | null; // '비교 대상으로 선택'한 파일 rel — 없으면 null
   setCompareBase(rel: string | null): void;
   compareBaseDir: string | null; // '비교 대상 폴더로 선택'한 디렉터리 rel
@@ -77,6 +78,7 @@ interface AppState {
   loadThreadMessages(msgs: AppState['chatMessages']): void;
   setAgentMode(v: boolean): void;
   setAutoApprove(v: boolean): void;
+  setChatDraft(v: string | null): void;
   upsertChatTool(tool: AgentToolUi): void;
   bumpTreeRefresh(): void;
   setRightTab(v: 'relation' | 'chat'): void;
@@ -113,6 +115,7 @@ export const useAppStore = create<AppState>((set) => ({
   threads: [],
   agentMode: false,
   autoApprove: true,
+  chatDraft: null,
   treeRefreshNonce: 0,
   rightTab: 'relation',
   terminals: [],
@@ -131,10 +134,10 @@ export const useAppStore = create<AppState>((set) => ({
         ? { activePath: path }
         : { tabs: [...s.tabs, { path, dirty: false, diskChanged: false }], activePath: path },
     ),
-  openDiffTab: (path, before, after, label) =>
+  openDiffTab: (path, before, after, label, origin) =>
     set((s) => {
       const key = `diff://${path}`;
-      const tab: Tab = { path: key, dirty: false, diskChanged: false, diff: { path, before, after, label } };
+      const tab: Tab = { path: key, dirty: false, diskChanged: false, diff: { path, before, after, label, origin } };
       const idx = s.tabs.findIndex((t) => t.path === key);
       const tabs = idx >= 0 ? s.tabs.map((t, i) => (i === idx ? tab : t)) : [...s.tabs, tab];
       return { tabs, activePath: key };
@@ -199,6 +202,7 @@ export const useAppStore = create<AppState>((set) => ({
   loadThreadMessages: (chatMessages) => set({ chatMessages, chatStreaming: false }),
   setAgentMode: (v) => set({ agentMode: v }),
   setAutoApprove: (v) => set({ autoApprove: v }),
+  setChatDraft: (v) => set({ chatDraft: v }),
   bumpTreeRefresh: () => set((s) => ({ treeRefreshNonce: s.treeRefreshNonce + 1 })),
   upsertChatTool: (tool) =>
     set((s) => {

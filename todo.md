@@ -380,5 +380,11 @@
   열린 버퍼(getContent) 우선·디스크(readFile) 폴백·마지막 path 캐시. 단위 7종 464/464,
   E2E `search-preview.spec`(클릭=미리보기·더블클릭=이동), analysis.spec 클릭→더블클릭 갱신, build EXIT=0.
 
+- [x] **AI diff 줄 주석 → 채팅 피드백**(Orca "Annotate AI Diffs" 차용): 에이전트가 제안/적용한 diff 탭
+  (origin==='agent')에서만 하단 주석 바 표시 — modified 커서 줄 추적, 코멘트 추가/삭제(같은 줄 교체),
+  `채팅으로 피드백 보내기` → 정렬·80자 절단된 피드백을 `chatDraft`로 프리필 후 chat 탭 전환·textarea 포커스.
+  순수 헬퍼 `composeDiffFeedback`(diff-feedback.ts) + store `origin`/`chatDraft`. 파일 비교 diff는 현행 유지.
+  단위 12종(피드백 합성 4·store 2 신규 포함) 471/471, E2E `diff-annotate.spec`(칩→diff→주석→프리필), build EXIT=0.
+
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)

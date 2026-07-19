@@ -57,6 +57,22 @@ describe('useAppStore', () => {
     expect(st.threads).toHaveLength(1);
     expect(st.chatMessages).toEqual([{ role: 'user', content: '복원됨', ts: 5 }]);
   });
+  it('openDiffTab: origin 저장 (agent/compare 구분)', () => {
+    const s = useAppStore.getState();
+    s.openDiffTab('a.py', 'x', 'y', undefined, 'agent');
+    const agentTab = useAppStore.getState().tabs.find((t) => t.path === 'diff://a.py');
+    expect(agentTab?.diff?.origin).toBe('agent');
+    s.openDiffTab('b.py', 'x', 'y', '비교', 'compare');
+    const cmpTab = useAppStore.getState().tabs.find((t) => t.path === 'diff://b.py');
+    expect(cmpTab?.diff?.origin).toBe('compare');
+  });
+  it('setChatDraft: 값 설정/클리어', () => {
+    const s = useAppStore.getState();
+    s.setChatDraft('피드백');
+    expect(useAppStore.getState().chatDraft).toBe('피드백');
+    s.setChatDraft(null);
+    expect(useAppStore.getState().chatDraft).toBeNull();
+  });
   it('upsertChatTool: 마지막 어시스턴트 메시지에 id로 upsert', () => {
     const s = useAppStore.getState();
     s.appendChatUser('만들어');

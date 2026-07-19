@@ -393,7 +393,7 @@ export function EditorPane() {
     <div className="editor-split-row">
       <div ref={hostRef} className="editor-host" style={hideEditor ? { display: 'none' } : undefined} />
       {showImage && <ImageView path={activePath} />}
-      {activeDiff && <DiffView path={activeDiff.path} before={activeDiff.before} after={activeDiff.after} />}
+      {activeDiff && <DiffView path={activeDiff.path} before={activeDiff.before} after={activeDiff.after} origin={activeDiff.origin} />}
       {activeDirCompare && <DirCompareView leftDir={activeDirCompare.leftDir} rightDir={activeDirCompare.rightDir} entries={activeDirCompare.entries} />}
       <SplitPane />
     </div>

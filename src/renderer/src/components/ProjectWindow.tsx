@@ -88,7 +88,7 @@ export function ProjectWindow() {
     ]);
     if (before == null || after == null) return;
     const d = buildCompareDiff(baseRel, before, otherRel, after);
-    useAppStore.getState().openDiffTab(d.path, d.before, d.after, d.label);
+    useAppStore.getState().openDiffTab(d.path, d.before, d.after, d.label, 'compare');
   };
 
   // base 폴더 ↔ 대상 폴더 재귀 비교 → 결과 탭

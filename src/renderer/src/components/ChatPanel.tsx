@@ -71,7 +71,9 @@ export function ChatPanel() {
   const settingsOpen = useAppStore((s) => s.settingsOpen);
   const activeThreadId = useAppStore((s) => s.activeThreadId);
   const threads = useAppStore((s) => s.threads);
+  const chatDraft = useAppStore((s) => s.chatDraft);
   const [input, setInput] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [profiles, setProfiles] = useState<CompletionProfilePublic[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -145,6 +147,15 @@ export function ChatPanel() {
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages]);
+
+  // diff 주석 → 채팅 프리필: chatDraft가 설정되면 입력창에 채우고 즉시 소비(클리어) + 포커스.
+  // store 경유이므로 탭 전환으로 ChatPanel이 (언)마운트되어도 값이 유실되지 않는다.
+  useEffect(() => {
+    if (chatDraft == null) return;
+    setInput(chatDraft);
+    useAppStore.getState().setChatDraft(null);
+    textareaRef.current?.focus();
+  }, [chatDraft]);
 
   const send = async () => {
     const text = input.trim();
@@ -325,7 +336,7 @@ export function ChatPanel() {
                             className="rename-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after!);
+                              useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after!, undefined, 'agent');
                             }}
                           >에디터에서 diff</button>
                         )}
@@ -356,7 +367,7 @@ export function ChatPanel() {
                     title={`${t.path} — 클릭하면 변경 내용(diff)`}
                     onClick={() => {
                       // 원문이 있으면 diff 탭으로, 없으면(대용량 등) 파일 자체를 연다
-                      if (t.after !== undefined) useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after);
+                      if (t.after !== undefined) useAppStore.getState().openDiffTab(t.path!, t.before ?? '', t.after, undefined, 'agent');
                       else useAppStore.getState().openTab(t.path!);
                     }}
                   >
@@ -386,6 +397,7 @@ export function ChatPanel() {
       </div>
       <div className="chat-input-row">
         <textarea
+          ref={textareaRef}
           rows={2}
           value={input}
           placeholder="무엇이든 물어보세요 (Shift+Enter 줄바꿈)"

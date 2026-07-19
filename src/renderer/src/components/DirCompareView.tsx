@@ -22,7 +22,7 @@ export function DirCompareView({ leftDir, rightDir, entries }: { leftDir: string
     ]);
     if (before == null || after == null) return;
     const d = buildCompareDiff(lp, before, rp, after);
-    st.openDiffTab(d.path, d.before, d.after, d.label);
+    st.openDiffTab(d.path, d.before, d.after, d.label, 'compare');
   };
   return (
     <div className="dircmp">
