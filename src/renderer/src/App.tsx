@@ -11,7 +11,8 @@ import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
-import { EditorPane, getContent, getCursorLocation, setDiskContent, disposeAllModels, isDiffTabPath } from './components/EditorPane';
+import { EditorPane, getContent, getCursorLocation, getSelectedText, setDiskContent, disposeAllModels, isDiffTabPath } from './components/EditorPane';
+import { normalizeSearchSeed } from './search-seed';
 import { exportFileHtml } from './html-export';
 import { CHAT_ERROR_TEXT } from './components/ChatPanel';
 import { scheduleChatSave } from './chat-persist';
@@ -242,7 +243,10 @@ export function App() {
         const p = useAppStore.getState().activePath;
         if (p && !isDiffTabPath(p)) void exportFileHtml(monaco, p);
       }
-      if (action.type === 'find-in-files') useAppStore.getState().setSearchOpen(true);
+      if (action.type === 'find-in-files') {
+        useAppStore.getState().setSearchSeed(normalizeSearchSeed(getSelectedText()));
+        useAppStore.getState().setSearchOpen(true);
+      }
     });
     // 채팅 스트림 이벤트 구독 — App은 항상 마운트 상태이므로 RightPanel의 탭 전환으로
     // ChatPanel이 언마운트돼도 이벤트가 유실되지 않는다 (P1 수정).
@@ -305,7 +309,10 @@ export function App() {
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && (ev.key === 'f' || ev.key === 'F')) {
         ev.preventDefault();
-        useAppStore.getState().setSearchOpen(!useAppStore.getState().searchOpen);
+        const willOpen = !useAppStore.getState().searchOpen;
+        // 열리는 경우에만 선택 텍스트를 시드로 (닫을 때는 건드리지 않음)
+        if (willOpen) useAppStore.getState().setSearchSeed(normalizeSearchSeed(getSelectedText()));
+        useAppStore.getState().setSearchOpen(willOpen);
         return;
       }
       if (ev.ctrlKey && ev.key === '`') {

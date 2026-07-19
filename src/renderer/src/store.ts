@@ -22,6 +22,7 @@ interface AppState {
   cursorSymbol: { name: string; path: string; line: number; col: number } | null;
   pendingJump: { path: string; line: number; col: number } | null;
   searchOpen: boolean;
+  searchSeed: string | null; // 전체 검색 열 때 프리필할 시드(에디터 선택). 소비 즉시 클리어됨
   settingsOpen: boolean;
   renameRequest: { name: string; path: string; line?: number; col?: number } | null;
   completionStatus: string | null;
@@ -60,6 +61,7 @@ interface AppState {
   setCursorSymbol(s: AppState['cursorSymbol']): void;
   setPendingJump(j: AppState['pendingJump']): void;
   setSearchOpen(v: boolean): void;
+  setSearchSeed(s: string | null): void;
   setSettingsOpen(v: boolean): void;
   setRenameRequest(r: { name: string; path: string; line?: number; col?: number } | null): void;
   setCompletionStatus(msg: string | null): void;
@@ -97,6 +99,7 @@ export const useAppStore = create<AppState>((set) => ({
   cursorSymbol: null,
   pendingJump: null,
   searchOpen: false,
+  searchSeed: null,
   settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
   compareBase: null,
@@ -155,6 +158,7 @@ export const useAppStore = create<AppState>((set) => ({
   setCursorSymbol: (cursorSymbol) => set({ cursorSymbol }),
   setPendingJump: (pendingJump) => set({ pendingJump }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  setSearchSeed: (searchSeed) => set({ searchSeed }),
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
   setCompareBase: (compareBase) => set({ compareBase }),

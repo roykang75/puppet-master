@@ -74,6 +74,14 @@ export function getChatEditorState(): import('../chat-context').ChatEditorState 
   };
 }
 
+/** 현재 에디터 선택 텍스트. 선택 없음/에디터·모델 없음이면 null. (전체 검색 시드용) */
+export function getSelectedText(): string | null {
+  const model = editorInstance?.getModel();
+  const sel = editorInstance?.getSelection();
+  if (!model || !sel || sel.isEmpty()) return null;
+  return model.getValueInRange(sel);
+}
+
 let refDecorations: import('monaco-editor').editor.IEditorDecorationsCollection | null = null;
 
 /** 파일 내 whole-word 일치를 하이라이트 (스펙 §6 자동 참조 하이라이트의 텍스트 기반 구현). */

@@ -370,6 +370,10 @@
   Project 패널 돋보기 버튼(VscSearch).
 - [x] 검증: 단위 7종(위치·다중매치·대소문자·캡·특수문자·limit·빈질의) 전체 449/449, `npm run build` EXIT=0,
   기존 E2E analysis.spec 그대로 통과(심볼 경로 무변경).
+- [x] **선택 텍스트 프리필**(VS Code 동일 UX): 에디터 선택 후 전체 검색을 열면 선택 내용이 검색어로 자동 입력.
+  순수 헬퍼 `normalizeSearchSeed`(첫 줄·트림·200자 캡·무의미시 null) + `getSelectedText`(EditorPane) +
+  스토어 `searchSeed`(소비 즉시 클리어) + 열기 3지점 배선(Cmd/Ctrl+Shift+F 열림시만·메뉴·돋보기 버튼) +
+  SearchOverlay 프리필+전체선택. 단위 8종 457/457, E2E `search-seed.spec`(더블클릭→돋보기→프리필+결과), build EXIT=0.
 
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)

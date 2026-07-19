@@ -3,6 +3,8 @@ import { VscChevronDown, VscChevronRight, VscNewFile, VscNewFolder, VscRefresh, 
 import { useAppStore } from '../store';
 import { fileIconUrl, folderIconUrl } from '../file-icons';
 import { buildCompareDiff } from '../compare';
+import { getSelectedText } from './EditorPane';
+import { normalizeSearchSeed } from '../search-seed';
 
 interface DirEntry {
   name: string;
@@ -212,7 +214,10 @@ export function ProjectWindow() {
           <button
             className="panel-action"
             title="전체 검색 (Cmd/Ctrl+Shift+F)"
-            onClick={() => useAppStore.getState().setSearchOpen(true)}
+            onClick={() => {
+              useAppStore.getState().setSearchSeed(normalizeSearchSeed(getSelectedText()));
+              useAppStore.getState().setSearchOpen(true);
+            }}
           ><VscSearch /></button>
           <button
             className="panel-action"

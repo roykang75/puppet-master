@@ -48,10 +48,16 @@ export function SearchOverlay() {
 
   useEffect(() => {
     if (open) {
-      setQ('');
+      // 에디터 선택 시드가 있으면 프리필(즉시 클리어) — 없으면 빈칸으로 시작
+      const seed = useAppStore.getState().searchSeed;
+      if (seed) useAppStore.getState().setSearchSeed(null);
+      setQ(seed ?? '');
       setItems([]);
       setSel(0);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        if (seed) inputRef.current?.select(); // 전체 선택 — 타이핑 시 교체
+      }, 0);
     }
   }, [open]);
 
