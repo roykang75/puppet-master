@@ -351,7 +351,9 @@
 - [x] **Plan 19** (`4c7f2a2`): 인덱서 HTTP 경계 추출(fetch/axios·FastAPI/Flask·Spring prefix·Next 라우트) + 정규화
   + 양방향 매칭 + getImpact (SCHEMA_VERSION 4). **S1·S2 데이터 레벨 실증**(fetch 템플릿→FastAPI read_user,
   axios→Spring getOrder, unresolved 정직 기록). 추출 13+통합 9, 전체 422/422. 기존 쿼리 무변경(별도 트리 워크).
-- [ ] **Plan 20**: Relation "Flow" 탭 — 호출부↔엔드포인트↔핸들러 트리, unresolved 정직 표시
+- [x] **Plan 20** (`b73db0f`): Relation "Flow" 탭 — 파일 기반 단일 왕복(getFlowForFile), 호출부→매칭 핸들러
+  점프·엔드포인트→역방향 호출부, unresolved 뱃지. **E2E flow.spec으로 북극성 S1·S2 화면 실증**
+  (fetch→read_user 클릭→main.py 점프→역방향 loadUser). 전체 424/424.
 - [ ] **Plan 21**: 에이전트 구조 도구 4종(find_symbol/get_call_graph/get_impact/trace_http) + 컨텍스트 구조 블록
 
 ### 동결된 백로그 (v3 이후 재평가)
