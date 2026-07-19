@@ -414,12 +414,13 @@ function openAboutWindow(): void {
   }
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     html,body{margin:0;height:100%;}
-    body{background:#1e1f22;color:#e7ecf4;font:13px -apple-system,'Helvetica Neue',sans-serif;
+    /* About 창은 테마 무관 항상 흰 배경 — 오리지널 이미지의 흰 여백이 배경에 녹아든다 */
+    body{background:#ffffff;color:#1a1a1a;font:13px -apple-system,'Helvetica Neue',sans-serif;
       display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;}
-    img{width:220px;height:220px;object-fit:contain;border-radius:48px;}
-    h1{font-size:18px;font-weight:600;margin:18px 0 2px;}
-    .v{color:#8b95a5;font-size:12px;}
-    .d{color:#6b7688;font-size:11px;margin-top:16px;text-align:center;line-height:1.5;padding:0 24px;}
+    img{width:240px;height:240px;object-fit:contain;}
+    h1{font-size:18px;font-weight:600;margin:14px 0 2px;}
+    .v{color:#888;font-size:12px;}
+    .d{color:#aaa;font-size:11px;margin-top:16px;text-align:center;line-height:1.5;padding:0 24px;}
   </style></head><body>
     ${dataUri ? `<img src="${dataUri}" alt="">` : ''}
     <h1>Puppet Master</h1>
@@ -434,7 +435,7 @@ function openAboutWindow(): void {
     maximizable: false,
     fullscreenable: false,
     title: 'About Puppet Master',
-    backgroundColor: '#1e1f22',
+    backgroundColor: '#ffffff',
     webPreferences: {},
   });
   aboutWin.setMenuBarVisibility(false);
