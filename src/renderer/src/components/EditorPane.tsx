@@ -98,6 +98,13 @@ function clearSemanticTokens(): void {
   semDecorations = null;
 }
 
+// 리비전 마크(git gutter) — 디스크 기준 HEAD 대비 변경 라인 바
+let revDecorations: import('monaco-editor').editor.IEditorDecorationsCollection | null = null;
+function clearRevisionMarks(): void {
+  revDecorations?.clear();
+  revDecorations = null;
+}
+
 async function resolveAndJump(name: string, fromPath: string): Promise<void> {
   const cands = await window.si.resolve(name, fromPath).catch(() => []);
   if (cands.length === 0) {
@@ -347,6 +354,39 @@ export function EditorPane() {
       cancelled = true;
     };
   }, [activePath, outlineVersion, indexing]);
+
+  // 리비전 마크 — git HEAD 대비 변경 라인 gutter 바. 파일 전환/저장·재인덱싱(outlineVersion) 시 갱신.
+  useEffect(() => {
+    clearRevisionMarks();
+    if (!activePath || isImagePath(activePath) || isDiffTabPath(activePath)) return;
+    let cancelled = false;
+    const uri = uriOf(activePath);
+    const apply = (attempt = 0): void => {
+      if (cancelled) return;
+      const model = monaco.editor.getModel(uri);
+      if (!model || editorInstance?.getModel() !== model) {
+        if (attempt < 20) setTimeout(() => apply(attempt + 1), 100);
+        return;
+      }
+      void window.si
+        .gitFileDiff(activePath)
+        .then((ranges) => {
+          if (cancelled || !editorInstance || editorInstance.getModel() !== model) return;
+          revDecorations?.clear();
+          revDecorations = editorInstance.createDecorationsCollection(
+            ranges.map((r) => ({
+              range: new monaco.Range(r.startLine, 1, r.endLine, 1),
+              options: { linesDecorationsClassName: `rev-mark rev-mark-${r.type}` },
+            })),
+          );
+        })
+        .catch(() => {}); // 비-git/오류 — 조용히 무시
+    };
+    apply();
+    return () => {
+      cancelled = true;
+    };
+  }, [activePath, outlineVersion]);
 
   // pendingJump 소비 — activePath 모델 세팅 이후 반영 (모델 로드 전이면 위 effect가 재시도)
   useEffect(() => {

@@ -301,8 +301,22 @@
 - [x] **부수 수정**: 스테일 E2E `agent.spec` 셀렉터(`.chat-context-toggle` 체크박스→`.chat-mode` select)를
   현재 UI에 맞게 정정 — 세션 이전 UI/UX 개선(c572a92, 토글→드롭다운) 때 누락됐던 테스트 rot.
 
+## ✅ Plan 17: 리비전 마크 (git gutter) (v2 12탄) — 완료 (main 직접 커밋)
+
+- [x] **git HEAD 대비 변경 라인을 에디터 gutter 바로 표시**(추가=녹색/수정=파랑/삭제=빨강). `git-diff.ts`:
+  `parseGitDiff`(순수, -U0 헌크→범위) + `getFileChanges`(execFile, 비-git/오류 조용히 []). IPC `git:fileDiff`.
+- [x] EditorPane gutter 데코레이션(`linesDecorationsClassName`), 파일 전환/저장·재인덱싱(outlineVersion) 신호로 재계산
+  — semantic-tokens effect와 동일 패턴(모델 준비 재시도 포함).
+- [x] 검증: 단위(parseGitDiff 4) + **실제 git 통합**(temp repo 커밋→수정/추가/삭제 감지, 비-git → []) 4
+  + **E2E revision-marks.spec**(실제 앱 gutter에 .rev-mark-modify/.rev-mark-add 실증). 전체 **388/388**,
+  smoke/analysis E2E 무회귀, node ABI 복구.
+- **분리**: HTML 내보내기·레이아웃 프리셋은 별건 후속.
+
+**인계 노트(비차단):** 마크는 **디스크 기준**(HEAD vs 워킹트리 파일) — 저장 전 미저장 편집은 미반영(저장 후 갱신).
+미추적(untracked) 파일은 마크 없음(git diff 대상 아님). 삭제는 앵커 라인 빨강 바로 단순 표시(삼각형 아님).
+
 ### 다음 후보
-사용자 결정 대기 — 로드맵 Plan 17(리비전마크·HTML·레이아웃)/Directory Compare/Code Beautifier 중 선택.
+사용자 결정 대기 — HTML 내보내기/레이아웃 프리셋/Directory Compare/Code Beautifier 중 선택.
 
 ### v2 이후 (백로그)
-- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
+- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)

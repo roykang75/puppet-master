@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, GitChangeRange, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -21,6 +21,7 @@ const api = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   readFileBinary: (rel: string): Promise<string> => ipcRenderer.invoke('file:read-binary', rel),
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
+  gitFileDiff: (rel: string): Promise<GitChangeRange[]> => ipcRenderer.invoke('git:fileDiff', rel),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),
   getFileTokens: (path: string): Promise<FileTokens> =>

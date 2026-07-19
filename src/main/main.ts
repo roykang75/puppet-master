@@ -13,6 +13,7 @@ import { LspManager } from './lsp/manager';
 import { TerminalManager } from './terminal/manager';
 import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
+import { getFileChanges } from './git-diff';
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
@@ -180,6 +181,7 @@ function registerIpc(): void {
   });
   ipcMain.handle('file:read', (_e, rel: string) => requireFiles().readFile(rel));
   ipcMain.handle('file:read-binary', (_e, rel: string) => requireFiles().readBinary(rel));
+  ipcMain.handle('git:fileDiff', (_e, rel: string) => (currentRoot ? getFileChanges(currentRoot, rel) : []));
   ipcMain.handle('file:save', (_e, rel: string, content: string) => {
     try {
       requireFiles().saveFile(rel, content);

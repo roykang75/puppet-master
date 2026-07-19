@@ -116,6 +116,12 @@ body {
 .tabs-actions .nav-btn { font-size: 15px; padding: 2px 4px; } /* 프로젝트 창 panel-action과 동일 크기 */
 .open-editors-backdrop { position: fixed; inset: 0; z-index: 40; }
 .tree-ctx-menu { position: fixed; top: auto; right: auto; min-width: 180px; }
+
+/* 리비전 마크 — 에디터 lines-decorations 레인의 변경 바 (git HEAD 대비) */
+.rev-mark { width: 3px !important; margin-left: 3px; }
+.rev-mark-add { background: #2ea043; }
+.rev-mark-modify { background: #2f7ee6; }
+.rev-mark-delete { background: #e5534b; }
 .open-editors-menu {
   position: absolute; top: 100%; right: 4px; z-index: 41;
   min-width: 240px; max-width: 420px; max-height: 50vh; overflow-y: auto;

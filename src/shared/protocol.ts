@@ -103,6 +103,7 @@ export interface LspCompletionItemN {
   detail?: string;
   sortText?: string;
 }
+export interface GitChangeRange { startLine: number; endLine: number; type: 'add' | 'modify' | 'delete' } // 1-based
 export interface LspHoverN { markdown: string }
 export interface LspLocationN { path: string; line: number; col: number }
 export interface LspSignatureParamN { label: string | [number, number]; documentation?: string }
