@@ -20,7 +20,12 @@ import { Context7Service } from './context7/service';
 import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage, ProjectStack } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
-if (process.env.SI_USER_DATA) app.setPath('userData', process.env.SI_USER_DATA);
+// dev 모드에선 앱 이름이 실행 바이너리(Electron) 기준이라 macOS 앱 메뉴에 "Electron"으로 뜬다.
+// setName으로 교정하되, setName이 기본 userData 경로(이름 파생)를 바꿔 기존 설정/채팅/인덱스를
+// 고아로 만들지 않도록 현재 userData 경로를 먼저 고정한 뒤 이름을 바꾼다.
+const userDataPath = process.env.SI_USER_DATA ?? app.getPath('userData');
+app.setName('Puppet Master');
+app.setPath('userData', userDataPath);
 
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
