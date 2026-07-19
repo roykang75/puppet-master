@@ -59,8 +59,8 @@ test('AI 채팅: 질문 → 스트리밍 응답 → 새 대화 리셋', async ()
     await expect(page.locator('.chat-assistant')).toContainText('테스트 응답입니다', { timeout: 15_000 });
     await expect(page.locator('.chat-user')).toContainText('x가 뭐야?');
 
-    // 새 대화 → 리셋
-    await page.locator('.chat-toolbar .chat-new').click();
+    // 새 대화 → 리셋 (헤더 개편으로 .chat-toolbar → .chat-thread-actions, 버튼은 title로 특정)
+    await page.locator('.chat-thread-actions button[title="새 대화"]').click();
     await expect(page.locator('.chat-msg')).toHaveCount(0);
   } finally {
     await app.close();
