@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Rebuild native modules for Electron ABI
+        run: npm run rebuild:electron
+
+      - name: Package (electron-builder)
+        run: npx electron-builder --${{ matrix.platform }} --publish never
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: puppet-master-${{ matrix.platform }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+          if-no-files-found: ignore

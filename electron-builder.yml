@@ -35,3 +35,12 @@ mac:
   identity: null
   category: public.app-category.developer-tools
   icon: build/icon.icns
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Puppet-Master-Setup-${version}.exe

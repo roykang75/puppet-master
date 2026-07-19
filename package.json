@@ -18,7 +18,7 @@
     "pretest": "node scripts/abi.js ensure node",
     "test": "vitest run",
     "test:e2e": "npm run build && npm run rebuild:electron && playwright test",
-    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3,node-pty && node scripts/abi.js mark electron",
+    "rebuild:electron": "node scripts/rebuild-electron.js",
     "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3 node-pty && node scripts/abi.js mark node",
     "bench": "node dist/scripts/bench.js",
     "package": "npm run build && npm run rebuild:electron && electron-builder --mac",
