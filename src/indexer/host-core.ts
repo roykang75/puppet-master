@@ -87,6 +87,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
     getFlowForFile: (p: FileParams) => queries.getFlowForFile(opened().db, p.path),
     getImpact: (p: { name: string; depth?: number }) => queries.getImpact(opened().db, p.name, p.depth ?? 2),
+    getImpactSummaries: (p: { names: string[] }) => queries.getImpactSummaries(opened().db, p.names),
     traceHttp: (p: { query: string }) => queries.traceHttp(opened().db, p.query),
     // 변경 리뷰 (Plan 22) — DB 무관 임의 내용의 심볼 추출. 확장자로 spec 결정, 미지원 언어는 [].
     extractSymbols: (p: ExtractSymbolsParams) => {

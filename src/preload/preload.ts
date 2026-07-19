@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, AgentTrustPreset, ThreadMeta, ThreadSearchHit, ChatStoredMessage, ReviewState, ReviewCommitsResult, ReviewChangedFile, ReviewFileDiff } from '../shared/protocol';
 import type { SymbolRow } from '../indexer/extractor';
-import type { SymbolHit, TextHit, TextMatch, CallerHit, RefHit, FileFlow } from '../indexer/api';
+import type { SymbolHit, TextHit, TextMatch, CallerHit, RefHit, FileFlow, ImpactSummary } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
 import type { RecentEntry } from '../main/persistence';
@@ -123,6 +123,8 @@ const api = {
   reviewStateSave: (state: ReviewState): Promise<void> => ipcRenderer.invoke('review:stateSave', state),
   extractSymbols: (path: string, content: string): Promise<SymbolRow[]> =>
     ipcRenderer.invoke('indexer:call', 'extractSymbols', { path, content }),
+  getImpactSummaries: (names: string[]): Promise<ImpactSummary[]> =>
+    ipcRenderer.invoke('indexer:call', 'getImpactSummaries', { names }),
   themeList: (): Promise<{ id: string; name: string }[]> => ipcRenderer.invoke('theme:list'),
   themeRead: (id: string): Promise<unknown | null> => ipcRenderer.invoke('theme:read', id),
   themeImport: (): Promise<{ id: string; name: string } | { error: string } | null> =>

@@ -354,6 +354,42 @@ export interface ImpactHit {
   depth: number; // 1 = 직접 호출자
 }
 
+// ── Impact Summaries (리뷰 센터 영향 배지 — Plan 22-D) ──
+
+export interface ImpactSummary {
+  name: string;
+  callers: number; // 직접 호출 사이트 수
+  topCallers: { name: string | null; path: string; line: number }[]; // 최대 3개
+  endpoints: number; // 이 심볼이 핸들러인 엔드포인트 수
+  apiCalls: number; // 이 심볼 안의 HTTP 호출 중 엔드포인트에 매칭된 것 수
+}
+
+/**
+ * 이름 배치로 영향도 요약. names는 수십 개 수준이라 prepared 재사용 루프면 충분.
+ * 존재하지 않는 이름도 0 카운트로 반환(삭제된 심볼에 콜러가 남아 있으면 callers>0 — 위험 신호로 노출).
+ */
+export function getImpactSummaries(db: Database, names: string[]): ImpactSummary[] {
+  const epStmt = db.prepare(
+    `SELECT COUNT(*) AS n FROM endpoints e JOIN symbols hs ON hs.id = e.symbol_id WHERE hs.name = ?`,
+  );
+  const acStmt = db.prepare(
+    `SELECT COUNT(*) AS n FROM http_calls c JOIN symbols es ON es.id = c.enclosing_symbol_id
+     WHERE es.name = ? AND c.path != '' AND EXISTS (
+       SELECT 1 FROM endpoints e WHERE e.path = c.path AND ${METHOD_COMPAT}
+     )`,
+  );
+  return names.map((name) => {
+    const callers = getCallers(db, name);
+    return {
+      name,
+      callers: callers.length,
+      topCallers: callers.slice(0, 3).map((c) => ({ name: c.callerName, path: c.path, line: c.line })),
+      endpoints: (epStmt.get(name) as { n: number }).n,
+      apiCalls: (acStmt.get(name) as { n: number }).n,
+    };
+  });
+}
+
 /** name 심볼의 전이적 호출자 BFS. 이름 기반 근사(동명 혼입 가능성은 Relation과 동일 한계). */
 export function getImpact(db: Database, name: string, depth = 2, limit = 200): ImpactHit[] {
   const out: ImpactHit[] = [];

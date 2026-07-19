@@ -171,6 +171,13 @@ body {
 .review-badge-deleted { color: #e5534b; border: 1px solid #e5534b; }
 .review-symbol-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .review-symbol-name:hover { color: var(--accent); }
+.review-impact { flex: none; font-size: 10px; border-radius: 3px; padding: 1px 5px; border: 1px solid transparent; }
+.review-impact-callers { cursor: pointer; }
+.review-impact-callers.is-warn { color: var(--warn); border-color: var(--warn); }
+.review-impact-callers.is-danger { color: #e5534b; border-color: #e5534b; }
+.review-impact-callers.is-orphan { font-weight: 600; background: rgba(229, 83, 75, 0.14); }
+.review-impact-callers:hover { background: var(--bg-active); }
+.review-impact-api { color: var(--accent); border-color: var(--accent); }
 
 /* 레이아웃 프리셋 컨트롤 (상태바) */
 .statusbar-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

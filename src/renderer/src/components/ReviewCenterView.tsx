@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { VscRefresh, VscCheckAll, VscChevronRight, VscChevronDown } from 'react-icons/vsc';
 import { useAppStore } from '../store';
-import { mapChangesToSymbols, type SymbolChange } from '../../../shared/review-map';
+import { mapChangesToSymbols, FILE_LEVEL_NAME, type SymbolChange } from '../../../shared/review-map';
+import { sortFilesByImpact, sortSymbolsByImpact } from '../../../shared/review-impact';
+import type { ImpactSummary } from '../../../indexer/api';
 import type { ReviewChangedFile, ReviewCommit, ReviewCommitsResult } from '../../../shared/protocol';
 
 // 변경 리뷰 센터 (Plan 22) — baseline 이후 누적 변경을 파일→심볼 트리로 보여주고, 심볼별 리뷰 체크 + 진행률.
@@ -24,11 +26,27 @@ function leafKeys(f: FileEntry): string[] {
 
 const shortHash = (h: string | null | undefined) => (h ? h.slice(0, 7) : '');
 
+/** 콜러 배지 툴팁 — topCallers를 "name — path:line"(1-based) 줄로. 삭제 심볼이면 경고 헤더. */
+function callerTitle(im: ImpactSummary, deleted: boolean): string {
+  const lines = im.topCallers.map((c) => `${c.name ?? '(파일 최상위)'} — ${c.path}:${c.line + 1}`);
+  const head = deleted ? '삭제된 심볼을 아직 호출하는 곳이 있습니다\n' : '';
+  return head + lines.join('\n');
+}
+
+/** API 배지 툴팁 — 핸들러 엔드포인트/매칭 백엔드 호출을 구분 표기. */
+function apiTitle(im: ImpactSummary): string {
+  const parts: string[] = [];
+  if (im.endpoints > 0) parts.push(`이 심볼이 핸들러인 엔드포인트 ${im.endpoints}개`);
+  if (im.apiCalls > 0) parts.push(`매칭된 백엔드 호출 ${im.apiCalls}건`);
+  return parts.join('\n');
+}
+
 export function ReviewCenterView() {
   const [meta, setMeta] = useState<ReviewCommitsResult | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [impacts, setImpacts] = useState<Map<string, ImpactSummary>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -57,6 +75,12 @@ export function ReviewCenterView() {
         return { path: c.path, status: c.status, binary: false, before: d.before, after: d.after, symbols };
       }),
     );
+    // 영향도 요약 — 전체 심볼 이름(중복 제거, 파일수준 제외)으로 1회 조회. 인덱서 미준비/오류는 조용히 생략.
+    const names = [...new Set(entries.flatMap((e) => e.symbols.map((s) => s.name)))].filter((n) => n !== FILE_LEVEL_NAME);
+    const summaries = names.length
+      ? await window.si.getImpactSummaries(names).catch(() => [] as ImpactSummary[])
+      : [];
+    setImpacts(new Map(summaries.map((s) => [s.name, s])));
     setFiles(entries);
     setLoading(false);
   }, []);
@@ -67,6 +91,14 @@ export function ReviewCenterView() {
 
   const allLeaves = useMemo(() => files.flatMap(leafKeys), [files]);
   const doneCount = allLeaves.filter((k) => reviewed.has(k)).length;
+  // 영향도 정렬: 파일은 내부 최대 영향도 내림차순(동률=경로순), 심볼은 파일 내에서 영향도 내림차순(동률=기존 순서).
+  const sortedFiles = useMemo(() => sortFilesByImpact(files, impacts), [files, impacts]);
+
+  // 콜러 배지 클릭 — cursorSymbol 지정 후 Relation 패널로 전환해 콜러 상세 확인.
+  const openRelation = (path: string, s: SymbolChange) => {
+    useAppStore.getState().setCursorSymbol({ name: s.name, path, line: s.line, col: 0 });
+    useAppStore.getState().setRightTab('relation');
+  };
 
   const persist = (next: Set<string>) => {
     setReviewed(next);
@@ -147,10 +179,11 @@ export function ReviewCenterView() {
         </div>
         <div className="review-files">
           {files.length === 0 && <div className="hint">{loading ? '불러오는 중…' : '변경이 없습니다.'}</div>}
-          {files.map((f) => {
+          {sortedFiles.map((f) => {
             const keys = leafKeys(f);
             const fileDone = keys.every((k) => reviewed.has(k));
             const isOpen = expanded.has(f.path);
+            const syms = sortSymbolsByImpact(f.symbols, impacts);
             return (
               <div key={f.path} className="review-file-group">
                 <div className="review-file-row">
@@ -162,13 +195,27 @@ export function ReviewCenterView() {
                   <span className="review-file-path" onClick={() => openFileDiff(f)} title={f.path}>{f.path}</span>
                   {f.binary && <span className="review-binary">바이너리</span>}
                 </div>
-                {isOpen && f.symbols.map((s) => {
+                {isOpen && syms.map((s) => {
                   const key = `${f.path}#${s.name}`;
+                  const im = impacts.get(s.name);
+                  const deleted = s.change === 'deleted';
                   return (
                     <div key={key} className="review-symbol-row">
                       <input type="checkbox" checked={reviewed.has(key)} onChange={() => toggleLeaf(key)} />
                       <span className={`review-badge review-badge-${s.change}`}>{CHANGE_LABEL[s.change]}</span>
                       <span className="review-symbol-name" onClick={() => openFileDiff(f, s.line)}>{s.name}</span>
+                      {im && im.callers > 0 && (
+                        <span
+                          className={`review-impact review-impact-callers ${im.callers >= 5 ? 'is-danger' : 'is-warn'}${deleted ? ' is-orphan' : ''}`}
+                          title={callerTitle(im, deleted)}
+                          onClick={() => openRelation(f.path, s)}
+                        >
+                          콜러 {im.callers}{deleted ? ' ⚠' : ''}
+                        </span>
+                      )}
+                      {im && (im.endpoints > 0 || im.apiCalls > 0) && (
+                        <span className="review-impact review-impact-api" title={apiTitle(im)}>API</span>
+                      )}
                     </div>
                   );
                 })}
