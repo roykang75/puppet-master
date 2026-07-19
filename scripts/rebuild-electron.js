@@ -19,8 +19,10 @@ const MODULES = [
 
 const env = { ...process.env };
 if (process.platform === 'win32') {
-  // MSVC는 CXXFLAGS를 무시 — C++20은 CL 환경변수로 주입한다.
-  env.CL = [env.CL, '/std:c++20'].filter(Boolean).join(' ');
+  // MSVC는 CXXFLAGS를 무시 — C++20은 cl.exe 환경변수로 주입한다.
+  // CL 옵션은 명령줄 '앞'에 붙어 tree-sitter binding.gyp의 /std:c++17에 덮어써진다(D9025).
+  // _CL_ 옵션은 명령줄 '뒤'에 붙어 마지막 /std가 이기므로 C++20을 강제할 수 있다.
+  env._CL_ = [env._CL_, '/std:c++20'].filter(Boolean).join(' ');
 } else {
   env.CXXFLAGS = [env.CXXFLAGS, '-std=c++20'].filter(Boolean).join(' ');
 }
