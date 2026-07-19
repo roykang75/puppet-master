@@ -341,9 +341,16 @@
   registerDocumentFormattingEditProvider → 네이티브 "Format Document"(Shift+Alt+F). tsserver=TS/JS, pyright 미지원→무변경.
 - [x] 검증: 단위(toTextEdits 2) + **실서버 통합**(tsserver가 messy.ts에 정렬 편집 반환 실증). 전체 400/400.
 
-## 🔚 남은 백로그 트리아지 (사용자 결정 필요 — 자동 진행 부적합)
-- [ ] **AI 완성 스트리밍** — Plan 5에서 이미 판정: Monaco `InlineCompletionsProvider`가 항목 배열을 한 번에 반환
-  → 점진 렌더 경로 없음, 짧은 완성+디바운스에선 이득 사실상 0. **won't-do**(어댑터는 후속 여지 유지).
-- [ ] **LSP 후속: Java jdtls** — Eclipse JDT LS(~50MB+ 바이너리 + JRE 의존 + 패키징)는 별도 통합 프로젝트.
-  기존 경량 LSP 클라이언트에 얹을 수 있으나 바이너리/런타임 번들이 큰 작업 → **별도 Plan 필요**.
-- [ ] **사용자 정의 언어 규칙** — 범위 불명확(TextMate 문법? 심볼 추출 쿼리? 파일 연결?). **스펙/브레인스토밍 선행 필요**.
+## 🧭 v3 방향 전환 — 풀스택 호출 체인 추적 + 구조 인지 에이전트
+
+**패리티 기능 추가 동결.** VSCode 재조립으로는 "더 좋다"에 도달 불가 판정 — 유일한 고유 자산
+(다언어 심볼 DB + 호출 그래프)을 사용자 스택(React/Next ↔ FastAPI/Spring)의 언어 경계에 집중.
+북극성: **"fetch 한 줄에서 백엔드 핸들러+호출 트리까지 3초, 에이전트는 grep이 아닌 그래프로 답한다."**
+스펙: `docs/superpowers/specs/2026-07-19-v3-fullstack-flow-design.md`
+
+- [ ] **Plan 19**: 인덱서 HTTP 경계 추출(fetch/axios·FastAPI·Spring·Next 라우트) + 경로 정규화 + 매칭 + getImpact (SCHEMA_VERSION 4)
+- [ ] **Plan 20**: Relation "Flow" 탭 — 호출부↔엔드포인트↔핸들러 트리, unresolved 정직 표시
+- [ ] **Plan 21**: 에이전트 구조 도구 4종(find_symbol/get_call_graph/get_impact/trace_http) + 컨텍스트 구조 블록
+
+### 동결된 백로그 (v3 이후 재평가)
+- AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)
