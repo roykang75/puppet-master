@@ -348,7 +348,9 @@
 북극성: **"fetch 한 줄에서 백엔드 핸들러+호출 트리까지 3초, 에이전트는 grep이 아닌 그래프로 답한다."**
 스펙: `docs/superpowers/specs/2026-07-19-v3-fullstack-flow-design.md`
 
-- [ ] **Plan 19**: 인덱서 HTTP 경계 추출(fetch/axios·FastAPI·Spring·Next 라우트) + 경로 정규화 + 매칭 + getImpact (SCHEMA_VERSION 4)
+- [x] **Plan 19** (`4c7f2a2`): 인덱서 HTTP 경계 추출(fetch/axios·FastAPI/Flask·Spring prefix·Next 라우트) + 정규화
+  + 양방향 매칭 + getImpact (SCHEMA_VERSION 4). **S1·S2 데이터 레벨 실증**(fetch 템플릿→FastAPI read_user,
+  axios→Spring getOrder, unresolved 정직 기록). 추출 13+통합 9, 전체 422/422. 기존 쿼리 무변경(별도 트리 워크).
 - [ ] **Plan 20**: Relation "Flow" 탭 — 호출부↔엔드포인트↔핸들러 트리, unresolved 정직 표시
 - [ ] **Plan 21**: 에이전트 구조 도구 4종(find_symbol/get_call_graph/get_impact/trace_http) + 컨텍스트 구조 블록
 
