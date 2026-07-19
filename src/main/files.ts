@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { createIgnoreFilter, IgnoreFilter } from '../shared/ignore';
+import { compareDirs } from './dir-compare';
+import type { DirCompareEntry } from '../shared/protocol';
 
 export interface DirEntry {
   name: string;
@@ -39,6 +41,11 @@ export class ProjectFiles {
 
   readFile(rel: string): string {
     return fs.readFileSync(this.absOf(rel), 'utf8');
+  }
+
+  /** 두 하위 디렉터리 재귀 비교 (경로 안전 검증 후) */
+  compareDirs(leftRel: string, rightRel: string): DirCompareEntry[] {
+    return compareDirs(this.absOf(leftRel), this.absOf(rightRel));
   }
 
   /** 바이너리 파일(이미지 등)을 base64로 — 렌더러 data URL용 */

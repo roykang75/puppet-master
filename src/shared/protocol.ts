@@ -104,6 +104,8 @@ export interface LspCompletionItemN {
   sortText?: string;
 }
 export interface GitChangeRange { startLine: number; endLine: number; type: 'add' | 'modify' | 'delete' } // 1-based
+export type DirCompareStatus = 'left-only' | 'right-only' | 'different';
+export interface DirCompareEntry { relPath: string; status: DirCompareStatus } // relPath는 비교 디렉터리 기준 상대경로
 export interface LspHoverN { markdown: string }
 export interface LspLocationN { path: string; line: number; col: number }
 export interface LspSignatureParamN { label: string | [number, number]; documentation?: string }

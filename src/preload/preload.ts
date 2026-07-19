@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, GitChangeRange, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
+import type { UiState, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -22,6 +22,7 @@ const api = {
   readFileBinary: (rel: string): Promise<string> => ipcRenderer.invoke('file:read-binary', rel),
   readFile: (rel: string): Promise<string> => ipcRenderer.invoke('file:read', rel),
   gitFileDiff: (rel: string): Promise<GitChangeRange[]> => ipcRenderer.invoke('git:fileDiff', rel),
+  compareDirs: (leftRel: string, rightRel: string): Promise<DirCompareEntry[]> => ipcRenderer.invoke('dir:compare', leftRel, rightRel),
   exportHtml: (defaultName: string, content: string): Promise<string | null> => ipcRenderer.invoke('file:exportHtml', defaultName, content),
   saveFile: (rel: string, content: string): Promise<void> => ipcRenderer.invoke('file:save', rel, content),
   getFileOutline: (rel: string): Promise<SymbolHit[]> => ipcRenderer.invoke('indexer:getFileOutline', rel),

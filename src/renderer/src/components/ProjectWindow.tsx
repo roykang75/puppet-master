@@ -16,7 +16,8 @@ export function ProjectWindow() {
   const openTab = useAppStore((s) => s.openTab);
   const treeRefreshNonce = useAppStore((s) => s.treeRefreshNonce);
   const compareBase = useAppStore((s) => s.compareBase);
-  const [ctxMenu, setCtxMenu] = useState<{ rel: string; x: number; y: number } | null>(null);
+  const compareBaseDir = useAppStore((s) => s.compareBaseDir);
+  const [ctxMenu, setCtxMenu] = useState<{ rel: string; isDir: boolean; x: number; y: number } | null>(null);
   const [dirs, setDirs] = useState<Record<string, DirEntry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<{ rel: string; isDir: boolean } | null>(null);
@@ -86,6 +87,14 @@ export function ProjectWindow() {
     if (before == null || after == null) return;
     const d = buildCompareDiff(baseRel, before, otherRel, after);
     useAppStore.getState().openDiffTab(d.path, d.before, d.after, d.label);
+  };
+
+  // base 폴더 ↔ 대상 폴더 재귀 비교 → 결과 탭
+  const doCompareDir = async (baseRel: string, otherRel: string) => {
+    setCtxMenu(null);
+    const entries = await window.si.compareDirs(baseRel, otherRel).catch(() => null);
+    if (!entries) return;
+    useAppStore.getState().openDirCompareTab(baseRel, otherRel, entries);
   };
 
   /** 선택된 폴더(파일이면 그 부모) 안에 이름 입력 행 열기 */
@@ -172,10 +181,9 @@ export function ProjectWindow() {
                 else openTab(childRel);
               }}
               onContextMenu={(ev) => {
-                if (e.isDir) return; // 파일 비교만 (디렉터리 비교는 후속)
                 ev.preventDefault();
-                setSelected({ rel: childRel, isDir: false });
-                setCtxMenu({ rel: childRel, x: ev.clientX, y: ev.clientY });
+                setSelected({ rel: childRel, isDir: e.isDir });
+                setCtxMenu({ rel: childRel, isDir: e.isDir, x: ev.clientX, y: ev.clientY });
               }}
             >
               <span className="tree-icon">
@@ -221,13 +229,28 @@ export function ProjectWindow() {
         <>
           <div className="open-editors-backdrop" onMouseDown={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }} />
           <div className="open-editors-menu tree-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
-            <div className="open-editors-item" onClick={() => { useAppStore.getState().setCompareBase(ctxMenu.rel); setCtxMenu(null); }}>
-              비교 대상으로 선택
-            </div>
-            {compareBase && compareBase !== ctxMenu.rel && (
-              <div className="open-editors-item" onClick={() => void doCompare(compareBase, ctxMenu.rel)}>
-                '{compareBase.split('/').pop()}'와(과) 비교
-              </div>
+            {ctxMenu.isDir ? (
+              <>
+                <div className="open-editors-item" onClick={() => { useAppStore.getState().setCompareBaseDir(ctxMenu.rel); setCtxMenu(null); }}>
+                  비교 대상 폴더로 선택
+                </div>
+                {compareBaseDir && compareBaseDir !== ctxMenu.rel && (
+                  <div className="open-editors-item" onClick={() => void doCompareDir(compareBaseDir, ctxMenu.rel)}>
+                    '{compareBaseDir.split('/').pop()}'와(과) 폴더 비교
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="open-editors-item" onClick={() => { useAppStore.getState().setCompareBase(ctxMenu.rel); setCtxMenu(null); }}>
+                  비교 대상으로 선택
+                </div>
+                {compareBase && compareBase !== ctxMenu.rel && (
+                  <div className="open-editors-item" onClick={() => void doCompare(compareBase, ctxMenu.rel)}>
+                    '{compareBase.split('/').pop()}'와(과) 비교
+                  </div>
+                )}
+              </>
             )}
           </div>
         </>

@@ -122,6 +122,17 @@ body {
 .rev-mark-add { background: #2ea043; }
 .rev-mark-modify { background: #2f7ee6; }
 .rev-mark-delete { background: #e5534b; }
+
+/* 디렉터리 비교 결과 뷰 */
+.dircmp { flex: 1; overflow: auto; background: var(--bg); color: var(--fg); user-select: none; }
+.dircmp-head { padding: 8px 12px; font-size: 12px; color: var(--fg-dim); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+.dircmp-row { display: flex; align-items: center; gap: 10px; padding: 4px 12px; cursor: pointer; font-size: 13px; }
+.dircmp-row:hover { background: var(--bg-hover); }
+.dircmp-status { flex: none; width: 56px; font-size: 11px; text-align: center; border-radius: 3px; padding: 1px 0; }
+.dircmp-different .dircmp-status { color: #2f7ee6; border: 1px solid #2f7ee6; }
+.dircmp-left-only .dircmp-status { color: #e5534b; border: 1px solid #e5534b; }
+.dircmp-right-only .dircmp-status { color: #2ea043; border: 1px solid #2ea043; }
+.dircmp-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .open-editors-menu {
   position: absolute; top: 100%; right: 4px; z-index: 41;
   min-width: 240px; max-width: 420px; max-height: 50vh; overflow-y: auto;

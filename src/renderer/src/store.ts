@@ -8,6 +8,7 @@ export interface Tab {
   dirty: boolean;
   diskChanged: boolean;
   diff?: { path: string; before: string; after: string; label?: string }; // 있으면 diff 탭(읽기전용 가상문서). label 있으면 탭 제목 대체(파일 비교)
+  dirCompare?: { leftDir: string; rightDir: string; entries: import('../../shared/protocol').DirCompareEntry[] }; // 디렉터리 비교 탭
 }
 
 interface AppState {
@@ -48,6 +49,9 @@ interface AppState {
   openDiffTab(path: string, before: string, after: string, label?: string): void; // 변경 제안/파일 비교 탭 열기/갱신 (키 diff://<path>)
   compareBase: string | null; // '비교 대상으로 선택'한 파일 rel — 없으면 null
   setCompareBase(rel: string | null): void;
+  compareBaseDir: string | null; // '비교 대상 폴더로 선택'한 디렉터리 rel
+  setCompareBaseDir(rel: string | null): void;
+  openDirCompareTab(leftDir: string, rightDir: string, entries: import('../../shared/protocol').DirCompareEntry[]): void;
   closeTab(path: string): void;
   setActive(path: string): void;
   setDirty(path: string, dirty: boolean): void;
@@ -96,6 +100,7 @@ export const useAppStore = create<AppState>((set) => ({
   settingsOpen: false, // 전역 설정 — setProject 리셋에 포함하지 않음
   renameRequest: null,
   compareBase: null,
+  compareBaseDir: null,
   completionStatus: null,
   lspStopped: [],
   bookmarks: [],
@@ -113,7 +118,7 @@ export const useAppStore = create<AppState>((set) => ({
   split: null,
   setSplit: (split) => set({ split }),
   setProject: (root) =>
-    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, compareBase: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, activeThreadId: null, threads: [], terminals: [], activeTerminalId: null, split: null }),
+    set({ root, tabs: [], activePath: null, indexing: null, stats: null, error: null, cursorSymbol: null, pendingJump: null, searchOpen: false, renameRequest: null, compareBase: null, compareBaseDir: null, completionStatus: null, lspStopped: [], bookmarks: [], chatMessages: [], chatStreaming: false, activeThreadId: null, threads: [], terminals: [], activeTerminalId: null, split: null }),
   setIndexing: (indexing) => set({ indexing }),
   setStats: (stats) => set({ stats }),
   setError: (error) => set({ error }),
@@ -153,6 +158,15 @@ export const useAppStore = create<AppState>((set) => ({
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setRenameRequest: (renameRequest) => set({ renameRequest }),
   setCompareBase: (compareBase) => set({ compareBase }),
+  setCompareBaseDir: (compareBaseDir) => set({ compareBaseDir }),
+  openDirCompareTab: (leftDir, rightDir, entries) =>
+    set((s) => {
+      const key = `dircmp://${leftDir} ↔ ${rightDir}`;
+      const tab: Tab = { path: key, dirty: false, diskChanged: false, dirCompare: { leftDir, rightDir, entries } };
+      const idx = s.tabs.findIndex((t) => t.path === key);
+      const tabs = idx >= 0 ? s.tabs.map((t, i) => (i === idx ? tab : t)) : [...s.tabs, tab];
+      return { tabs, activePath: key };
+    }),
   setCompletionStatus: (completionStatus) => set({ completionStatus }),
   setLspStopped: (lang, stopped) =>
     set((s) => ({
