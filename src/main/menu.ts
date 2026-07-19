@@ -3,9 +3,24 @@ import type { RecentEntry } from './persistence';
 
 export type MenuAction = { type: 'open-folder' } | { type: 'save' } | { type: 'open-recent'; root: string } | { type: 'export-html' };
 
-export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => void): void {
+export function buildMenu(recent: RecentEntry[], send: (action: MenuAction) => void, openAbout: () => void): void {
+  // macOS 앱 메뉴 — 기본 appMenu 역할 대신 커스텀(About만 커스텀 창으로, 나머지는 표준 role)
+  const appMenu: Electron.MenuItemConstructorOptions = {
+    label: 'Puppet Master',
+    submenu: [
+      { label: 'About Puppet Master', click: () => openAbout() },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  };
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
+    ...(process.platform === 'darwin' ? [appMenu] : []),
     {
       label: 'File',
       submenu: [

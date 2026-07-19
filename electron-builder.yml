@@ -22,6 +22,8 @@ asarUnpack:
 # 클래식 tsserver(typescript-classic)도 동일 — lib/lib.*.d.ts가 없으면 표준 타입을 못 찾아
 # "Cannot find global type" 등으로 전체가 깨진다. asarUnpack만으론 제거 단계 전이라 못 살린다.
 extraResources:
+  - from: build/image-original.png       # About 패널 이미지 (process.resourcesPath에서 로드)
+    to: image-original.png
   - from: "node_modules/@typescript"
     to: "app.asar.unpacked/node_modules/@typescript"
     filter: ["**/*.d.ts"]

@@ -119,7 +119,7 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
       onExit: (id) => win?.webContents.send('terminal:event', { type: 'exit', id }),
     });
     persistence.addRecent(root);
-    buildMenu(persistence.loadRecent(), sendMenu);
+    buildMenu(persistence.loadRecent(), sendMenu, openAboutWindow);
 
     // 인덱싱은 백그라운드로 — 파일 열람/편집은 즉시 가능 (스펙 §5)
     mgr.rpc
@@ -397,6 +397,51 @@ function registerIpc(): void {
   });
 }
 
+let aboutWin: BrowserWindow | null = null;
+// 커스텀 About 창 — macOS 네이티브 패널은 iconPath 미지원(linux/win 전용)이라 오리지널 이미지를 못 넣는다.
+function openAboutWindow(): void {
+  if (aboutWin) { aboutWin.focus(); return; }
+  const imgPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'image-original.png')
+    : path.join(app.getAppPath(), 'build', 'image-original.png');
+  let dataUri = '';
+  try {
+    // 오리지널을 512로 다운스케일해 data URL로 (원본 1.4MB를 그대로 임베드하면 data URL 한도 위험)
+    const img = nativeImage.createFromPath(imgPath).resize({ width: 512, quality: 'best' });
+    if (!img.isEmpty()) dataUri = img.toDataURL();
+  } catch {
+    // 이미지 없으면 이미지 없이 표시
+  }
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;height:100%;}
+    body{background:#1e1f22;color:#e7ecf4;font:13px -apple-system,'Helvetica Neue',sans-serif;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;}
+    img{width:220px;height:220px;object-fit:contain;border-radius:48px;}
+    h1{font-size:18px;font-weight:600;margin:18px 0 2px;}
+    .v{color:#8b95a5;font-size:12px;}
+    .d{color:#6b7688;font-size:11px;margin-top:16px;text-align:center;line-height:1.5;padding:0 24px;}
+  </style></head><body>
+    ${dataUri ? `<img src="${dataUri}" alt="">` : ''}
+    <h1>Puppet Master</h1>
+    <div class="v">버전 ${app.getVersion()}</div>
+    <div class="d">AI 코드 인텔리전스 데스크톱 앱</div>
+  </body></html>`;
+  aboutWin = new BrowserWindow({
+    width: 380,
+    height: 460,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: 'About Puppet Master',
+    backgroundColor: '#1e1f22',
+    webPreferences: {},
+  });
+  aboutWin.setMenuBarVisibility(false);
+  void aboutWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  aboutWin.on('closed', () => { aboutWin = null; });
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1400,
@@ -454,7 +499,7 @@ app.whenReady().then(() => {
         : null,
   });
   createWindow();
-  buildMenu(persistence.loadRecent(), sendMenu);
+  buildMenu(persistence.loadRecent(), sendMenu, openAboutWindow);
   registerIpc();
   if (process.env.SI_OPEN_PROJECT) {
     win!.webContents.once('did-finish-load', () => {
