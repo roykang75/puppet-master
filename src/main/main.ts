@@ -30,7 +30,7 @@ app.setPath('userData', userDataPath);
 const INDEXER_CALL_ALLOWED = new Set([
   'resolve', 'getReferences', 'getSuperclasses', 'getSubclasses',
   'searchSymbols', 'searchText', 'getCallers', 'getCallees', 'getRenameTargets',
-  'getFileTokens',
+  'getFileTokens', 'getFlowForFile',
 ]);
 
 const LSP_CALL_ALLOWED = new Set(['completion', 'hover', 'definition', 'references', 'signatureHelp']);

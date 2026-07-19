@@ -311,6 +311,11 @@ body {
 .rel-kind { color: var(--fg-dim); font-size: 11px; }
 .rel-detail { margin-left: auto; color: var(--fg-dim); font-size: 11px; }
 .rel-group { padding: 2px 8px; color: var(--fg-dim); font-size: 11px; background: var(--bg); }
+/* Flow 탭 — HTTP 경계 */
+.flow-method { flex: none; min-width: 38px; font-size: 10px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 4px; text-align: center; margin-right: 6px; }
+.flow-unresolved { flex: none; font-size: 10px; color: var(--warn); border: 1px solid var(--warn); border-radius: 3px; padding: 0 4px; margin-left: 6px; }
+.flow-target .rel-label { color: var(--fg-dim); }
+.flow-target:hover .rel-label { color: var(--fg); }
 
 /* ── AI 채팅 (Plan 8) ── */
 .right-tabs { display: flex; gap: 2px; padding: 0; }

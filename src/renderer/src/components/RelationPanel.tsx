@@ -3,9 +3,9 @@ import { VscChevronDown, VscChevronRight, VscCircleSmallFilled } from 'react-ico
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import type { Candidate } from '../../../indexer/resolve';
-import type { SymbolHit, CallerHit } from '../../../indexer/api';
+import type { SymbolHit, CallerHit, FileFlow } from '../../../indexer/api';
 
-type Tab = 'calls' | 'callers' | 'refs' | 'class';
+type Tab = 'calls' | 'callers' | 'refs' | 'class' | 'flow';
 
 interface Node {
   key: string;           // `${name}:${path}:${line}` — visited/expand 키
@@ -75,14 +75,29 @@ export function RelationPanel() {
   const cursorSymbol = useAppStore((s) => s.cursorSymbol);
   const outlineVersion = useAppStore((s) => s.outlineVersion);
   const indexing = useAppStore((s) => s.indexing);
+  const activePath = useAppStore((s) => s.activePath);
   const [tab, setTab] = useState<Tab>('callers');
   const [root, setRoot] = useState<Candidate | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [refs, setRefs] = useState<Ref[]>([]);
+  const [flow, setFlow] = useState<FileFlow | null>(null);
   const [visited] = useState(() => new Set<string>());
   const genRef = useRef(0);
 
+  // Flow 탭 — 활성 파일의 HTTP 경계(호출부↔엔드포인트) 단일 왕복. 커서 심볼과 무관.
   useEffect(() => {
+    if (tab !== 'flow') return;
+    setFlow(null);
+    if (indexing || !activePath || activePath.includes('://')) return; // 인덱싱 중/diff·dircmp 가상 탭 제외
+    let cancelled = false;
+    void window.si.getFlowForFile(activePath)
+      .then((f) => { if (!cancelled) setFlow(f); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [tab, activePath, outlineVersion, indexing]);
+
+  useEffect(() => {
+    if (tab === 'flow') return; // flow는 위 전용 effect
     if (indexing || !cursorSymbol) { setRoot(null); setNodes([]); setRefs([]); return; }
     let cancelled = false;
     const gen = ++genRef.current;
@@ -139,23 +154,71 @@ export function RelationPanel() {
       </div>
     ));
 
-  const treeTitle = root
-    ? ` — ${root.name}${tab !== 'refs' && nodes.length > 0 ? ` (${nodes.length})` : ''}`
-    : '';
+  const treeTitle = tab === 'flow'
+    ? ' — Flow'
+    : root
+      ? ` — ${root.name}${tab !== 'refs' && nodes.length > 0 ? ` (${nodes.length})` : ''}`
+      : '';
 
   return (
     <div className="panel">
       <div className="panel-title">Relation{treeTitle}</div>
       <div className="rel-tabs">
-        {(['calls', 'callers', 'refs', 'class'] as Tab[]).map((t) => (
+        {(['calls', 'callers', 'refs', 'class', 'flow'] as Tab[]).map((t) => (
           <span key={t} className={`rel-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-            {{ calls: 'Calls', callers: 'Callers', refs: 'Refs', class: 'Class' }[t]}
+            {{ calls: 'Calls', callers: 'Callers', refs: 'Refs', class: 'Class', flow: 'Flow' }[t]}
           </span>
         ))}
       </div>
       <div className="panel-body">
         {indexing && <div className="hint">인덱싱 중…</div>}
-        {!indexing && !root && <div className="hint">심볼 위에 커서를 두세요</div>}
+        {!indexing && tab === 'flow' && (
+          !activePath || activePath.includes('://') ? <div className="hint">파일을 여세요</div>
+          : !flow ? <div className="hint">로딩…</div>
+          : flow.calls.length === 0 && flow.endpoints.length === 0 ? <div className="hint">이 파일에 HTTP 경계 없음</div>
+          : (
+            <>
+              {flow.calls.length > 0 && <div className="rel-group">HTTP 호출 ({flow.calls.length})</div>}
+              {flow.calls.map((c) => (
+                <div key={`c${c.id}`}>
+                  <div className="rel-item" onClick={() => jumpTo(c.file, c.line + 1)}>
+                    <span className="flow-method">{c.method}</span>
+                    <span className="rel-label">{c.rawPath}</span>
+                    {c.path === '' && <span className="flow-unresolved">unresolved</span>}
+                    <span className="rel-detail">:{c.line + 1}</span>
+                  </div>
+                  {c.endpoints.map((e) => (
+                    <div key={`ce${e.id}`} className="rel-item flow-target" style={{ paddingLeft: 24 }} onClick={() => jumpTo(e.file, e.line + 1)}>
+                      <span className="rel-label">→ {e.handlerName ?? e.path}</span>
+                      <span className="rel-detail">{e.file}:{e.line + 1}</span>
+                    </div>
+                  ))}
+                  {c.path !== '' && c.endpoints.length === 0 && (
+                    <div className="hint" style={{ paddingLeft: 24 }}>매칭되는 엔드포인트 없음</div>
+                  )}
+                </div>
+              ))}
+              {flow.endpoints.length > 0 && <div className="rel-group">엔드포인트 ({flow.endpoints.length})</div>}
+              {flow.endpoints.map((e) => (
+                <div key={`e${e.id}`}>
+                  <div className="rel-item" onClick={() => jumpTo(e.file, e.line + 1)}>
+                    <span className="flow-method">{e.method}</span>
+                    <span className="rel-label">{e.path}{e.handlerName ? ` (${e.handlerName})` : ''}</span>
+                    <span className="rel-detail">:{e.line + 1}</span>
+                  </div>
+                  {e.calls.map((c) => (
+                    <div key={`ec${c.id}`} className="rel-item flow-target" style={{ paddingLeft: 24 }} onClick={() => jumpTo(c.file, c.line + 1)}>
+                      <span className="rel-label">← {c.enclosingName ?? '(파일)'}</span>
+                      <span className="rel-detail">{c.file}:{c.line + 1}</span>
+                    </div>
+                  ))}
+                  {e.calls.length === 0 && <div className="hint" style={{ paddingLeft: 24 }}>호출부 없음</div>}
+                </div>
+              ))}
+            </>
+          )
+        )}
+        {!indexing && tab !== 'flow' && !root && <div className="hint">심볼 위에 커서를 두세요</div>}
         {!indexing && root && tab === 'refs' && (
           refs.length === 0 ? <div className="hint">참조 없음</div> : (
             <>
@@ -174,7 +237,7 @@ export function RelationPanel() {
             </>
           )
         )}
-        {!indexing && root && tab !== 'refs' && (
+        {!indexing && root && tab !== 'refs' && tab !== 'flow' && (
           nodes.length === 0 ? <div className="hint">{tab === 'class' ? '클래스 관계 없음' : '결과 없음'}</div> : renderNodes(nodes, 0)
         )}
       </div>

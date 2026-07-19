@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
-import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
+import type { SymbolHit, TextHit, CallerHit, RefHit, FileFlow } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
 import type { RecentEntry } from '../main/persistence';
@@ -46,6 +46,8 @@ const api = {
     ipcRenderer.invoke('indexer:call', 'getCallers', { name }),
   getCallees: (symbolId: number): Promise<SymbolHit[]> =>
     ipcRenderer.invoke('indexer:call', 'getCallees', { symbolId }),
+  getFlowForFile: (path: string): Promise<FileFlow> =>
+    ipcRenderer.invoke('indexer:call', 'getFlowForFile', { path }),
   getRenameTargets: (name: string): Promise<RenameTargets> =>
     ipcRenderer.invoke('indexer:call', 'getRenameTargets', { name }),
   applyRename: (oldName: string, newName: string, targets: RenameFileGroup[]): Promise<RenameApplyResult> =>

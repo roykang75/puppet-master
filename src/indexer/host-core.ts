@@ -81,6 +81,7 @@ export function startIndexerHost(transport: Transport): IndexerHostHandle {
     getRenameTargets: (p: NameParams) => queries.getRenameTargets(opened().db, p.name),
     getSuperclasses: (p: SymbolIdParams) => queries.getSuperclasses(opened().db, p.symbolId),
     getSubclasses: (p: NameParams) => queries.getSubclasses(opened().db, p.name),
+    getFlowForFile: (p: FileParams) => queries.getFlowForFile(opened().db, p.path),
   });
 
   server.emit('ready', { protocolVersion: PROTOCOL_VERSION });

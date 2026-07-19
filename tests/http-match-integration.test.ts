@@ -8,7 +8,7 @@ import type { Database } from 'better-sqlite3';
 import { openDb } from '../src/indexer/db';
 import { Indexer } from '../src/indexer/pipeline';
 import {
-  getEndpoints, getHttpCalls, matchCallToEndpoints, matchEndpointToCalls, getImpact,
+  getEndpoints, getHttpCalls, matchCallToEndpoints, matchEndpointToCalls, getImpact, getFlowForFile,
 } from '../src/indexer/api';
 
 let dir: string;
@@ -116,6 +116,22 @@ describe('getImpact (blast radius)', () => {
   });
   it('depth=1은 직접 호출자만', () => {
     expect(getImpact(db, 'target', 1).map((h) => h.name)).toEqual(['midCaller']);
+  });
+});
+
+describe('getFlowForFile (Flow 탭 단일 왕복)', () => {
+  it('프론트 파일: 호출부 4 + 매칭 임베드', () => {
+    const flow = getFlowForFile(db, 'web/src/App.tsx');
+    expect(flow.calls).toHaveLength(4);
+    const users = flow.calls.find((c) => c.path === '/api/users/{}')!;
+    expect(users.endpoints[0]).toMatchObject({ handlerName: 'read_user', file: 'server/main.py' });
+    const dyn = flow.calls.find((c) => c.path === '')!;
+    expect(dyn.endpoints).toEqual([]); // unresolved는 매칭 시도 안 함
+  });
+  it('백엔드 파일: 엔드포인트 + 역방향 호출부 임베드', () => {
+    const flow = getFlowForFile(db, 'server/main.py');
+    expect(flow.endpoints).toHaveLength(1);
+    expect(flow.endpoints[0].calls[0]).toMatchObject({ enclosingName: 'loadUser', file: 'web/src/App.tsx' });
   });
 });
 

@@ -273,6 +273,20 @@ export function matchEndpointToCalls(db: Database, endpointId: number): HttpCall
     .all(endpointId) as HttpCallHit[];
 }
 
+export interface FlowCall extends HttpCallHit { endpoints: EndpointHit[] }
+export interface FlowEndpoint extends EndpointHit { calls: HttpCallHit[] }
+export interface FileFlow { calls: FlowCall[]; endpoints: FlowEndpoint[] }
+
+/** 파일의 HTTP 경계 전체 + 매칭 임베드 — Flow 탭용 단일 왕복. */
+export function getFlowForFile(db: Database, relPath: string): FileFlow {
+  const calls = db.prepare(`${HC_SELECT} WHERE f.path = ? ORDER BY c.line`).all(relPath) as HttpCallHit[];
+  const endpoints = db.prepare(`${EP_SELECT} WHERE f.path = ? ORDER BY e.line`).all(relPath) as EndpointHit[];
+  return {
+    calls: calls.map((c) => ({ ...c, endpoints: c.path === '' ? [] : matchCallToEndpoints(db, c.id) })),
+    endpoints: endpoints.map((e) => ({ ...e, calls: matchEndpointToCalls(db, e.id) })),
+  };
+}
+
 // ── Impact (blast radius) — 이름 기반 전이적 callers ──
 
 export interface ImpactHit {
