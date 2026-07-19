@@ -151,6 +151,9 @@ export type ChatEvent =
   | { type: 'error'; kind: 'auth' | 'transient' | 'other' };
 
 // ── 에이전트 모드 (Plan 10) ──
+// 신뢰 프리셋 (Orca 차용 3탄) — 승인 정책 4단계.
+//   explore=탐색만(쓰기·셸 도구 미제공) · careful=쓰기·셸 승인 · edits=셸만 승인 · full=전체 자동
+export type AgentTrustPreset = 'explore' | 'careful' | 'edits' | 'full';
 export interface AgentToolUi {
   id: string;
   name: string;

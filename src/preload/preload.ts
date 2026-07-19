@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, AgentTrustPreset, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit, TextHit, TextMatch, CallerHit, RefHit, FileFlow } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -79,8 +79,8 @@ const api = {
     ipcRenderer.on('chat:event', h);
     return () => ipcRenderer.removeListener('chat:event', h);
   },
-  agentSend: (messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean, readOnly = false): Promise<void> =>
-    ipcRenderer.invoke('agent:send', messages, context, autoApprove, readOnly),
+  agentSend: (messages: ChatMessage[], context: ChatContext | null, preset: AgentTrustPreset, readOnly = false): Promise<void> =>
+    ipcRenderer.invoke('agent:send', messages, context, preset, readOnly),
   agentCancel: (): Promise<void> => ipcRenderer.invoke('agent:cancel'),
   agentApprove: (id: string, ok: boolean): Promise<void> => ipcRenderer.invoke('agent:approve', id, ok),
   onAgentEvent: (cb: (e: AgentEvent) => void): void => {
@@ -106,8 +106,8 @@ const api = {
   snippetsRead: (lang: string): Promise<unknown | null> => ipcRenderer.invoke('snippets:read', lang),
   getAppearance: (): Promise<{ theme: string }> => ipcRenderer.invoke('settings:appearance:get'),
   setAppearance: (a: { theme: string }): Promise<void> => ipcRenderer.invoke('settings:appearance:set', a),
-  getAgentSettings: (): Promise<{ allowedDirs: string[]; isolate: boolean }> => ipcRenderer.invoke('settings:agent:get'),
-  setAgentSettings: (a: { allowedDirs?: string[]; isolate?: boolean }): Promise<void> => ipcRenderer.invoke('settings:agent:set', a),
+  getAgentSettings: (): Promise<{ allowedDirs: string[]; isolate: boolean; trustPreset: AgentTrustPreset }> => ipcRenderer.invoke('settings:agent:get'),
+  setAgentSettings: (a: { allowedDirs?: string[]; isolate?: boolean; trustPreset?: AgentTrustPreset }): Promise<void> => ipcRenderer.invoke('settings:agent:set', a),
   agentIsolationAvailable: (): Promise<boolean> => ipcRenderer.invoke('agent:isolationAvailable'),
   agentWorktreeRead: (rel: string): Promise<string> => ipcRenderer.invoke('agent:worktreeRead', rel),
   agentWorktreeApply: (paths?: string[]): Promise<string[]> => ipcRenderer.invoke('agent:worktreeApply', paths),

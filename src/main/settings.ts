@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
-import type { CompletionProfileInput, CompletionSettings } from '../shared/protocol';
+import type { AgentTrustPreset, CompletionProfileInput, CompletionSettings } from '../shared/protocol';
+
+const TRUST_PRESETS: AgentTrustPreset[] = ['explore', 'careful', 'edits', 'full'];
+function isTrustPreset(v: unknown): v is AgentTrustPreset {
+  return typeof v === 'string' && (TRUST_PRESETS as string[]).includes(v);
+}
 
 // 서비스(completion/chat)가 소비하는 활성 프로파일 뷰 — 기존 형태 유지
 export interface StoredCompletionSettings {
@@ -33,7 +38,7 @@ interface SettingsFile {
   profiles?: CompletionProfile[];
   activeProfileId?: string | null;
   appearance?: { theme: string };
-  agent?: { allowedDirs: string[]; isolate?: boolean };
+  agent?: { allowedDirs: string[]; isolate?: boolean; trustPreset?: AgentTrustPreset };
   context7ApiKey?: string;
 }
 
@@ -41,7 +46,7 @@ interface Normalized {
   profiles: CompletionProfile[];
   activeProfileId: string | null;
   appearance?: { theme: string };
-  agent?: { allowedDirs: string[]; isolate?: boolean };
+  agent?: { allowedDirs: string[]; isolate?: boolean; trustPreset?: AgentTrustPreset };
   context7ApiKey?: string;
 }
 
@@ -154,13 +159,14 @@ export class SettingsStore {
     this.write({ ...prev, appearance: { theme: a.theme } });
   }
 
-  getAgent(): { allowedDirs: string[]; isolate: boolean } {
+  getAgent(): { allowedDirs: string[]; isolate: boolean; trustPreset: AgentTrustPreset } {
     const a = this.read().agent;
-    return { allowedDirs: a?.allowedDirs ?? [], isolate: a?.isolate ?? false };
+    // trustPreset 기본 'full' — 이전 autoApprove:true 기본 동작(전체 자동) 보존
+    return { allowedDirs: a?.allowedDirs ?? [], isolate: a?.isolate ?? false, trustPreset: a?.trustPreset ?? 'full' };
   }
 
-  /** 부분 갱신 — 지정한 필드만 바꾸고 나머지는 기존 유지 (allowedDirs/isolate가 서로 다른 UI에서 저장됨). */
-  setAgent(patch: { allowedDirs?: string[]; isolate?: boolean }): void {
+  /** 부분 갱신 — 지정한 필드만 바꾸고 나머지는 기존 유지 (allowedDirs/isolate/trustPreset이 서로 다른 UI에서 저장됨). */
+  setAgent(patch: { allowedDirs?: string[]; isolate?: boolean; trustPreset?: AgentTrustPreset }): void {
     const prev = this.read();
     const cur = prev.agent ?? { allowedDirs: [] };
     const allowedDirs =
@@ -168,7 +174,9 @@ export class SettingsStore {
         ? patch.allowedDirs.filter((d) => typeof d === 'string' && d)
         : cur.allowedDirs;
     const isolate = patch.isolate !== undefined ? patch.isolate : cur.isolate ?? false;
-    this.write({ ...prev, agent: { allowedDirs, isolate } });
+    // 허용된 4종 외 값은 무시하고 기존 유지 (안전)
+    const trustPreset = isTrustPreset(patch.trustPreset) ? patch.trustPreset : cur.trustPreset ?? 'full';
+    this.write({ ...prev, agent: { allowedDirs, isolate, trustPreset } });
   }
 
   getContext7Key(): string | null {

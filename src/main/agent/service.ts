@@ -1,13 +1,13 @@
 // src/main/agent/service.ts — 에이전트 tool-use 루프. electron 임포트 금지, 동시 1개.
 import { AnthropicAgentAdapter, OpenAIAgentAdapter, type AgentAdapter, type AgentMsg } from './adapters';
-import { AGENT_TOOLS, READONLY_AGENT_TOOLS, buildWriteDiff, DIFF_SOURCE_CAP, executeTool, readCurrentContent, toolSummary, type AgentToolDeps } from './tools';
+import { READONLY_AGENT_TOOLS, buildWriteDiff, DIFF_SOURCE_CAP, executeTool, readCurrentContent, toolSummary, type AgentToolDeps } from './tools';
+import { needsApproval, toolsForPreset } from './trust';
 import { buildAgentSystemPrompt } from './prompt';
 import { classifyError } from '../completion/errors';
-import type { AgentEvent, ChatContext, ChatMessage, WorktreeChange } from '../../shared/protocol';
+import type { AgentEvent, AgentTrustPreset, ChatContext, ChatMessage, WorktreeChange } from '../../shared/protocol';
 
 export const MAX_TOOL_CALLS = 25;
 export const READONLY_MAX_TOOL_CALLS = 12; // 질문 모드 탐색 한도 (에이전트 모드보다 낮게)
-const APPROVAL_REQUIRED = new Set(['write_file', 'run_command']);
 
 // AgentEvent error kind은 'unsuitable'을 갖지 않는다 — 'other'로 접는다.
 function toAgentErrorKind(e: unknown): 'auth' | 'transient' | 'other' {
@@ -87,7 +87,7 @@ export class AgentService {
   async send(
     messages: ChatMessage[],
     context: ChatContext | null,
-    autoApprove: boolean,
+    preset: AgentTrustPreset,
     onEvent: (e: AgentEvent) => void,
     readOnly = false,
   ): Promise<void> {
@@ -137,7 +137,8 @@ export class AgentService {
     try {
       const adapter = this.factory(settings.provider, { model: settings.model, apiKey, baseURL: settings.baseURL });
       const system = buildAgentSystemPrompt(context, readOnly);
-      const tools = readOnly ? READONLY_AGENT_TOOLS : AGENT_TOOLS;
+      // 질문 모드(readOnly)는 프리셋 무관 — 항상 읽기 전용. 에이전트 모드는 프리셋별 도구셋.
+      const tools = readOnly ? READONLY_AGENT_TOOLS : toolsForPreset(preset);
       const maxToolCalls = readOnly ? READONLY_MAX_TOOL_CALLS : MAX_TOOL_CALLS;
       const msgs: AgentMsg[] = messages.map((m) => ({ role: m.role, content: m.content }));
       let toolCount = 0;
@@ -167,7 +168,7 @@ export class AgentService {
             }
           }
           let result: string;
-          if (!autoApprove && APPROVAL_REQUIRED.has(call.name)) {
+          if (needsApproval(preset, call.name)) {
             onEvent({ type: 'tool', id: call.id, name: call.name, summary, state: 'awaiting', path, detail: diff, before, after });
             const ok = await this.waitApproval(call.id, controller.signal);
             if (controller.signal.aborted) break;

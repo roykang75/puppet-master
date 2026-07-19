@@ -18,7 +18,7 @@ import { isGitRepo, ensureWorktree, worktreeChanges, applyWorktree, discardWorkt
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
-import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, ChatStoredMessage, ProjectStack } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameFileGroup, RenameApplyResult, CompletionContext, CompletionProfileInput, LspCallParams, ChatMessage, ChatContext, AgentEvent, AgentTrustPreset, ChatStoredMessage, ProjectStack } from '../shared/protocol';
 import type { SymbolHit } from '../indexer/api';
 
 // dev 모드에선 앱 이름이 실행 바이너리(Electron) 기준이라 macOS 앱 메뉴에 "Electron"으로 뜬다.
@@ -325,8 +325,10 @@ function registerIpc(): void {
   });
   ipcMain.handle('chat:thread:rename', (_e, id: string, title: string) => chatStore?.renameThread(id, title));
   ipcMain.handle('chat:thread:delete', (_e, id: string) => chatStore?.deleteThread(id));
-  ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, autoApprove: boolean, readOnly = false) => {
-    void agentService.send(messages, context, autoApprove, (event) => win?.webContents.send('agent:event', event), readOnly);
+  ipcMain.handle('agent:send', (_e, messages: ChatMessage[], context: ChatContext | null, preset: AgentTrustPreset, readOnly = false) => {
+    // 허용된 4종 외 값은 'careful'로 강등 — 안전 기본
+    const safe: AgentTrustPreset = preset === 'explore' || preset === 'careful' || preset === 'edits' || preset === 'full' ? preset : 'careful';
+    void agentService.send(messages, context, safe, (event) => win?.webContents.send('agent:event', event), readOnly);
   });
   ipcMain.handle('agent:cancel', () => agentService.cancel());
   ipcMain.handle('agent:approve', (_e, id: string, ok: boolean) => agentService.approve(id, ok));
@@ -346,7 +348,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:appearance:get', () => settingsStore.getAppearance());
   ipcMain.handle('settings:appearance:set', (_e, a: { theme: string }) => settingsStore.setAppearance(a));
   ipcMain.handle('settings:agent:get', () => settingsStore.getAgent());
-  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs?: string[]; isolate?: boolean }) => settingsStore.setAgent(a));
+  ipcMain.handle('settings:agent:set', (_e, a: { allowedDirs?: string[]; isolate?: boolean; trustPreset?: AgentTrustPreset }) => settingsStore.setAgent(a));
   // 격리(worktree) 모드 — 프로젝트가 git 저장소일 때만 사용 가능 (렌더러 토글 disable 판단용)
   ipcMain.handle('agent:isolationAvailable', () => (currentRoot ? isGitRepo(currentRoot) : false));
   // wt 파일 내용 읽기 — 리뷰 diff의 after 쪽. 활성 wt 루트 안만 허용.

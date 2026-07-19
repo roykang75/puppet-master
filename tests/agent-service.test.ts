@@ -47,7 +47,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter, '작성 완료: a.py'));
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: '만들어' }], null, true, on);
+    await svc.send([{ role: 'user', content: '만들어' }], null, 'full', on);
     // 2턴째 입력에 assistant(toolCalls)와 tool result가 들어있다
     const second = seen[1];
     expect(second.some((m) => m.role === 'assistant' && m.toolCalls?.length === 1)).toBe(true);
@@ -69,7 +69,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    const p = svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
     await new Promise((r) => setTimeout(r, 20));
     const awaiting = events.find((e) => e.type === 'tool' && e.state === 'awaiting') as any;
     expect(awaiting.detail).toContain('+ print(1)');
@@ -86,7 +86,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'full', on);
     const toolEvents = events.filter((e) => e.type === 'tool' && e.state === 'done');
     expect(toolEvents.length).toBe(MAX_TOOL_CALLS);
     expect(events.some((e) => e.type === 'chunk' && e.text.includes('한도'))).toBe(true);
@@ -100,7 +100,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    const p = svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
     await new Promise((r) => setTimeout(r, 20)); // awaiting 도달 대기
     expect(events.some((e) => e.type === 'tool' && e.state === 'awaiting')).toBe(true);
     svc.approve('c1', true);
@@ -115,7 +115,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    const p = svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
     await new Promise((r) => setTimeout(r, 20));
     svc.approve('c1', false);
     await p;
@@ -130,7 +130,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
     expect(events.some((e) => e.type === 'tool' && e.state === 'awaiting')).toBe(false);
   });
 
@@ -138,7 +138,7 @@ describe('AgentService 루프', () => {
     const { adapter } = fakeAdapter([{ text: 'x', toolCalls: [] }]);
     const svc = new AgentService({ ...baseDeps(adapter), getSettings: () => ({ provider: 'none' as const, model: '' }) });
     const { events, on } = collect();
-    await svc.send([], null, true, on);
+    await svc.send([], null, 'full', on);
     expect(events[0]).toEqual({ type: 'error', kind: 'other' });
   });
 
@@ -152,7 +152,7 @@ describe('AgentService 루프', () => {
     };
     const svc = new AgentService(baseDeps(adapter));
     const { on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, false, on, true);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'careful', on, true);
     expect(toolNames).toEqual(['list_dir', 'read_file', 'search_text', 'library_docs', 'find_symbol', 'get_call_graph', 'get_impact', 'trace_http']);
   });
 
@@ -162,7 +162,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, false, on, true);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'careful', on, true);
     const doneTools = events.filter((e) => e.type === 'tool' && e.state === 'done');
     expect(doneTools.length).toBe(READONLY_MAX_TOOL_CALLS);
     expect(READONLY_MAX_TOOL_CALLS).toBeLessThan(MAX_TOOL_CALLS);
@@ -185,7 +185,7 @@ describe('AgentService 루프', () => {
       },
     });
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'full', on);
     expect(seenRoot).toBe('/tmp/wt'); // 파일 도구가 wt 기준으로 격리됨
     const wt = events.find((e) => e.type === 'worktree') as any;
     expect(wt.changes).toEqual([{ path: 'a.py', status: 'A' }]);
@@ -210,7 +210,7 @@ describe('AgentService 루프', () => {
       },
     });
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'full', on);
     expect(called).toBe(false); // 어떤 도구도 실행되지 않음
     expect(events.some((e) => e.type === 'chunk' && e.text.includes('git 저장소'))).toBe(true);
     expect(events.some((e) => e.type === 'worktree')).toBe(false);
@@ -224,7 +224,7 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    await svc.send([{ role: 'user', content: 'x' }], null, true, on);
+    await svc.send([{ role: 'user', content: 'x' }], null, 'full', on);
     expect(events.some((e) => e.type === 'worktree')).toBe(false);
   });
 
@@ -234,10 +234,74 @@ describe('AgentService 루프', () => {
     ]);
     const svc = new AgentService(baseDeps(adapter));
     const { events, on } = collect();
-    const p = svc.send([{ role: 'user', content: 'x' }], null, false, on);
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
     await new Promise((r) => setTimeout(r, 20));
     svc.cancel();
     await p;
     expect(events[events.length - 1]).toEqual({ type: 'done' });
+  });
+});
+
+describe('신뢰 프리셋 승인 분기', () => {
+  it("'edits': write_file은 승인 없이 자동 실행, run_command만 awaiting", async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'w', name: 'write_file', args: { path: 'a.py', content: 'x' } }] },
+      { text: '', toolCalls: [{ id: 'r', name: 'run_command', args: { command: 'ls' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'edits', on);
+    await new Promise((r) => setTimeout(r, 30));
+    // write_file은 awaiting 없이 done, run_command는 awaiting에서 멈춤
+    const writeDone = events.find((e) => e.type === 'tool' && e.id === 'w' && e.state === 'done');
+    expect(writeDone).toBeTruthy();
+    expect(events.some((e) => e.type === 'tool' && e.id === 'w' && e.state === 'awaiting')).toBe(false);
+    expect(events.some((e) => e.type === 'tool' && e.id === 'r' && e.state === 'awaiting')).toBe(true);
+    svc.approve('r', true);
+    await p;
+    expect(events.some((e) => e.type === 'tool' && e.id === 'r' && e.state === 'done')).toBe(true);
+  });
+
+  it("'careful': write_file·run_command 둘 다 awaiting", async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'r', name: 'run_command', args: { command: 'ls' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    const p = svc.send([{ role: 'user', content: 'x' }], null, 'careful', on);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(events.some((e) => e.type === 'tool' && e.id === 'r' && e.state === 'awaiting')).toBe(true);
+    svc.approve('r', true);
+    await p;
+  });
+
+  it("'full': write_file·run_command 모두 승인 없이 자동", async () => {
+    const { adapter } = fakeAdapter([
+      { text: '', toolCalls: [{ id: 'r', name: 'run_command', args: { command: 'ls' } }] },
+      { text: '끝', toolCalls: [] },
+    ]);
+    const svc = new AgentService(baseDeps(adapter));
+    const { events, on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, 'full', on);
+    expect(events.some((e) => e.type === 'tool' && e.state === 'awaiting')).toBe(false);
+    expect(events.some((e) => e.type === 'tool' && e.id === 'r' && e.state === 'done')).toBe(true);
+  });
+
+  it("'explore': 어댑터에 쓰기·셸 도구가 전달되지 않는다", async () => {
+    let toolNames: string[] = [];
+    const adapter: AgentAdapter = {
+      async runTurn(_m, _s, tools, _c, _sig) {
+        toolNames = tools.map((t) => t.name);
+        return { text: '탐색만', toolCalls: [] };
+      },
+    };
+    const svc = new AgentService(baseDeps(adapter));
+    const { on } = collect();
+    await svc.send([{ role: 'user', content: 'x' }], null, 'explore', on);
+    expect(toolNames).not.toContain('write_file');
+    expect(toolNames).not.toContain('run_command');
+    expect(toolNames).toContain('read_file');
   });
 });

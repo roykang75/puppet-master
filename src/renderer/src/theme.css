@@ -501,6 +501,12 @@ body {
 }
 .chat-mode:hover { color: var(--fg); }
 .chat-mode option { background: var(--bg-panel); color: var(--fg); }
+.chat-trust {
+  flex: none; color: var(--fg-dim); font-size: 11px;
+  background: none; border: none; outline: none; cursor: pointer; padding: 0;
+}
+.chat-trust:hover { color: var(--fg); }
+.chat-trust option { background: var(--bg-panel); color: var(--fg); }
 .chat-model {
   color: var(--fg-dim); font-size: 11px; min-width: 0; max-width: 100%;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

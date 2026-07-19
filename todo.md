@@ -405,5 +405,24 @@
   - **v1 스코프 아웃**(의도적): 병렬 worktree 다중, 브랜치/커밋 생성, 3-way 병합(적용=파일 복사·마지막 승리 —
     diff 리뷰가 안전장치), 인덱서의 wt 신규 파일 인식.
 
+- [x] **에이전트 신뢰 프리셋(Agent Trust Presets)**(Orca "Agent Trust Presets" 차용 3탄 v1 — 1·2·3탄 완결):
+  기존 자동승인 이분법(ON=전부 자동 / OFF=쓰기·셸 매번 승인)을 4단계 프리셋으로 교체. 핵심 공백이던
+  "쓰기는 자동, **셸만 승인**" 중간 단계를 채움.
+  - `shared/protocol.ts` `AgentTrustPreset`(explore/careful/edits/full) + 순수 모듈 `main/agent/trust.ts`
+    (electron-free): `toolsForPreset`(explore→읽기전용 도구셋, 그 외→전체) + `needsApproval`(careful→쓰기·셸,
+    edits→셸만, full/explore→없음, 읽기 도구는 항상 false) — 승인 정책 단일 진실(기존 APPROVAL_REQUIRED 상수 제거).
+  - `AgentService.send` 시그니처 `autoApprove:boolean`→`preset:AgentTrustPreset`, 도구셋은 에이전트 모드에서
+    `toolsForPreset(preset)`(질문 모드 readOnly는 프리셋 무관·기존 READONLY 경로 유지), 승인 분기는 `needsApproval`.
+    main IPC는 허용 4종 외 값을 'careful'로 강등(안전 기본).
+  - 영속화: settings `agent.trustPreset`(부분 갱신, allowedDirs/isolate와 독립, 기본 'full'=이전 autoApprove:true
+    동작 보존). store `autoApprove`→`trustPreset`. ChatPanel: 자동승인 체크박스→`<select className="chat-trust">`
+    (탐색만/신중/편집 자동/전체 자동), 변경 시 store+settings 저장, 로드 시 settings에서 초기화.
+  - **스코프 아웃**(의도적): 명령 패턴별 허용목록(npm test 자동/rm 승인), 프리셋별 allowedDirs, 격리와의 자동
+    연동(프리셋 자동 변경 금지 — 놀람 방지).
+  - 검증: 단위 `agent-trust.test`(4프리셋×도구 판정 매트릭스+toolsForPreset) + `agent-service` 프리셋 분기 4종
+    (edits write 자동·run_command awaiting / careful 양쪽 awaiting / full 양쪽 자동 / explore 도구셋 쓰기·셸 부재) +
+    settings trustPreset merge/영속/기본값, 501/501. E2E `agent.spec`/`agent-isolation.spec`(체크박스→select 회귀,
+    기본 'full'로 흐름 동일) + `diff-annotate.spec` 회귀, build EXIT=0.
+
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)

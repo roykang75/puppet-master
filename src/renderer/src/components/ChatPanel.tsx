@@ -67,7 +67,7 @@ export function ChatPanel() {
   const messages = useAppStore((s) => s.chatMessages);
   const streaming = useAppStore((s) => s.chatStreaming);
   const agentMode = useAppStore((s) => s.agentMode);
-  const autoApprove = useAppStore((s) => s.autoApprove);
+  const trustPreset = useAppStore((s) => s.trustPreset);
   const isolate = useAppStore((s) => s.isolate);
   const worktreeChanges = useAppStore((s) => s.worktreeChanges);
   const [isolationAvailable, setIsolationAvailable] = useState(true);
@@ -141,7 +141,11 @@ export function ChatPanel() {
 
   // 격리 설정/가용성 로드 — 프로젝트 전환(root)마다 git 여부 재확인
   useEffect(() => {
-    void window.si.getAgentSettings().then((a) => useAppStore.getState().setIsolate(a.isolate)).catch(() => {});
+    void window.si.getAgentSettings().then((a) => {
+      const st = useAppStore.getState();
+      st.setIsolate(a.isolate);
+      st.setTrustPreset(a.trustPreset);
+    }).catch(() => {});
     void window.si.agentIsolationAvailable().then(setIsolationAvailable).catch(() => setIsolationAvailable(false));
   }, [root]);
 
@@ -235,8 +239,8 @@ export function ChatPanel() {
       .slice(0, -1) // 방금 추가한 빈 어시스턴트 제외
       .map((m) => ({ role: m.role, content: m.content }));
     // 에이전트 모드: 전체 도구(쓰기/실행) · 질문 모드: 읽기 전용 에이전트(파일 탐색만)
-    if (useAppStore.getState().agentMode) void window.si.agentSend(history, context, useAppStore.getState().autoApprove);
-    else void window.si.agentSend(history, context, false, true);
+    if (useAppStore.getState().agentMode) void window.si.agentSend(history, context, useAppStore.getState().trustPreset);
+    else void window.si.agentSend(history, context, 'careful', true); // 질문 모드: readOnly 우선, preset 값은 무의미
     scheduleChatSave();
   };
 
@@ -480,15 +484,22 @@ export function ChatPanel() {
               <option value="ask">질문</option>
             </select>
             {agentMode && (
-              <label className="chat-context-toggle" title="끄면 파일 쓰기/셸 실행 전에 승인 버튼이 표시됩니다">
-                <input
-                  type="checkbox"
-                  checked={autoApprove}
-                  disabled={streaming}
-                  onChange={(e) => useAppStore.getState().setAutoApprove(e.target.checked)}
-                />
-                <span className="chat-context-label">자동 승인</span>
-              </label>
+              <select
+                className="chat-trust"
+                title="탐색만=쓰기·셸 없음 · 신중=쓰기·셸 승인 · 편집 자동=셸만 승인 · 전체 자동 · 격리 모드에서는 [적용] 전까지 프로젝트가 안전합니다"
+                value={trustPreset}
+                disabled={streaming}
+                onChange={(e) => {
+                  const p = e.target.value as typeof trustPreset;
+                  useAppStore.getState().setTrustPreset(p);
+                  void window.si.setAgentSettings({ trustPreset: p });
+                }}
+              >
+                <option value="explore">탐색만</option>
+                <option value="careful">신중</option>
+                <option value="edits">편집 자동</option>
+                <option value="full">전체 자동</option>
+              </select>
             )}
             {agentMode && (
               <label

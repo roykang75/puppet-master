@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { IndexStats } from '../../indexer/pipeline';
-import type { AgentToolUi, ThreadMeta, WorktreeChange } from '../../shared/protocol';
+import type { AgentToolUi, AgentTrustPreset, ThreadMeta, WorktreeChange } from '../../shared/protocol';
 import type { Bookmark } from './bookmarks';
 
 export interface Tab {
@@ -33,7 +33,7 @@ interface AppState {
   activeThreadId: string | null;
   threads: ThreadMeta[];
   agentMode: boolean;
-  autoApprove: boolean;
+  trustPreset: AgentTrustPreset; // 신뢰 프리셋 — settings와 동기화, ChatPanel select
   isolate: boolean; // 격리(worktree) 모드 — settings와 동기화, ChatPanel 토글
   worktreeChanges: WorktreeChange[] | null; // 격리 턴 종료 후 리뷰/적용 바 (null = 없음)
   chatDraft: string | null; // diff 주석 → 채팅 입력창 프리필 대기값. ChatPanel이 소비 후 클리어
@@ -79,7 +79,7 @@ interface AppState {
   setThreads(list: ThreadMeta[]): void;
   loadThreadMessages(msgs: AppState['chatMessages']): void;
   setAgentMode(v: boolean): void;
-  setAutoApprove(v: boolean): void;
+  setTrustPreset(v: AgentTrustPreset): void;
   setIsolate(v: boolean): void;
   setWorktreeChanges(c: WorktreeChange[] | null): void;
   setChatDraft(v: string | null): void;
@@ -118,7 +118,7 @@ export const useAppStore = create<AppState>((set) => ({
   activeThreadId: null,
   threads: [],
   agentMode: false,
-  autoApprove: true,
+  trustPreset: 'full', // 이전 autoApprove:true 기본 동작 보존 (settings 로드 시 갱신됨)
   isolate: false,
   worktreeChanges: null,
   chatDraft: null,
@@ -207,7 +207,7 @@ export const useAppStore = create<AppState>((set) => ({
   setThreads: (threads) => set({ threads }),
   loadThreadMessages: (chatMessages) => set({ chatMessages, chatStreaming: false }),
   setAgentMode: (v) => set({ agentMode: v }),
-  setAutoApprove: (v) => set({ autoApprove: v }),
+  setTrustPreset: (v) => set({ trustPreset: v }),
   setIsolate: (v) => set({ isolate: v }),
   setWorktreeChanges: (c) => set({ worktreeChanges: c }),
   setChatDraft: (v) => set({ chatDraft: v }),
