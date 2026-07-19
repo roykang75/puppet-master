@@ -375,5 +375,10 @@
   스토어 `searchSeed`(소비 즉시 클리어) + 열기 3지점 배선(Cmd/Ctrl+Shift+F 열림시만·메뉴·돋보기 버튼) +
   SearchOverlay 프리필+전체선택. 단위 8종 457/457, E2E `search-seed.spec`(더블클릭→돋보기→프리필+결과), build EXIT=0.
 
+- [x] **검색 결과 미리보기 + 더블클릭 이동**: 단일 클릭/↑↓ 선택 → 오버레이 하단 `.search-preview` 패널에
+  대상 위치 ±7줄 표시(이동 없음), 더블클릭/Enter → jumpTo + 닫힘. 순수 헬퍼 `buildPreviewSlice`(경계 클램프) +
+  열린 버퍼(getContent) 우선·디스크(readFile) 폴백·마지막 path 캐시. 단위 7종 464/464,
+  E2E `search-preview.spec`(클릭=미리보기·더블클릭=이동), analysis.spec 클릭→더블클릭 갱신, build EXIT=0.
+
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)

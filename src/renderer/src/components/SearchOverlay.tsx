@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
+import { getContent } from './EditorPane';
+import { buildPreviewSlice, type PreviewSlice } from '../search-preview';
 import type { SymbolHit, TextMatch } from '../../../indexer/api';
 
 interface Item {
@@ -38,13 +40,26 @@ function highlight(text: string, query: string): React.ReactNode {
   return parts;
 }
 
+/** 항목의 미리보기/점프용 1-기반 대상 줄. symbol.line은 이미 1-기반, text.line은 0-기반. */
+const targetLineOf = (it: Item): number => (it.kind === 'symbol' ? it.line! : it.line! + 1);
+
+interface Preview {
+  path: string;
+  targetLine: number; // 1-기반
+  slice: PreviewSlice;
+  query?: string; // text 항목만 — 줄 안 질의 강조
+}
+
 export function SearchOverlay() {
   const open = useAppStore((s) => s.searchOpen);
   const setOpen = useAppStore((s) => s.setSearchOpen);
   const [q, setQ] = useState('');
   const [items, setItems] = useState<Item[]>([]);
   const [sel, setSel] = useState(0);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // 마지막으로 읽은 (path, content) 한 쌍만 캐시 — 같은 파일 연속 선택 시 재읽기 방지
+  const contentCache = useRef<{ path: string; content: string } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -58,8 +73,50 @@ export function SearchOverlay() {
         inputRef.current?.focus();
         if (seed) inputRef.current?.select(); // 전체 선택 — 타이핑 시 교체
       }, 0);
+    } else {
+      // 닫힐 때 미리보기 상태 초기화
+      setPreview(null);
+      contentCache.current = null;
     }
   }, [open]);
+
+  // 선택(sel) 변경 시 디바운스 후 미리보기 로드. 열린 탭이면 편집 중 버퍼 우선, 없으면 디스크 읽기.
+  useEffect(() => {
+    if (!open) return;
+    const it = items[sel];
+    if (!it) {
+      setPreview(null);
+      return;
+    }
+    let cancelled = false;
+    const targetLine = targetLineOf(it);
+    const t = setTimeout(() => {
+      void (async () => {
+        let content: string | null;
+        if (contentCache.current?.path === it.path) {
+          content = contentCache.current.content;
+        } else {
+          content = getContent(it.path) ?? (await window.si.readFile(it.path).catch(() => null));
+          if (content != null) contentCache.current = { path: it.path, content };
+        }
+        if (cancelled) return;
+        if (content == null) {
+          setPreview(null);
+          return;
+        }
+        setPreview({
+          path: it.path,
+          targetLine,
+          slice: buildPreviewSlice(content, targetLine),
+          query: it.kind === 'text' ? it.query : undefined,
+        });
+      })();
+    }, 120);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [sel, items, open]);
 
   useEffect(() => {
     if (!open || q.trim().length < 2) {
@@ -153,7 +210,8 @@ export function SearchOverlay() {
             <div
               key={`s${idxOf(it)}`}
               className={`search-item${idxOf(it) === sel ? ' selected' : ''}`}
-              onClick={() => pick(it)}
+              onClick={() => setSel(idxOf(it))}
+              onDoubleClick={() => pick(it)}
             >
               <span className="search-label">{it.label}</span>
               <span className="search-detail">{it.detail}</span>
@@ -175,7 +233,8 @@ export function SearchOverlay() {
                 <div
                   key={`t${idxOf(it)}`}
                   className={`search-item search-line-item${idxOf(it) === sel ? ' selected' : ''}`}
-                  onClick={() => pick(it)}
+                  onClick={() => setSel(idxOf(it))}
+                  onDoubleClick={() => pick(it)}
                 >
                   <span className="search-lineno">{it.line! + 1}</span>
                   <span className="search-label search-snippet">{highlight(it.lineText!, it.query!)}</span>
@@ -185,6 +244,27 @@ export function SearchOverlay() {
           ))}
           {q.trim().length >= 2 && items.length === 0 && <div className="hint">결과 없음</div>}
         </div>
+        {preview && (
+          <div className="search-preview">
+            <div className="search-preview-head">
+              {preview.path}:{preview.targetLine}
+            </div>
+            <div className="search-preview-body">
+              {preview.slice.lines.map((ln, i) => {
+                const lineNo = preview.slice.startLine + i;
+                const active = lineNo === preview.targetLine;
+                return (
+                  <div key={lineNo} className={`search-preview-line${active ? ' active' : ''}`}>
+                    <span className="search-preview-lineno">{lineNo}</span>
+                    <span className="search-preview-code">
+                      {preview.query ? highlight(ln, preview.query) : ln}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
