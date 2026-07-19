@@ -12,14 +12,17 @@
     "build:renderer": "vite build",
     "dev:renderer": "vite",
     "dev:electron": "VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "predev": "node scripts/abi.js ensure electron",
     "dev": "npm run build:main && concurrently -k -n vite,electron -c cyan,magenta \"npm:dev:renderer\" \"wait-on tcp:127.0.0.1:5173 && npm run dev:electron\"",
     "start": "electron .",
+    "pretest": "node scripts/abi.js ensure node",
     "test": "vitest run",
     "test:e2e": "npm run build && npm run rebuild:electron && playwright test",
-    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3,node-pty",
-    "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3 node-pty",
+    "rebuild:electron": "CXXFLAGS=-std=c++20 electron-rebuild -f -w tree-sitter,tree-sitter-c,tree-sitter-cpp,tree-sitter-python,tree-sitter-typescript,tree-sitter-java,better-sqlite3,node-pty && node scripts/abi.js mark electron",
+    "rebuild:node": "npm rebuild tree-sitter tree-sitter-c tree-sitter-cpp tree-sitter-python tree-sitter-typescript tree-sitter-java better-sqlite3 node-pty && node scripts/abi.js mark node",
     "bench": "node dist/scripts/bench.js",
-    "package": "npm run build && npm run rebuild:electron && electron-builder --mac"
+    "package": "npm run build && npm run rebuild:electron && electron-builder --mac",
+    "postinstall": "node scripts/abi.js mark node"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
