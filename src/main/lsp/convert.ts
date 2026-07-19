@@ -1,5 +1,5 @@
 // LSP 원시 응답 → 중립 타입 순수 변환 — electron/모나코 임포트 금지
-import type { LspCompletionItemN, LspHoverN, LspLocationN, LspDiagnosticN, LspSignatureHelpN } from '../../shared/protocol';
+import type { LspCompletionItemN, LspHoverN, LspLocationN, LspDiagnosticN, LspSignatureHelpN, LspTextEditN } from '../../shared/protocol';
 
 export const MAX_DIAGNOSTICS = 500;
 
@@ -60,6 +60,24 @@ export function toLocations(raw: unknown, uriToRel: (uri: string) => string | nu
     out.push({ path: rel, line: range.start.line, col: range.start.character });
   }
   return out;
+}
+
+interface RawEdit {
+  range?: { start: { line: number; character: number }; end: { line: number; character: number } };
+  newText?: string;
+}
+
+export function toTextEdits(raw: unknown): LspTextEditN[] {
+  const arr = Array.isArray(raw) ? (raw as RawEdit[]) : [];
+  return arr
+    .filter((e) => e?.range && typeof e.newText === 'string')
+    .map((e) => ({
+      startLine: e.range!.start.line,
+      startCol: e.range!.start.character,
+      endLine: e.range!.end.line,
+      endCol: e.range!.end.character,
+      newText: e.newText as string,
+    }));
 }
 
 interface RawSigLabel { label?: string | [number, number]; documentation?: unknown }

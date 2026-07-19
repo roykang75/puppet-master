@@ -228,6 +228,9 @@ function registerIpc(): void {
     if (!LSP_CALL_ALLOWED.has(method)) throw new Error(`허용되지 않은 LSP 메서드: ${method}`);
     return lsp?.request(method as 'completion' | 'hover' | 'definition' | 'references' | 'signatureHelp', params as LspCallParams) ?? null;
   });
+  ipcMain.handle('lsp:format', (_e, path: string, tabSize: number, insertSpaces: boolean) =>
+    lsp?.format({ path, tabSize, insertSpaces }) ?? [],
+  );
   ipcMain.handle('lsp:notify', (_e, kind: string, params: unknown) => {
     if (!LSP_NOTIFY_ALLOWED.has(kind)) throw new Error(`허용되지 않은 LSP 통지: ${kind}`);
     lsp?.notify(kind as 'didOpen' | 'didChange' | 'didClose' | 'didSave', params as { path: string; text?: string });

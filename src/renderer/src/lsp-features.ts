@@ -3,7 +3,7 @@ import type * as Monaco from 'monaco-editor';
 import { lspSync, isLspPath } from './lsp-sync';
 import { useAppStore } from './store';
 import { jumpTo } from './navigation';
-import type { LspCompletionItemN, LspDiagnosticN, LspHoverN, LspLocationN, LspSignatureHelpN } from '../../shared/protocol';
+import type { LspCompletionItemN, LspDiagnosticN, LspHoverN, LspLocationN, LspSignatureHelpN, LspTextEditN } from '../../shared/protocol';
 
 let registered = false;
 let monacoRef: typeof Monaco | null = null;
@@ -88,6 +88,23 @@ export function registerLspFeatures(monaco: typeof Monaco): void {
       return locs.map((l) => ({
         uri: monaco.Uri.file('/' + l.path),
         range: new monaco.Range(l.line + 1, l.col + 1, l.line + 1, l.col + 1),
+      }));
+    },
+  });
+
+  // 코드 정렬 — LSP 문서 포매팅(Shift+Alt+F, 우클릭 "Format Document"). tsserver=TS/JS 지원, pyright=미지원→무변경.
+  monaco.languages.registerDocumentFormattingEditProvider(LSP_MONACO_LANGS, {
+    async provideDocumentFormattingEdits(model, options) {
+      const path = pathOf(model);
+      if (!path || !isLspPath(path)) return [];
+      await lspSync.lspFlush();
+      const edits = (await window.si
+        .lspFormat(path, options.tabSize, options.insertSpaces)
+        .catch(() => null)) as LspTextEditN[] | null;
+      if (!edits) return [];
+      return edits.map((e) => ({
+        range: new monaco.Range(e.startLine + 1, e.startCol + 1, e.endLine + 1, e.endCol + 1),
+        text: e.newText,
       }));
     },
   });

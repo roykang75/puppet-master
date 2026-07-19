@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
+import type { UiState, LayoutPresets, RenameTargets, RenameFileGroup, RenameApplyResult, FileTokens, CompletionSettings, CompletionProfileInput, CompletionContext, CompletionResult, LspCallParams, LspDiagnosticN, LspStatusN, LspTextEditN, GitChangeRange, DirCompareEntry, ChatMessage, ChatContext, ChatEvent, AgentEvent, ThreadMeta, ThreadSearchHit, ChatStoredMessage } from '../shared/protocol';
 import type { SymbolHit, TextHit, CallerHit, RefHit } from '../indexer/api';
 import type { Candidate } from '../indexer/resolve';
 import type { DirEntry } from '../main/files';
@@ -124,6 +124,8 @@ const api = {
     ipcRenderer.invoke('lsp:call', method, params),
   lspNotify: (kind: 'didOpen' | 'didChange' | 'didClose' | 'didSave', params: { path: string; text?: string }): Promise<void> =>
     ipcRenderer.invoke('lsp:notify', kind, params),
+  lspFormat: (path: string, tabSize: number, insertSpaces: boolean): Promise<LspTextEditN[]> =>
+    ipcRenderer.invoke('lsp:format', path, tabSize, insertSpaces),
   onLspEvent: (cb: (e: LspEventPayload) => void): (() => void) => {
     const h = (_e: Electron.IpcRendererEvent, data: LspEventPayload) => cb(data);
     ipcRenderer.on('lsp:event', h);

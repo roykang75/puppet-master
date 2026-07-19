@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp, MAX_DIAGNOSTICS } from '../src/main/lsp/convert';
+import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp, toTextEdits, MAX_DIAGNOSTICS } from '../src/main/lsp/convert';
 
 const uriToRel = (uri: string) =>
   uri.startsWith('file:///proj/') ? uri.slice('file:///proj/'.length) : null;
@@ -59,6 +59,21 @@ describe('toLocations', () => {
 
   it('null → 빈 배열', () => {
     expect(toLocations(null, uriToRel)).toEqual([]);
+  });
+});
+
+describe('toTextEdits', () => {
+  it('range/newText 변환 + 무효 항목 필터', () => {
+    const raw = [
+      { range: { start: { line: 0, character: 2 }, end: { line: 1, character: 0 } }, newText: '  ' },
+      { newText: 'x' }, // range 없음 → 제외
+      { range: { start: { line: 2, character: 0 }, end: { line: 2, character: 4 } } }, // newText 없음 → 제외
+    ];
+    expect(toTextEdits(raw)).toEqual([{ startLine: 0, startCol: 2, endLine: 1, endCol: 0, newText: '  ' }]);
+  });
+  it('배열 아님 → []', () => {
+    expect(toTextEdits(null)).toEqual([]);
+    expect(toTextEdits({})).toEqual([]);
   });
 });
 

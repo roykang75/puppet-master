@@ -78,6 +78,15 @@ describe('tsgo 실왕복', () => {
     } | null;
     expect(sh?.signatures[0]?.label ?? '').toContain('name');
   }, 30_000);
+
+  it('format: 잘못 들여쓴 파일에 대해 편집 반환', async () => {
+    const p = path.join(root, 'messy.ts');
+    fs.writeFileSync(p, 'function  f( ){return    1}\n');
+    mgr.notify('didOpen', { path: 'messy.ts', text: fs.readFileSync(p, 'utf8') });
+    await new Promise((r) => setTimeout(r, 300));
+    const edits = await mgr.format({ path: 'messy.ts', tabSize: 2, insertSpaces: true });
+    expect(edits.length).toBeGreaterThan(0); // tsserver가 정렬 편집 제안
+  }, 30_000);
 });
 
 describe('pyright 실왕복', () => {

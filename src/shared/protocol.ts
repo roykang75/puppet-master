@@ -111,6 +111,7 @@ export interface LspLocationN { path: string; line: number; col: number }
 export interface LspSignatureParamN { label: string | [number, number]; documentation?: string }
 export interface LspSignatureN { label: string; documentation?: string; parameters: LspSignatureParamN[] }
 export interface LspSignatureHelpN { signatures: LspSignatureN[]; activeSignature: number; activeParameter: number }
+export interface LspTextEditN { startLine: number; startCol: number; endLine: number; endCol: number; newText: string } // 0-based
 export interface LspDiagnosticN {
   message: string;
   severity: 1 | 2 | 3 | 4; // LSP DiagnosticSeverity

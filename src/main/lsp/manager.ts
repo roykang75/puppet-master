@@ -4,7 +4,7 @@ import * as path from 'path';
 import { pathToFileURL, fileURLToPath } from 'url';
 import { LspClient } from './client';
 import { serverForExt, LspSpawnSpec } from './servers';
-import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp } from './convert';
+import { toCompletionItems, toHover, toLocations, toDiagnostics, toSignatureHelp, toTextEdits } from './convert';
 import { LSP_EXT_TO_LANGUAGE } from '../../shared/protocol';
 import type { LspCallParams, LspDiagnosticN, LspLanguage, LspStatusN } from '../../shared/protocol';
 
@@ -221,6 +221,22 @@ export class LspManager {
     if (kind === 'hover') return toHover(raw);
     if (kind === 'signatureHelp') return toSignatureHelp(raw);
     return toLocations(raw, this.uriToRel); // definition | references
+  }
+
+  /** 문서 전체 포매팅 — TextEdit[] 반환. 서버 미지원(pyright 등) 시 빈 배열. */
+  async format(params: { path: string; tabSize: number; insertSpaces: boolean }): Promise<import('../../shared/protocol').LspTextEditN[]> {
+    const entry = this.ensure(params.path);
+    if (!entry) return [];
+    await entry.ready;
+    const raw = await entry.client.request(
+      'textDocument/formatting',
+      {
+        textDocument: { uri: this.uriFor(params.path) },
+        options: { tabSize: params.tabSize, insertSpaces: params.insertSpaces },
+      },
+      5_000,
+    );
+    return raw == null ? [] : toTextEdits(raw);
   }
 
   shutdownAll(): void {
