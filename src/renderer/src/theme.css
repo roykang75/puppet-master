@@ -243,7 +243,7 @@ body {
 .search-hl { color: var(--fg); background: var(--bg-active); border-radius: 2px; }
 
 /* 검색 미리보기 — 오버레이 하단 고정 높이 패널 (단일 선택 시 표시, 이동하지 않음) */
-.search-preview { flex: none; height: 200px; border-top: 1px solid var(--border); display: flex; flex-direction: column; }
+.search-preview { flex: none; height: auto; max-height: 200px; overflow-y: auto; border-top: 1px solid var(--border); display: flex; flex-direction: column; }
 .search-preview-head { flex: none; padding: 4px 12px; font-size: 11px; color: var(--fg-dim); background: var(--bg); border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-preview-body { flex: 1; overflow: auto; font-family: monospace; font-size: 12px; padding: 4px 0; }
 .search-preview-line { display: flex; gap: 8px; padding: 0 12px; white-space: pre; }

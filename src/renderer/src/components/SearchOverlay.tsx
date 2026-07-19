@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import * as monaco from 'monaco-editor';
 import { useAppStore } from '../store';
 import { jumpTo } from '../navigation';
 import { getContent } from './EditorPane';
+import { ensureLanguageRegistered } from '../textmate/registry';
 import { buildPreviewSlice, type PreviewSlice } from '../search-preview';
 import type { SymbolHit, TextMatch } from '../../../indexer/api';
 
@@ -43,11 +45,23 @@ function highlight(text: string, query: string): React.ReactNode {
 /** 항목의 미리보기/점프용 1-기반 대상 줄. symbol.line은 이미 1-기반, text.line은 0-기반. */
 const targetLineOf = (it: Item): number => (it.kind === 'symbol' ? it.line! : it.line! + 1);
 
+/** 경로 확장자를 등록된 Monaco 언어에 매칭. 없으면 'plaintext'. colorize용 languageId. */
+function monacoLanguageForPath(m: typeof monaco, p: string): string {
+  const name = p.split('/').pop() ?? p;
+  const dot = name.lastIndexOf('.');
+  const ext = dot >= 0 ? name.slice(dot).toLowerCase() : '';
+  if (!ext) return 'plaintext';
+  for (const lang of m.languages.getLanguages()) {
+    if (lang.extensions?.some((e) => e.toLowerCase() === ext)) return lang.id;
+  }
+  return 'plaintext';
+}
+
 interface Preview {
   path: string;
   targetLine: number; // 1-기반
   slice: PreviewSlice;
-  query?: string; // text 항목만 — 줄 안 질의 강조
+  html?: string[]; // colorize 성공 시 줄별 HTML(.mtkN 스팬, Monaco가 이스케이프). 없으면 평문 폴백.
 }
 
 export function SearchOverlay() {
@@ -104,12 +118,23 @@ export function SearchOverlay() {
           setPreview(null);
           return;
         }
-        setPreview({
-          path: it.path,
-          targetLine,
-          slice: buildPreviewSlice(content, targetLine),
-          query: it.kind === 'text' ? it.query : undefined,
-        });
+        const slice = buildPreviewSlice(content, targetLine);
+        // 구문 강조: 언어 결정 → TextMate 토크나이저 지연 등록(실패해도 monarch/plaintext로 무해)
+        //  → colorize. 예외/줄수 불일치 시 html 미설정 → 평문 폴백.
+        let html: string[] | undefined;
+        try {
+          const languageId = monacoLanguageForPath(monaco, it.path);
+          await ensureLanguageRegistered(monaco, languageId);
+          if (cancelled) return;
+          const colored = await monaco.editor.colorize(slice.lines.join('\n'), languageId, { tabSize: 4 });
+          if (cancelled) return;
+          const parts = colored.split(/<br\s*\/?>/); // colorize는 줄을 <br/>로 구분
+          if (parts.length >= slice.lines.length) html = parts.slice(0, slice.lines.length);
+        } catch {
+          html = undefined; // colorize 실패 → 평문 렌더
+        }
+        if (cancelled) return;
+        setPreview({ path: it.path, targetLine, slice, html });
       })();
     }, 120);
     return () => {
@@ -253,12 +278,19 @@ export function SearchOverlay() {
               {preview.slice.lines.map((ln, i) => {
                 const lineNo = preview.slice.startLine + i;
                 const active = lineNo === preview.targetLine;
+                const lineHtml = preview.html?.[i];
                 return (
                   <div key={lineNo} className={`search-preview-line${active ? ' active' : ''}`}>
                     <span className="search-preview-lineno">{lineNo}</span>
-                    <span className="search-preview-code">
-                      {preview.query ? highlight(ln, preview.query) : ln}
-                    </span>
+                    {lineHtml != null ? (
+                      // Monaco colorize가 이스케이프한 .mtkN 스팬 — 안전. 빈 줄은 nbsp로 높이 유지.
+                      <span
+                        className="search-preview-code"
+                        dangerouslySetInnerHTML={{ __html: lineHtml || '&nbsp;' }}
+                      />
+                    ) : (
+                      <span className="search-preview-code">{ln || ' '}</span>
+                    )}
                   </div>
                 );
               })}
