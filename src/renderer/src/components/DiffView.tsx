@@ -17,8 +17,9 @@ export function DiffView({ path, before, after }: { path: string; before: string
 
   useEffect(() => {
     if (!hostRef.current) return;
-    const original = monaco.editor.createModel(before, undefined, monaco.Uri.parse(`agent-diff://before/${path}`));
-    const modified = monaco.editor.createModel(after, undefined, monaco.Uri.parse(`agent-diff://after/${path}`));
+    // Uri.from: 경로에 공백·비ASCII(파일 비교의 "A ↔ B")가 와도 안전. 언어는 마지막 세그먼트 확장자로 추정.
+    const original = monaco.editor.createModel(before, undefined, monaco.Uri.from({ scheme: 'agent-diff', authority: 'before', path: '/' + path }));
+    const modified = monaco.editor.createModel(after, undefined, monaco.Uri.from({ scheme: 'agent-diff', authority: 'after', path: '/' + path }));
     const ed = monaco.editor.createDiffEditor(hostRef.current, {
       automaticLayout: true,
       readOnly: true,

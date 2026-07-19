@@ -48,8 +48,8 @@ test('에이전트 모드: 요청 → write_file 실행 → 디스크 생성 + �
     const page = await app.firstWindow();
     await expect(page.locator('.tree-item', { hasText: 'a.ts' })).toBeVisible({ timeout: 15_000 });
     await page.locator('.right-tabs button', { hasText: 'AI 채팅' }).click();
-    // 에이전트 모드 켜기
-    await page.locator('.chat-context-toggle', { hasText: '에이전트' }).locator('input').check();
+    // 에이전트 모드 켜기 (모드 선택 드롭다운 — 세션 UI 개선으로 토글→select 변경됨)
+    await page.locator('.chat-mode').selectOption('agent');
     const input = page.locator('.chat-input-row textarea');
     await input.fill('구구단 앱을 파이썬으로 만들어줘');
     await input.press('Enter');

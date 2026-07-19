@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { VscChevronDown, VscChevronRight, VscNewFile, VscNewFolder, VscRefresh } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { fileIconUrl, folderIconUrl } from '../file-icons';
+import { buildCompareDiff } from '../compare';
 
 interface DirEntry {
   name: string;
@@ -14,6 +15,8 @@ export function ProjectWindow() {
   const root = useAppStore((s) => s.root);
   const openTab = useAppStore((s) => s.openTab);
   const treeRefreshNonce = useAppStore((s) => s.treeRefreshNonce);
+  const compareBase = useAppStore((s) => s.compareBase);
+  const [ctxMenu, setCtxMenu] = useState<{ rel: string; x: number; y: number } | null>(null);
   const [dirs, setDirs] = useState<Record<string, DirEntry[]>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<{ rel: string; isDir: boolean } | null>(null);
@@ -29,6 +32,7 @@ export function ProjectWindow() {
     setExpanded(new Set());
     setSelected(null);
     setCreating(null);
+    setCtxMenu(null);
     if (root) void window.si.listDir('').then((es) => setDirs({ '': es }));
   }, [root]);
 
@@ -71,6 +75,18 @@ export function ProjectWindow() {
     if (treeRefreshNonce > 0) void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [treeRefreshNonce]);
+
+  // base 파일 ↔ 대상 파일을 읽어 diff 탭으로 연다
+  const doCompare = async (baseRel: string, otherRel: string) => {
+    setCtxMenu(null);
+    const [before, after] = await Promise.all([
+      window.si.readFile(baseRel).catch(() => null),
+      window.si.readFile(otherRel).catch(() => null),
+    ]);
+    if (before == null || after == null) return;
+    const d = buildCompareDiff(baseRel, before, otherRel, after);
+    useAppStore.getState().openDiffTab(d.path, d.before, d.after, d.label);
+  };
 
   /** 선택된 폴더(파일이면 그 부모) 안에 이름 입력 행 열기 */
   const startCreate = (kind: 'file' | 'dir') => {
@@ -155,6 +171,12 @@ export function ProjectWindow() {
                 if (e.isDir) toggle(childRel);
                 else openTab(childRel);
               }}
+              onContextMenu={(ev) => {
+                if (e.isDir) return; // 파일 비교만 (디렉터리 비교는 후속)
+                ev.preventDefault();
+                setSelected({ rel: childRel, isDir: false });
+                setCtxMenu({ rel: childRel, x: ev.clientX, y: ev.clientY });
+              }}
             >
               <span className="tree-icon">
                 {e.isDir && (expanded.has(childRel) ? <VscChevronDown /> : <VscChevronRight />)}
@@ -195,6 +217,21 @@ export function ProjectWindow() {
         </span>
       </div>
       <div className="panel-body">{renderDir('', 0)}</div>
+      {ctxMenu && (
+        <>
+          <div className="open-editors-backdrop" onMouseDown={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }} />
+          <div className="open-editors-menu tree-ctx-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
+            <div className="open-editors-item" onClick={() => { useAppStore.getState().setCompareBase(ctxMenu.rel); setCtxMenu(null); }}>
+              비교 대상으로 선택
+            </div>
+            {compareBase && compareBase !== ctxMenu.rel && (
+              <div className="open-editors-item" onClick={() => void doCompare(compareBase, ctxMenu.rel)}>
+                '{compareBase.split('/').pop()}'와(과) 비교
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

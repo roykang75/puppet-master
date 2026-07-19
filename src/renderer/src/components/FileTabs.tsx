@@ -74,7 +74,7 @@ export function FileTabs() {
             ) : (
               <img className="file-icon tab-file-icon" src={fileIconUrl(t.path.split('/').pop() ?? '')} alt="" />
             )}
-            <span>{t.diff ? `변경 제안 ${t.diff.path.split('/').pop()}` : t.path.split('/').pop()}</span>
+            <span>{t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : t.path.split('/').pop()}</span>
             {t.dirty && <span className="dirty-dot"><VscCircleFilled /></span>}
             {t.diskChanged && <span className="disk-changed" title="디스크에서 변경됨"><VscWarning /></span>}
             <span
@@ -120,7 +120,7 @@ export function FileTabs() {
           <div className="open-editors-menu" ref={menuRef} tabIndex={-1} onKeyDown={onMenuKey}>
             <div className="open-editors-title">열린 파일 {tabs.length}개</div>
             {tabs.map((t, i) => {
-              const name = t.diff ? `변경 제안 ${t.diff.path.split('/').pop()}` : (t.path.split('/').pop() ?? t.path);
+              const name = t.diff ? (t.diff.label ?? `변경 제안 ${t.diff.path.split('/').pop()}`) : (t.path.split('/').pop() ?? t.path);
               const dir = t.path.slice(0, Math.max(0, t.path.length - name.length - 1));
               return (
                 <div

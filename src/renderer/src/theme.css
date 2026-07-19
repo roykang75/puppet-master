@@ -115,6 +115,7 @@ body {
 .tabs-actions { flex: none; display: flex; align-items: center; padding: 0 4px; border-left: 1px solid var(--border); }
 .tabs-actions .nav-btn { font-size: 15px; padding: 2px 4px; } /* 프로젝트 창 panel-action과 동일 크기 */
 .open-editors-backdrop { position: fixed; inset: 0; z-index: 40; }
+.tree-ctx-menu { position: fixed; top: auto; right: auto; min-width: 180px; }
 .open-editors-menu {
   position: absolute; top: 100%; right: 4px; z-index: 41;
   min-width: 240px; max-width: 420px; max-height: 50vh; overflow-y: auto;

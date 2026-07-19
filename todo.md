@@ -289,8 +289,20 @@
 **인계 노트(비차단):** searchSymbols는 전 언어 전역 검색이라 C 파일에서 Java 심볼도 제안될 수 있음(SI식 전역 완성 — 의도적,
 필요 시 path 확장자 필터로 언어 한정 가능). 에디터 드롭다운 GUI 물리동작은 수동 확인 권장.
 
+## ✅ Plan 16: File Compare (v2 11탄) — 완료 (main 직접 커밋)
+
+- [x] **트리 우클릭 컨텍스트 메뉴** "비교 대상으로 선택" → 다른 파일 우클릭 "'<base>'와(과) 비교" → diff 탭.
+  기존 DiffView/openDiffTab 재사용. store에 `compareBase` + `Tab.diff.label`(탭 제목 대체), `compare.ts`
+  순수 헬퍼(buildCompareDiff), FileTabs 제목 label 우선.
+- [x] DiffView 모델 URI를 `Uri.parse`→`Uri.from`으로 — 파일 비교의 "A ↔ B"(공백·비ASCII) 경로도 안전.
+- [x] **Directory Compare는 후속 분리** (main 재귀 워크 + 결과 패널이 별도 서브시스템).
+- [x] 검증: 단위(compare 2) + **E2E 신규 compare.spec 실증**(우클릭→선택→비교→diff 탭 렌더). 전체 380/380.
+  DiffView 변경 회귀 없음(rename/agent E2E PASS).
+- [x] **부수 수정**: 스테일 E2E `agent.spec` 셀렉터(`.chat-context-toggle` 체크박스→`.chat-mode` select)를
+  현재 UI에 맞게 정정 — 세션 이전 UI/UX 개선(c572a92, 토글→드롭다운) 때 누락됐던 테스트 rot.
+
 ### 다음 후보
-사용자 결정 대기 — 로드맵 Plan 16(File/Directory Compare)/17(리비전마크·HTML·레이아웃)/Code Beautifier 중 선택.
+사용자 결정 대기 — 로드맵 Plan 17(리비전마크·HTML·레이아웃)/Directory Compare/Code Beautifier 중 선택.
 
 ### v2 이후 (백로그)
-- [ ] Code Beautifier, File/Directory Compare, 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
+- [ ] Code Beautifier, Directory Compare(트리 재귀 diff), 리비전 마크, HTML 내보내기, 레이아웃 프리셋, 사용자 정의 언어 규칙, AI 완성 스트리밍, LSP 후속(Java jdtls)
