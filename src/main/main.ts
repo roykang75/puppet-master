@@ -71,9 +71,11 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
   indexer?.kill();
   const mgr = spawnIndexer();
   indexer = mgr;
+  let indexerReady = false;
   try {
     mgr.onExit((code) => {
       if (quitting || mgr !== indexer || !win) return; // 교체/종료 중이면 무시
+      if (!indexerReady) return; // 시작 중 종료는 whenReady 거부가 아래 catch에서 에러로 표시 (다이얼로그 중복 방지)
       void dialog
         .showMessageBox(win, {
           type: 'error',
@@ -86,6 +88,7 @@ async function openProjectInMain(root: string): Promise<{ root: string; uiState:
     });
     mgr.rpc.onEvent(sendIndexerEvent);
     await mgr.whenReady;
+    indexerReady = true; // 이후의 종료는 런타임 크래시 → onExit 다이얼로그로 안내
 
     files = new ProjectFiles(root);
     currentRoot = root;
