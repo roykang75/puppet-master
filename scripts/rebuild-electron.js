@@ -6,15 +6,22 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
+// node-pty는 제외 — node-addon-api(N-API) 기반이라 ABI가 안정적이고 동봉 프리빌드가
+// electron에서 그대로 동작한다. 오히려 win32에서 deps/winpty의 gyp 액션이 실패해
+// 재빌드 전체를 중단시킨다.
+// 제외가 실제로 먹으려면 -o(--only)여야 한다. -w(--which-module)는 대상을 '추가'할 뿐이라
+// 목록에 없는 네이티브 의존성도 그대로 빌드된다.
+// -o는 목록 밖을 전부 무시하므로 전이 의존성인 tree-sitter-javascript도 명시해야 한다
+// (직접 의존성이 아니라 -w 시절엔 자동 포함되던 모듈).
 const MODULES = [
   'tree-sitter',
   'tree-sitter-c',
   'tree-sitter-cpp',
   'tree-sitter-python',
   'tree-sitter-typescript',
+  'tree-sitter-javascript',
   'tree-sitter-java',
   'better-sqlite3',
-  'node-pty',
 ];
 
 const env = { ...process.env };
@@ -30,7 +37,7 @@ if (process.platform === 'win32') {
 const bin = process.platform === 'win32' ? 'electron-rebuild.cmd' : 'electron-rebuild';
 const rebuild = spawnSync(
   path.join('node_modules', '.bin', bin),
-  ['-f', '-w', MODULES.join(',')],
+  ['-f', '-o', MODULES.join(',')],
   { stdio: 'inherit', env, shell: process.platform === 'win32' },
 );
 if (rebuild.status !== 0) {
