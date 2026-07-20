@@ -20,10 +20,11 @@ export function scheduleSave(): void {
   timer = setTimeout(() => {
     const s = useAppStore.getState();
     if (!s.root) return;
-    void window.si.saveUiState({
-      panelLayouts,
-      openTabs: s.tabs.filter((t) => !t.diff).map((t) => t.path), // 변경 제안(diff) 탭은 세션 한정 — 저장 제외
-      activeTab: s.activePath,
-    });
+    // 가상 탭(diff/dircmp/review)은 세션 한정 — 저장 제외. 복원은 openTab(path)로만 이뤄져
+    // 탭에 붙은 상태(diff/dirCompare/review 플래그)를 되살릴 수 없고, 껍데기 탭이 빈 화면으로 남는다.
+    const virtualTab = (t: (typeof s.tabs)[number]) => !!t.diff || !!t.dirCompare || !!t.review;
+    const openTabs = s.tabs.filter((t) => !virtualTab(t)).map((t) => t.path);
+    const activeTab = openTabs.includes(s.activePath ?? '') ? s.activePath : (openTabs.at(-1) ?? null);
+    void window.si.saveUiState({ panelLayouts, openTabs, activeTab });
   }, 500);
 }

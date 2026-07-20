@@ -11,7 +11,7 @@ import { ProjectWindow } from './components/ProjectWindow';
 import { FileTabs } from './components/FileTabs';
 import { SymbolWindow } from './components/SymbolWindow';
 import { BookmarksSection } from './components/BookmarksSection';
-import { EditorPane, getContent, getCursorLocation, getSelectedText, setDiskContent, disposeAllModels, isDiffTabPath } from './components/EditorPane';
+import { EditorPane, getContent, getCursorLocation, getSelectedText, setDiskContent, disposeAllModels, isDiffTabPath, isDirCompareTabPath, isReviewTabPath } from './components/EditorPane';
 import { normalizeSearchSeed } from './search-seed';
 import { exportFileHtml } from './html-export';
 import { CHAT_ERROR_TEXT } from './components/ChatPanel';
@@ -62,11 +62,17 @@ async function openProject(root: string): Promise<void> {
   }
 }
 
+// 가상 탭(diff/dircmp/review)은 openTab(path)로 복원할 수 없다 — 탭에 붙은 상태가 없어 빈 화면이 된다.
+// 저장 단계에서 이미 제외하지만, 이전 버전이 저장해 둔 상태를 위해 복원 쪽에서도 걸러낸다.
+const isVirtualTabPath = (p: string): boolean =>
+  isDiffTabPath(p) || isDirCompareTabPath(p) || isReviewTabPath(p);
+
 function applyUiState(ui: UiState | null): void {
   if (!ui) return;
   const st = useAppStore.getState();
-  for (const p of ui.openTabs) st.openTab(p);
-  if (ui.activeTab) st.setActive(ui.activeTab);
+  const paths = ui.openTabs.filter((p) => !isVirtualTabPath(p));
+  for (const p of paths) st.openTab(p);
+  if (ui.activeTab && paths.includes(ui.activeTab)) st.setActive(ui.activeTab);
 }
 
 async function toggleBookmark(): Promise<void> {
