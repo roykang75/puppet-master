@@ -4,7 +4,7 @@ import { useAppStore } from '../store';
 import { mapChangesToSymbols, FILE_LEVEL_NAME, type SymbolChange } from '../../../shared/review-map';
 import { sortFilesByImpact, sortSymbolsByImpact } from '../../../shared/review-impact';
 import type { ImpactSummary } from '../../../indexer/api';
-import type { ReviewChangedFile, ReviewCommit, ReviewCommitsResult } from '../../../shared/protocol';
+import type { ReviewChangedFile, ReviewCommit, ReviewCommitsResult, ReviewFileDiff } from '../../../shared/protocol';
 
 // 변경 리뷰 센터 (Plan 22) — baseline 이후 누적 변경을 파일→심볼 트리로 보여주고, 심볼별 리뷰 체크 + 진행률.
 interface FileEntry {
@@ -48,9 +48,41 @@ export function ReviewCenterView() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [impacts, setImpacts] = useState<Map<string, ImpactSummary>>(new Map());
   const [loading, setLoading] = useState(true);
+  // null = baseline 누적 뷰, hash = 그 커밋 하나(<hash>^..<hash>)만 보기
+  const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
+
+  // 변경 목록 → 심볼 트리. diff 조회 방식만 주입받아 baseline 뷰/커밋 뷰가 같은 로직을 쓴다.
+  const buildEntries = useCallback(
+    (changes: ReviewChangedFile[], getDiff: (rel: string) => Promise<ReviewFileDiff>) =>
+      Promise.all(
+        changes.map(async (c): Promise<FileEntry> => {
+          const d = await getDiff(c.path).catch(() => null);
+          if (!d || d.binary) return { path: c.path, status: c.status, binary: !!d?.binary, before: '', after: '', symbols: [] };
+          const [oldSyms, newSyms] = await Promise.all([
+            d.before ? window.si.extractSymbols(c.path, d.before).catch(() => []) : Promise.resolve([]),
+            d.after ? window.si.extractSymbols(c.path, d.after).catch(() => []) : Promise.resolve([]),
+          ]);
+          const symbols = mapChangesToSymbols(d.hunks, oldSyms, newSyms);
+          return { path: c.path, status: c.status, binary: false, before: d.before, after: d.after, symbols };
+        }),
+      ),
+    [],
+  );
+
+  // 영향도 요약 — 전체 심볼 이름(중복 제거, 파일수준 제외)으로 1회 조회. 인덱서 미준비/오류는 조용히 생략.
+  const applyEntries = useCallback(async (entries: FileEntry[]) => {
+    const names = [...new Set(entries.flatMap((e) => e.symbols.map((s) => s.name)))].filter((n) => n !== FILE_LEVEL_NAME);
+    const summaries = names.length
+      ? await window.si.getImpactSummaries(names).catch(() => [] as ImpactSummary[])
+      : [];
+    setImpacts(new Map(summaries.map((s) => [s.name, s])));
+    setFiles(entries);
+    setLoading(false);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setSelectedCommit(null);
     const [m, state, changes] = await Promise.all([
       window.si.reviewCommits(),
       window.si.reviewStateGet(),
@@ -63,27 +95,25 @@ export function ReviewCenterView() {
       setLoading(false);
       return;
     }
-    const entries = await Promise.all(
-      changes.map(async (c): Promise<FileEntry> => {
-        const d = await window.si.reviewFileDiff(c.path).catch(() => null);
-        if (!d || d.binary) return { path: c.path, status: c.status, binary: !!d?.binary, before: '', after: '', symbols: [] };
-        const [oldSyms, newSyms] = await Promise.all([
-          d.before ? window.si.extractSymbols(c.path, d.before).catch(() => []) : Promise.resolve([]),
-          d.after ? window.si.extractSymbols(c.path, d.after).catch(() => []) : Promise.resolve([]),
-        ]);
-        const symbols = mapChangesToSymbols(d.hunks, oldSyms, newSyms);
-        return { path: c.path, status: c.status, binary: false, before: d.before, after: d.after, symbols };
-      }),
-    );
-    // 영향도 요약 — 전체 심볼 이름(중복 제거, 파일수준 제외)으로 1회 조회. 인덱서 미준비/오류는 조용히 생략.
-    const names = [...new Set(entries.flatMap((e) => e.symbols.map((s) => s.name)))].filter((n) => n !== FILE_LEVEL_NAME);
-    const summaries = names.length
-      ? await window.si.getImpactSummaries(names).catch(() => [] as ImpactSummary[])
-      : [];
-    setImpacts(new Map(summaries.map((s) => [s.name, s])));
-    setFiles(entries);
-    setLoading(false);
-  }, []);
+    const entries = await buildEntries(changes, (rel) => window.si.reviewFileDiff(rel));
+    await applyEntries(entries);
+  }, [buildEntries, applyEntries]);
+
+  // 커밋 하나만 보기. 같은 커밋을 다시 누르면 baseline 누적 뷰로 돌아간다.
+  const selectCommit = useCallback(
+    async (hash: string) => {
+      if (selectedCommit === hash) {
+        void load();
+        return;
+      }
+      setLoading(true);
+      setSelectedCommit(hash);
+      const changes = await window.si.reviewCommitChanges(hash).catch(() => [] as ReviewChangedFile[]);
+      const entries = await buildEntries(changes, (rel) => window.si.reviewCommitFileDiff(hash, rel));
+      await applyEntries(entries);
+    },
+    [selectedCommit, load, buildEntries, applyEntries],
+  );
 
   useEffect(() => {
     void load();
@@ -151,7 +181,18 @@ export function ReviewCenterView() {
     <div className="review">
       <div className="review-topbar">
         <div className="review-baseline">
-          <b>{shortHash(meta?.baseline)}</b> · 커밋 {meta?.sinceCommits.length ?? 0}개 · 파일 {files.length}개
+          {selectedCommit ? (
+            <>
+              커밋 <b>{shortHash(selectedCommit)}</b> 단독 보기 · 파일 {files.length}개
+              <button className="rename-btn" onClick={() => void load()} title="baseline 누적 변경으로 돌아가기">
+                전체 보기
+              </button>
+            </>
+          ) : (
+            <>
+              <b>{shortHash(meta?.baseline)}</b> · 커밋 {meta?.sinceCommits.length ?? 0}개 · 파일 {files.length}개
+            </>
+          )}
         </div>
         <div className="review-progress">리뷰 {doneCount}/{allLeaves.length}</div>
         <button className="rename-btn" onClick={() => void load()} title="새로고침"><VscRefresh /> 새로고침</button>
@@ -165,10 +206,22 @@ export function ReviewCenterView() {
             {meta && meta.sinceCommits.length > 0 ? '베이스라인 이후 커밋' : '최근 커밋 (시작점 선택)'}
           </div>
           {(meta && meta.sinceCommits.length > 0 ? meta.sinceCommits : meta?.recentCommits ?? []).map((c: ReviewCommit) => (
-            <div key={c.hash} className="review-commit">
-              <div className="review-commit-main">
+            <div key={c.hash} className={`review-commit${selectedCommit === c.hash ? ' selected' : ''}`}>
+              <div
+                className="review-commit-main"
+                role="button"
+                tabIndex={0}
+                title={`${c.subject}\n(클릭: 이 커밋의 변경만 보기)`}
+                onClick={() => void selectCommit(c.hash)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    void selectCommit(c.hash);
+                  }
+                }}
+              >
                 <span className="review-commit-hash">{shortHash(c.hash)}</span>
-                <span className="review-commit-subject" title={c.subject}>{c.subject}</span>
+                <span className="review-commit-subject">{c.subject}</span>
               </div>
               <button className="review-commit-from" onClick={() => startFrom(c.hash)}>여기부터 리뷰</button>
             </div>

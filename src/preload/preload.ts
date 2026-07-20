@@ -119,6 +119,10 @@ const api = {
   reviewCommits: (): Promise<ReviewCommitsResult> => ipcRenderer.invoke('review:commits'),
   reviewChanges: (): Promise<ReviewChangedFile[]> => ipcRenderer.invoke('review:changes'),
   reviewFileDiff: (rel: string): Promise<ReviewFileDiff> => ipcRenderer.invoke('review:fileDiff', rel),
+  reviewCommitChanges: (hash: string): Promise<ReviewChangedFile[]> =>
+    ipcRenderer.invoke('review:commitChanges', hash),
+  reviewCommitFileDiff: (hash: string, rel: string): Promise<ReviewFileDiff> =>
+    ipcRenderer.invoke('review:commitFileDiff', hash, rel),
   reviewStateGet: (): Promise<ReviewState> => ipcRenderer.invoke('review:stateGet'),
   reviewStateSave: (state: ReviewState): Promise<void> => ipcRenderer.invoke('review:stateSave', state),
   extractSymbols: (path: string, content: string): Promise<SymbolRow[]> =>

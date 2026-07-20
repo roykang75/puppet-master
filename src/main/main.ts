@@ -15,7 +15,7 @@ import { buildMenu, MenuAction } from './menu';
 import { applyRenameToContent } from './rename';
 import { getFileChanges } from './git-diff';
 import { isGitRepo, ensureWorktree, worktreeChanges, applyWorktree, discardWorktree } from './agent/worktree';
-import { listRecentCommits, listCommitsSince, changedFilesSince, fileDiffSince, headHash, isValidRef } from './review';
+import { listRecentCommits, listCommitsSince, changedFilesSince, fileDiffSince, changedFilesInCommit, fileDiffInCommit, headHash, isValidRef } from './review';
 import { detectStack } from './stack/detect';
 import { buildStackSummary } from '../shared/stack-summary';
 import { Context7Service } from './context7/service';
@@ -413,6 +413,15 @@ function registerIpc(): void {
     if (!currentRoot || !isGitRepo(currentRoot)) return { binary: false, before: '', after: '', hunks: [] };
     const baseline = reviewBaseline(currentRoot);
     return fileDiffSince(currentRoot, rel, baseline ?? 'HEAD');
+  });
+  // 커밋 하나만 보기 — baseline과 무관하게 <hash>^..<hash>를 본다(워킹트리 미포함).
+  ipcMain.handle('review:commitChanges', (_e, hash: string) => {
+    if (!currentRoot || !isGitRepo(currentRoot)) return [];
+    return changedFilesInCommit(currentRoot, hash);
+  });
+  ipcMain.handle('review:commitFileDiff', (_e, hash: string, rel: string) => {
+    if (!currentRoot || !isGitRepo(currentRoot)) return { binary: false, before: '', after: '', hunks: [] };
+    return fileDiffInCommit(currentRoot, rel, hash);
   });
   ipcMain.handle('review:stateGet', (): ReviewState => (currentRoot ? persistence.loadReviewState(currentRoot) : { baseline: null, reviewed: [] }));
   ipcMain.handle('review:stateSave', (_e, state: ReviewState) => {

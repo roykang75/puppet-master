@@ -87,6 +87,45 @@ export function listCommitsSince(root: string, baseline: string): ReviewCommit[]
   }
 }
 
+/** 커밋의 부모 범위 표기. 최초 커밋은 부모가 없어 빈 트리 해시를 쓴다(git이 보장하는 상수). */
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+function parentRef(root: string, hash: string): string {
+  return isValidRef(root, `${hash}^`) ? `${hash}^` : EMPTY_TREE;
+}
+
+/** 커밋 하나가 바꾼 파일 (부모↔해당 커밋). 워킹트리/미추적은 포함하지 않는다. */
+export function changedFilesInCommit(root: string, hash: string): ReviewChangedFile[] {
+  try {
+    return parseNameStatus(git(root, ['diff', '--name-status', '-z', parentRef(root, hash), hash]));
+  } catch {
+    return [];
+  }
+}
+
+/** 커밋 하나에서의 rel 파일 diff (부모↔해당 커밋). 양쪽 모두 커밋에서 읽는다. */
+export function fileDiffInCommit(root: string, rel: string, hash: string): ReviewFileDiff {
+  const parent = parentRef(root, hash);
+  const show = (ref: string): string => {
+    try {
+      return git(root, ['show', `${ref}:${rel}`]);
+    } catch {
+      return ''; // 해당 쪽에 없던 파일 (추가/삭제)
+    }
+  };
+  const before = parent === EMPTY_TREE ? '' : show(parent);
+  const after = show(hash);
+  if (before.length > MAX_DIFF_BYTES || after.length > MAX_DIFF_BYTES) {
+    return { binary: true, before: '', after: '', hunks: [] };
+  }
+  let hunks = [] as ReviewFileDiff['hunks'];
+  try {
+    hunks = parseGitDiff(git(root, ['--no-pager', 'diff', '--no-color', '--unified=0', parent, hash, '--', rel]));
+  } catch {
+    hunks = [];
+  }
+  return { binary: false, before, after, hunks };
+}
+
 /** baseline 이후 누적 변경 파일 = tracked diff(커밋+스테이지+워킹트리) ∪ untracked(??). */
 export function changedFilesSince(root: string, baseline: string): ReviewChangedFile[] {
   const byPath = new Map<string, ReviewChangedFile>();

@@ -146,7 +146,8 @@ body {
 .review-section-title { padding: 6px 12px; font-size: 11px; text-transform: uppercase; color: var(--fg-dim); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
 .review-commit { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12px; }
 .review-commit:hover { background: var(--bg-hover); }
-.review-commit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.review-commit.selected { background: var(--bg-active, var(--bg-hover)); box-shadow: inset 2px 0 0 var(--accent); }
+.review-commit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
 .review-commit-hash { color: var(--accent); font-family: var(--mono, monospace); font-size: 11px; }
 .review-commit-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .review-commit-from { flex: none; background: none; border: 1px solid var(--border); color: var(--fg-dim); border-radius: 3px; padding: 2px 6px; font-size: 11px; cursor: pointer; }

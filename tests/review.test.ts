@@ -10,6 +10,8 @@ import {
   listCommitsSince,
   changedFilesSince,
   fileDiffSince,
+  changedFilesInCommit,
+  fileDiffInCommit,
   headHash,
   isValidRef,
 } from '../src/main/review';
@@ -102,5 +104,38 @@ describe('review.ts (실제 git)', () => {
     expect(d.before).toBe('');
     expect(d.after).toBe('a\nb\nc\n');
     expect(d.hunks.some((h) => h.type === 'add')).toBe(true);
+  });
+
+  it('changedFilesInCommit: 그 커밋이 바꾼 파일만 (워킹트리/미추적 제외)', () => {
+    fs.writeFileSync(path.join(dir, 'a.ts'), 'export function foo() { return 9; }\n');
+    git(['commit', '-qam', 'foo=9']);
+    const target = headHash(dir)!;
+    // 이후 커밋 + 미추적 파일 — 대상 커밋 결과에 섞이면 안 된다
+    fs.writeFileSync(path.join(dir, 'later.ts'), 'export const l = 1;\n');
+    git(['add', '.']);
+    git(['commit', '-qm', 'later']);
+    fs.writeFileSync(path.join(dir, 'untracked.ts'), 'x\n');
+
+    expect(changedFilesInCommit(dir, target)).toEqual([{ path: 'a.ts', status: 'M' }]);
+  });
+
+  it('changedFilesInCommit: 최초 커밋은 부모가 없어도 추가로 잡힌다', () => {
+    const first = listRecentCommits(dir).at(-1)!.hash;
+    expect(changedFilesInCommit(dir, first)).toEqual([{ path: 'a.ts', status: 'A' }]);
+  });
+
+  it('fileDiffInCommit: before=부모, after=해당 커밋 (워킹트리 무시)', () => {
+    fs.writeFileSync(path.join(dir, 'a.ts'), 'export function foo() { return 9; }\n');
+    git(['commit', '-qam', 'foo=9']);
+    const target = headHash(dir)!;
+    // 커밋 이후 워킹트리를 바꿔도 결과가 흔들리면 안 된다
+    fs.writeFileSync(path.join(dir, 'a.ts'), 'export function foo() { return 777; }\n');
+
+    const d = fileDiffInCommit(dir, 'a.ts', target);
+    expect(d.binary).toBe(false);
+    expect(d.before).toContain('return 1');
+    expect(d.after).toContain('return 9');
+    expect(d.after).not.toContain('777');
+    expect(d.hunks.length).toBeGreaterThan(0);
   });
 });
