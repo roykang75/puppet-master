@@ -48,3 +48,40 @@ jobs:
             release/*.zip
             release/*.exe
           if-no-files-found: ignore
+
+  # 태그 푸시일 때만 GitHub Release를 만든다. workflow_dispatch로 돌린 빌드는
+  # 아티팩트만 남긴다(태그가 없어 릴리스를 만들 수 없다).
+  # 빌드 잡이 매트릭스라 각 잡에서 릴리스를 만들면 경쟁이 생긴다 — 모두 끝난 뒤
+  # 단일 잡에서 아티팩트를 모아 한 번에 올린다.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 릴리스 생성에 필요
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # download-artifact는 artifacts/<이름>/<파일> 구조로 풀어놓는다.
+          # 글롭은 디렉터리까지 잡아 gh upload가 실패하므로 파일만 고른다.
+          mapfile -t files < <(find artifacts -type f | sort)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "업로드할 아티팩트가 없습니다 — 빌드 잡을 확인하세요." >&2
+            exit 1
+          fi
+          printf '업로드 대상:\n'; printf '  %s\n' "${files[@]}"
+          # 재실행 대비 — 릴리스가 이미 있으면 만들지 않고 파일만 덮어쓴다.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" \
+              --title "$GITHUB_REF_NAME" --generate-notes
+          fi
