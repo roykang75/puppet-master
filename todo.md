@@ -31,7 +31,8 @@
 - [ ] `skipped` 카운트 시맨틱 세분화 (해시동일/IO실패 구분) — UI에서 스킵 사유 표시 시
 - [ ] 2MB 초과 파일: 심볼 스킵되나 FTS엔 전체 삽입 — 동작 문서화 또는 정책 통일
 - [ ] 중첩 .gitignore 미지원 (루트만) — 대형 저장소에서 필요 시 확장
-- [ ] Windows 지원 시: `rebuild:electron`의 인라인 `CXXFLAGS`를 cross-env로 (Plan 4 패키징에서)
+- [x] Windows 지원 시: `rebuild:electron`의 인라인 `CXXFLAGS` 처리 — cross-env 대신 `scripts/rebuild-electron.js`
+  래퍼로 해소(POSIX=`CXXFLAGS`, MSVC=`_CL_`로 C++20 주입, `5e19613`). Windows 실행/패키징은 0.1.1 세션에서 완결.
 - [x] 워처 테스트 타이밍 의존성 — 근본 해소됨 (chokidar ready 경합을 결정적 대기로 제거, `9326251`)
 
 ---
@@ -424,6 +425,58 @@
     (edits write 자동·run_command awaiting / careful 양쪽 awaiting / full 양쪽 자동 / explore 도구셋 쓰기·셸 부재) +
     settings trustPreset merge/영속/기본값, 501/501. E2E `agent.spec`/`agent-isolation.spec`(체크박스→select 회귀,
     기본 'full'로 흐름 동일) + `diff-annotate.spec` 회귀, build EXIT=0.
+
+## ✅ Windows 지원 + 배포 파이프라인 (0.1.1 릴리스) — 완료 (main 직접 커밋)
+
+Windows에서 앱이 **아예 실행되지 않던** 문제부터 시작해 배포까지 이어진 세션. 개발 환경 요구사항이
+드러났다: `better-sqlite3`는 Electron 43(ABI 148)용 프리빌드가 없어 **Python + VS Build Tools(C++)
+설치가 필수**다(tree-sitter/node-pty는 N-API라 프리빌드로 충분).
+
+- [x] **`npm run dev`가 Windows에서 동작** (`f5c1ac9`, `ffdf553`): 세 가지가 겹쳐 창이 뜨지 않았다.
+  - `dev:electron`의 `VITE_DEV_SERVER_URL=... electron .`는 POSIX 전용 → `scripts/dev-electron.js` 래퍼
+    (rebuild-electron.js와 같은 패턴). 이후 `spawnSync`→`spawn`으로 바꿔 프로세스 계층을 2단계 줄이고
+    SIGINT/SIGTERM/SIGHUP을 electron에 전달(고아 방지).
+  - vite가 `::1`(IPv6)에만 바인딩하는데 `wait-on tcp:127.0.0.1:5173`은 IPv4를 기다려 **영구 대기** →
+    `dev:renderer`에 `--host 127.0.0.1`.
+  - `rebuild:electron`이 node-pty를 재빌드하다 `deps/winpty` gyp 액션 실패로 전체 중단 → 대상에서 제외.
+    **제외가 먹으려면 `-w`(--which-module, 대상 '추가')가 아니라 `-o`(--only)여야 한다.** `-o`로 바꾸며
+    전이 의존성 `tree-sitter-javascript`가 누락돼 목록에 명시.
+- [x] **통합 터미널 흑백 출력 수정** (`4b1cd2c`): `buildSpawnSpec`이 부모 env를 통째로 물려주며 `NO_COLOR`까지
+  pty로 전달 → 터미널 안 CLI가 색을 껐다. `TERM`/`COLORTERM`으로 색을 요구해 놓고 색상 억제를 함께
+  물려받는 모순. 원인 규명 시 렌더러/파이프라인을 먼저 배제(xterm 테마는 ANSI 16색 미재정의 → 기본 팔레트,
+  node-pty는 SGR 그대로 통과, pty 안 `isatty(1)=true`).
+- [x] **가상 탭이 빈 화면으로 남던 버그** (`887e849`): 세션 저장이 `diff`만 제외하고 `review://`·`dircmp://`는
+  포함 → 복원은 `openTab(path)`뿐이라 탭에 붙은 상태를 못 살리고 껍데기만 남았다. **재시작할 때마다
+  변경 리뷰 탭이 아무것도 렌더링하지 않았다.** 저장·복원 양쪽에서 가상 탭을 걸러낸다.
+- [x] **변경 리뷰: 커밋별 diff 보기** (`6580056`): 커밋 행에 클릭 핸들러가 없어 눌러도 반응이 없었고 항상
+  baseline 누적 변경만 보였다. `changedFilesInCommit`/`fileDiffInCommit`(`<hash>^..<hash>`, 최초 커밋은
+  빈 트리 해시) 추가 — 양쪽 모두 커밋에서 읽어 워킹트리에 흔들리지 않는다. 같은 커밋 재클릭/「전체 보기」로 복귀.
+- [x] **변경 리뷰: 로딩 상태 표시** (`35bb351`): 로딩 문구가 `files.length === 0`에 묶여 있어 커밋 전환 시
+  이전 목록이 그대로 남았다(갱신이 끝난 것처럼 보여 오해가 더 컸다). 로딩 중 이전 결과를 지우고
+  2단계 표시(변경 목록 대기 → 파일별 분석 `done/total`). 느린 원인이 파일마다 diff+심볼 추출이라 진행률이 필요.
+- [x] **패키징 크로스 플랫폼** (`5b5310f`): `package` 스크립트의 `electron-builder --mac` 고정 제거.
+  플래그가 없으면 현재 플랫폼용으로 빌드하는 것이 기본 동작이라 래퍼 불필요.
+- [x] **CI가 태그 푸시 시 GitHub Release 자동 생성** (`d7a7038`): 기존엔 `--publish never`로 아티팩트만 남아
+  영구 링크가 없고 90일 뒤 만료됐다. `needs: build` 단일 `release` 잡(매트릭스 잡마다 만들면 경쟁),
+  태그일 때만(`if: startsWith(github.ref, 'refs/tags/v')`), `permissions: contents: write`,
+  서드파티 액션 대신 `gh` CLI, 재실행 시 `upload --clobber`. 아티팩트 수집은 글롭 대신 `find -type f`
+  (download-artifact가 `artifacts/<이름>/<파일>` 구조라 globstar가 디렉터리까지 잡아 업로드가 실패한다).
+- [x] **0.1.1 릴리스** (`0bd3170`): 태그 재푸시 후 CI 3잡 전부 success,
+  Release 자동 생성 실증 — `Puppet-Master-Setup-0.1.1.exe`(159.7MB) / `-arm64.dmg`(188.1MB) / `-arm64-mac.zip`(189.6MB).
+- [x] 검증: 패키징된 앱(`win-unpacked`) 실행까지 확인 — 인덱싱 230파일/1038심볼, 터미널 정상
+  (better-sqlite3·tree-sitter·node-pty가 `app.asar.unpacked`에서 로드).
+
+**인계 노트(비차단):**
+- **`rebuild:node`에 node-pty가 남아 있다** — `pretest` 경로. `npm rebuild`는 electron-rebuild와 달리
+  install 스크립트(prebuild 우선)를 타므로 실패하지 않을 수 있으나 **Windows에서 미검증**.
+- **전체 `npm test` 미실행** — `pretest`가 ABI를 node로 뒤집어 실행 중인 앱을 깨뜨려, 세션 내내 영향받는
+  테스트 파일만 vitest로 직접 돌렸다. 한가할 때 전체 스위트 확인 권장.
+- **mac 산출물이 arm64 전용** — `macos-latest` 러너가 Apple Silicon. Intel Mac 지원이 필요하면
+  `mac.target`에 `arch: [x64, arm64]` 또는 universal.
+- **코드 서명 없음** — Windows SmartScreen 경고, macOS Gatekeeper 차단(우클릭→열기).
+- `dev-electron.js`의 시그널 전달은 **POSIX에서만 의미** — win32는 실제 시그널이 없어(TerminateProcess)
+  무동작이며, 고아 프로세스 해소 여부는 macOS에서 `Ctrl+C` 후 확인 필요.
+- 변경 리뷰 진행률은 **파일이 많은 커밋에서의 체감 미검증**(워킹트리 변경 3개로만 확인).
 
 ### 동결된 백로그 (v3 이후 재평가)
 - AI 완성 스트리밍(won't-do — Monaco API 제약), Java jdtls(별도 프로젝트), 사용자 정의 언어 규칙(스펙 선행 필요)
