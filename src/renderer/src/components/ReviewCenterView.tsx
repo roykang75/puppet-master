@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { VscRefresh, VscCheckAll, VscChevronRight, VscChevronDown } from 'react-icons/vsc';
+import { VscRefresh, VscCheckAll, VscChevronRight, VscChevronDown, VscLoading } from 'react-icons/vsc';
 import { useAppStore } from '../store';
 import { mapChangesToSymbols, FILE_LEVEL_NAME, type SymbolChange } from '../../../shared/review-map';
 import { sortFilesByImpact, sortSymbolsByImpact } from '../../../shared/review-impact';
@@ -50,12 +50,18 @@ export function ReviewCenterView() {
   const [loading, setLoading] = useState(true);
   // null = baseline 누적 뷰, hash = 그 커밋 하나(<hash>^..<hash>)만 보기
   const [selectedCommit, setSelectedCommit] = useState<string | null>(null);
+  // 파일 분석 진행률 (null = 아직 변경 목록도 못 받은 단계)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   // 변경 목록 → 심볼 트리. diff 조회 방식만 주입받아 baseline 뷰/커밋 뷰가 같은 로직을 쓴다.
-  const buildEntries = useCallback(
-    (changes: ReviewChangedFile[], getDiff: (rel: string) => Promise<ReviewFileDiff>) =>
-      Promise.all(
-        changes.map(async (c): Promise<FileEntry> => {
+  // 파일마다 diff + 심볼 추출을 하므로 변경이 많으면 수 초가 걸린다 — 완료 수를 진행률로 알린다.
+  const buildEntries = useCallback((changes: ReviewChangedFile[], getDiff: (rel: string) => Promise<ReviewFileDiff>) => {
+    let done = 0;
+    setProgress({ done: 0, total: changes.length });
+    const bump = () => setProgress({ done: ++done, total: changes.length });
+    return Promise.all(
+      changes.map(async (c): Promise<FileEntry> => {
+        try {
           const d = await getDiff(c.path).catch(() => null);
           if (!d || d.binary) return { path: c.path, status: c.status, binary: !!d?.binary, before: '', after: '', symbols: [] };
           const [oldSyms, newSyms] = await Promise.all([
@@ -64,10 +70,12 @@ export function ReviewCenterView() {
           ]);
           const symbols = mapChangesToSymbols(d.hunks, oldSyms, newSyms);
           return { path: c.path, status: c.status, binary: false, before: d.before, after: d.after, symbols };
-        }),
-      ),
-    [],
-  );
+        } finally {
+          bump();
+        }
+      }),
+    );
+  }, []);
 
   // 영향도 요약 — 전체 심볼 이름(중복 제거, 파일수준 제외)으로 1회 조회. 인덱서 미준비/오류는 조용히 생략.
   const applyEntries = useCallback(async (entries: FileEntry[]) => {
@@ -77,11 +85,13 @@ export function ReviewCenterView() {
       : [];
     setImpacts(new Map(summaries.map((s) => [s.name, s])));
     setFiles(entries);
+    setProgress(null);
     setLoading(false);
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setProgress(null);
     setSelectedCommit(null);
     const [m, state, changes] = await Promise.all([
       window.si.reviewCommits(),
@@ -107,6 +117,7 @@ export function ReviewCenterView() {
         return;
       }
       setLoading(true);
+      setProgress(null);
       setSelectedCommit(hash);
       const changes = await window.si.reviewCommitChanges(hash).catch(() => [] as ReviewChangedFile[]);
       const entries = await buildEntries(changes, (rel) => window.si.reviewCommitFileDiff(hash, rel));
@@ -183,14 +194,15 @@ export function ReviewCenterView() {
         <div className="review-baseline">
           {selectedCommit ? (
             <>
-              커밋 <b>{shortHash(selectedCommit)}</b> 단독 보기 · 파일 {files.length}개
+              커밋 <b>{shortHash(selectedCommit)}</b> 단독 보기 · 파일 {loading ? '…' : `${files.length}개`}
               <button className="rename-btn" onClick={() => void load()} title="baseline 누적 변경으로 돌아가기">
                 전체 보기
               </button>
             </>
           ) : (
             <>
-              <b>{shortHash(meta?.baseline)}</b> · 커밋 {meta?.sinceCommits.length ?? 0}개 · 파일 {files.length}개
+              <b>{shortHash(meta?.baseline)}</b> · 커밋 {meta?.sinceCommits.length ?? 0}개 · 파일{' '}
+              {loading ? '…' : `${files.length}개`}
             </>
           )}
         </div>
@@ -231,8 +243,19 @@ export function ReviewCenterView() {
           )}
         </div>
         <div className="review-files">
-          {files.length === 0 && <div className="hint">{loading ? '불러오는 중…' : '변경이 없습니다.'}</div>}
-          {sortedFiles.map((f) => {
+          {/* 로딩 중에는 이전 결과를 그대로 두지 않는다 — 갱신이 끝난 것처럼 보여 오해를 만든다. */}
+          {loading && (
+            <div className="review-loading">
+              <VscLoading className="review-spin" />
+              <span>
+                {progress
+                  ? `변경 파일 분석 중… ${progress.done}/${progress.total}`
+                  : '변경 목록을 불러오는 중…'}
+              </span>
+            </div>
+          )}
+          {!loading && files.length === 0 && <div className="hint">변경이 없습니다.</div>}
+          {!loading && sortedFiles.map((f) => {
             const keys = leafKeys(f);
             const fileDone = keys.every((k) => reviewed.has(k));
             const isOpen = expanded.has(f.path);
