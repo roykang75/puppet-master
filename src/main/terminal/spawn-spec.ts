@@ -12,7 +12,10 @@ export function buildSpawnSpec(
   cwd: string,
   platform: NodeJS.Platform = process.platform,
 ): SpawnSpec {
-  const baseEnv = { ...env, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+  const baseEnv: NodeJS.ProcessEnv = { ...env, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+  // 통합 터미널은 항상 컬러 — TERM/COLORTERM으로 색을 요구해 놓고 부모의 색상 억제를
+  // 물려받으면 모순이다. 앱을 NO_COLOR가 설정된 셸에서 띄우면 pty 안의 CLI가 전부 흑백이 된다.
+  delete baseEnv.NO_COLOR;
   if (platform === 'win32') {
     return {
       file: env.ComSpec || 'cmd.exe',

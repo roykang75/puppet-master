@@ -31,4 +31,13 @@ describe('buildSpawnSpec', () => {
   it('Windows에서 ComSpec 없으면 cmd.exe 폴백', () => {
     expect(buildSpawnSpec({}, 'C:\\p', 'win32').file).toBe('cmd.exe');
   });
+
+  it('부모의 NO_COLOR를 물려주지 않는다 (통합 터미널은 항상 컬러)', () => {
+    for (const platform of ['darwin', 'win32'] as const) {
+      const spec = buildSpawnSpec({ NO_COLOR: '1', PATH: '/usr/bin' }, '/p', platform);
+      expect(spec.env.NO_COLOR).toBeUndefined();
+      expect(spec.env.COLORTERM).toBe('truecolor');
+      expect(spec.env.PATH).toBe('/usr/bin'); // 나머지 env는 보존
+    }
+  });
 });
